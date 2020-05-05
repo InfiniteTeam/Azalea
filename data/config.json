@@ -1,0 +1,21 @@
+{
+    "botName": "Azalea",
+    "prefix": ";",
+    "betaprefix": "*",
+    "inspection": false,
+    "is_android": false,
+    "securedir": {
+        "Windows": "C:/azalea",
+        "Linux": "/home/pi/azalea",
+        "Android": "/sdcard/azalea"
+    },
+    "tokenFileName": "token.txt",
+    "betatokenFileName": "beta.txt",
+    "maxlogbytes": 5242880,
+    "dbacName": "dbac.json",
+    "sshFileName": "ssh.json",
+    "dbIP": "192.168.0.7",
+    "localRun": false,
+    "betamode": true,
+    "ims_host": "arpa.kro.kr"
+}

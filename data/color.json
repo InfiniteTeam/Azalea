@@ -1,0 +1,8 @@
+{
+    "primary": "0xFF36B5",
+    "info": "0x00d8ff",
+    "warn": "0xffcd00",
+    "error": "0xff0000",
+    "ask": "0xa566ff",
+    "success": "0x1ddb16"
+}
