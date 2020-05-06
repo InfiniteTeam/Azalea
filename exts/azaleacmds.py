@@ -102,7 +102,7 @@ class Azaleacmds(BaseCog):
             await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 이미 등록된 사용자입니다!', color=self.color['info']))
             self.msglog.log(ctx, '[등록: 이미 등록됨]')
             return
-        embed = discord.Embed(title='Azalea 등록', description='**Azalea를 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.**', color=self.color['ask'], timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(title='Azalea 등록', description='**Azalea를 이용하기 위한 이용약관 및 개인정보 취급방침입니다. Azalea를 이용하려면 동의가 필요 합니다.**', color=self.color['ask'], timestamp=datetime.datetime.utcnow())
         embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
         embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
         msg = await ctx.send(content=ctx.author.mention, embed=embed)
@@ -137,7 +137,7 @@ class Azaleacmds(BaseCog):
         embed = discord.Embed(title='Azalea 탈퇴',
         description='''**Azalea 이용약관 및 개인정보 취급방침 동의를 철회하고, Azalea를 탈퇴하게 됩니다.**
         이 경우 _사용자님의 모든 데이터(개인정보 취급방침을 참조하십시오)_가 Azalea에서 삭제되며, __되돌릴 수 없습니다.__
-        계속하시려면 `탈퇴`를 입력하십시오.''', color=self.color['warn'], timestamp=datetime.datetime.utcnow())
+        계속할까요?''', color=self.color['warn'], timestamp=datetime.datetime.utcnow())
         embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
         embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
         msg = await ctx.send(content=ctx.author.mention, embed=embed)
