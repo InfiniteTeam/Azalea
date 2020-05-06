@@ -98,31 +98,73 @@ class Azaleacmds(BaseCog):
 
     @commands.command(name='등록')
     async def _register(self, ctx: commands.Context):
-        if self.cur.execute('select * from userdata where id=%s', ctx.author.id):
+        if self.cur.execute('select * from userdata where id=%s', ctx.author.id) != 0:
             await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 이미 등록된 사용자입니다!', color=self.color['info']))
             self.msglog.log(ctx, '[등록: 이미 등록됨]')
+            return
+        embed = discord.Embed(title='Azalea 등록', description='**Azalea를 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.**', color=self.color['ask'], timestamp=datetime.datetime.utcnow())
+        embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+        embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
+        msg = await ctx.send(content=ctx.author.mention, embed=embed)
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        self.msglog.log(ctx, '[등록: 등록하기]')
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            self.msglog.log(ctx, '[등록: 시간 초과]')
         else:
-            embed = discord.Embed(title='Azalea 등록', description='**Azalea을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.**', color=self.color['ask'], timestamp=datetime.datetime.utcnow())
-            embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
-            embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
-            await ctx.send(content=ctx.author.mention, embed=embed)
-            self.msglog.log(ctx, '[등록: 등록하기]')
-            def checkmsg(m):
-                return m.channel == ctx.channel and m.author == ctx.author and m.content == '동의'
-            try:
-                msg = await self.client.wait_for('message', timeout=20.0, check=checkmsg)
-            except asyncio.TimeoutError:
-                await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
-                self.msglog.log(ctx, '[등록: 시간 초과]')
-            else:
-                if self.cur.execute('select * from userdata where id=%s', (msg.author.id)) == 0:
+            remj = str(reaction.emoji)
+            if remj == '⭕':
+                if self.cur.execute('select * from userdata where id=%s', ctx.author.id) == 0:
                     now = datetime.datetime.now()
-                    if self.cur.execute('insert into userdata(id, level, type, date) values (%s, %s, %s, %s)', (msg.author.id, 1, 'User', datetime.date(now.year, now.month, now.day))) == 1:
+                    if self.cur.execute('insert into userdata(id, level, type, date) values (%s, %s, %s, %s)', (ctx.author.id, 1, 'User', datetime.date(now.year, now.month, now.day))) == 1:
                         await ctx.send(f'등록되었습니다. `{self.client.command_prefix}도움` 명령으로 전체 명령을 볼 수 있습니다.')
                         self.msglog.log(ctx, '[등록: 완료]')
                 else:
-                    await ctx.send('이미 등록된 사용자입니다.')
+                    await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 이미 등록된 사용자입니다!', color=self.color['info']))
                     self.msglog.log(ctx, '[등록: 이미 등록됨]')
+            elif remj == '❌':
+                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[등록: 취소됨]')
+
+    @commands.command(name='탈퇴')
+    async def _withdraw(self, ctx: commands.Context):
+        embed = discord.Embed(title='Azalea 탈퇴',
+        description='''**Azalea 이용약관 및 개인정보 취급방침 동의를 철회하고, Azalea를 탈퇴하게 됩니다.**
+        이 경우 _사용자님의 모든 데이터(개인정보 취급방침을 참조하십시오)_가 Azalea에서 삭제되며, __되돌릴 수 없습니다.__
+        계속하시려면 `탈퇴`를 입력하십시오.''', color=self.color['warn'], timestamp=datetime.datetime.utcnow())
+        embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+        embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
+        msg = await ctx.send(content=ctx.author.mention, embed=embed)
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        self.msglog.log(ctx, '[탈퇴: 탈퇴하기]')
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            self.msglog.log(ctx, '[탈퇴: 시간 초과]')
+        else:
+            remj = str(reaction.emoji)
+            if remj == '⭕':
+                if self.cur.execute('select * from userdata where id=%s', (ctx.author.id)):
+                    if self.cur.execute('delete from userdata where id=%s', ctx.author.id):
+                        await ctx.send('탈퇴되었습니다.')
+                        self.msglog.log(ctx, '[탈퇴: 완료]')
+                else:
+                    await ctx.send('이미 탈퇴된 사용자입니다.')
+                    self.msglog.log(ctx, '[탈퇴: 이미 탈퇴됨]')
+            elif remj == '❌':
+                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[탈퇴: 취소됨]')
 
 def setup(client):
     cog = Azaleacmds(client)

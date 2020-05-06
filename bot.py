@@ -188,7 +188,7 @@ async def on_command_error(ctx: commands.Context, error: Exception):
     elif commands.errors.MissingRequiredArgument in allerrs:
         return
     elif isinstance(error, errors.NotRegistered):
-        await ctx.send(f'등록되지 않은 사용자입니다! `{prefix}등록` 명령으로 등록해주세요!')
+        await ctx.send(embed=discord.Embed(title='❗ 등록되지 않은 사용자입니다!', description=f'`{prefix}등록` 명령으로 등록해주세요!', color=color['error']))
         msglog.log(ctx, '[미등록 사용자]')
         return
     elif isinstance(error, errors.NotMaster):
