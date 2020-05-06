@@ -121,7 +121,7 @@ class Mastercmds(BaseCog):
                     f = discord.File(fp=logfile, filename='error.log')
                 await ctx.send(file=f)
 
-    @commands.command(name='sysexec')
+    @commands.command(name='sys')
     async def _dbcmd(self, ctx: commands.Context, where, *, cmd):
         if where.lower() == 'dsv':
             dbcmd = self.client.get_data('dbcmd')
