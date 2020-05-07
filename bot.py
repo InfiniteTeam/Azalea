@@ -12,7 +12,7 @@ import logging.handlers
 import traceback
 import paramiko
 from random import randint
-from exts.utils import errors, checks, msglogger, emojictrl, permutil
+from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr
 from exts.utils.azalea import Azalea
 
 # Local Data Load
@@ -24,6 +24,11 @@ with open('./data/color.json', encoding='utf-8') as color_file:
     color = json.load(color_file)
 with open('./data/emojis.json', encoding='utf-8') as emojis_file:
     emojis = json.load(emojis_file)
+
+templates = {}
+# Load Templates
+with open('./templates/baseitem.json', encoding='utf-8') as baseitem_file:
+    templates['baseitem'] = json.load(baseitem_file)
 
 # Make Dir
 reqdirs = ['./logs', './logs/azalea', './logs/error', './logs/ping']
@@ -131,6 +136,7 @@ for i in color.keys(): # convert HEX to DEC
 
 check = checks.Checks(cur=cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
+imgr = itemmgr.ItemMgr()
 
 gamenum = 0
 
@@ -251,6 +257,7 @@ client.add_data('emojictrl', emj)
 client.add_data('msglog', msglog)
 client.add_data('errlogger', errlogger)
 client.add_data('logger', logger)
+client.add_data('templates', templates)
 client.add_data('cur', cur)
 client.add_data('dbcmd', dbcmd)
 client.add_data('ping', None)

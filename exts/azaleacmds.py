@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import datetime
 import re
+import json
 import asyncio
 from exts.utils.basecog import BaseCog
 
@@ -122,7 +123,8 @@ class Azaleacmds(BaseCog):
             if remj == '⭕':
                 if self.cur.execute('select * from userdata where id=%s', ctx.author.id) == 0:
                     now = datetime.datetime.now()
-                    if self.cur.execute('insert into userdata(id, level, type, date) values (%s, %s, %s, %s)', (ctx.author.id, 1, 'User', datetime.date(now.year, now.month, now.day))) == 1:
+                    
+                    if self.cur.execute('insert into userdata(id, level, type, date, items) values (%s, %s, %s, %s, %s)', (ctx.author.id, 1, 'User', datetime.date(now.year, now.month, now.day), self.templates['baseitem'])) == 1:
                         await ctx.send(f'등록되었습니다. `{self.client.command_prefix}도움` 명령으로 전체 명령을 볼 수 있습니다.')
                         self.msglog.log(ctx, '[등록: 완료]')
                 else:

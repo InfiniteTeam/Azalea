@@ -10,3 +10,4 @@ class BaseCog(commands.Cog):
         self.cur = client.get_data('cur')
         self.check = client.get_data('check')
         self.errlogger = client.get_data('errlogger')
+        self.templates = client.get_data('templates')
