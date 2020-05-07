@@ -12,10 +12,9 @@ class Emoji:
             return self.client.get_emoji(self.emojis[name]['default'])
         else:
             try:
-                rt = self.emojis[name]['replace']
+                return self.emojis[name]['replace']
             except KeyError:
-                rt = ''
-            return rt
+                return self.client.get_emoji(self.emojis[name]['default'])
 
     def getid(self, name):
         return self.emojis[name]

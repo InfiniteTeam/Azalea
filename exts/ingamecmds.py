@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import datetime
 import asyncio
+import json
+from exts.utils import pager, itemmgr
 from exts.utils.basecog import BaseCog
 
 class InGamecmds(BaseCog):
@@ -10,9 +12,14 @@ class InGamecmds(BaseCog):
         for cmd in self.get_commands():
                 cmd.add_check(self.check.registered)
 
-    @commands.command(name='아이템')
-    async def _myitem(self, ctx: commands.Context):
-        pass
+    @commands.command(name='가방')
+    async def _backpack(self, ctx: commands.Context):
+        self.cur.execute('select items from userdata where id=%s', ctx.author.id)
+        items = json.loads(self.cur.fetchone()['items'])['items']
+        imgr = itemmgr.ItemMgr(self.dbs['items']['itemdb'], items)
+        print(items)
+        pgr = pager.Pager(items)
+        
 
 def setup(client):
     cog = InGamecmds(client)

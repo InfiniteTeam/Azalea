@@ -1,0 +1,39 @@
+{
+  "itemdb":
+  [
+    {
+      "id": 0,
+      "name": "갤럭시 S20 Ultra",
+      "icon": {
+        "default": "📱"
+      },
+      "typetags": [
+        "phone",
+        "smartphone"
+      ],
+      "enchantments": [
+        {
+          "long-battery": 4,
+          "case": 1
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "ODROID N2",
+      "icon": {
+        "default": "⚙"
+      },
+      "typetags": [
+        "sbc",
+        "odroid"
+      ],
+      "enchantments": [
+        {
+          "ram": 4,
+          "case": 1
+        }
+      ]
+    }
+  ]
+}

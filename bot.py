@@ -16,14 +16,21 @@ from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr
 from exts.utils.azalea import Azalea
 
 # Local Data Load
-with open('./data/config.json', encoding='utf-8') as config_file:
+with open('./data/config.json', 'r', encoding='utf-8') as config_file:
     config = json.load(config_file)
-with open('./data/version.json', encoding='utf-8') as version_file:
+with open('./data/version.json', 'r', encoding='utf-8') as version_file:
     version = json.load(version_file)
-with open('./data/color.json', encoding='utf-8') as color_file:
+with open('./data/color.json', 'r', encoding='utf-8') as color_file:
     color = json.load(color_file)
-with open('./data/emojis.json', encoding='utf-8') as emojis_file:
+with open('./data/emojis.json', 'r', encoding='utf-8') as emojis_file:
     emojis = json.load(emojis_file)
+
+dbs = {}
+for onedb in os.listdir('./db'):
+    with open('./db/' + onedb, 'r', encoding='utf-8') as dbfile:
+        dbs[os.path.splitext(onedb)[0]] = json.load(dbfile)
+
+print(dbs)
 
 templates = {}
 # Load Templates
@@ -136,7 +143,6 @@ for i in color.keys(): # convert HEX to DEC
 
 check = checks.Checks(cur=cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
-imgr = itemmgr.ItemMgr()
 
 gamenum = 0
 
@@ -264,6 +270,7 @@ client.add_data('ping', None)
 client.add_data('guildshards', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
+client.add_data('dbs', dbs)
 client.add_data('start', datetime.datetime.now())
 
 client.datas['allexts'] = []
