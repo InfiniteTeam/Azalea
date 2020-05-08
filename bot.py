@@ -24,6 +24,9 @@ with open('./data/color.json', 'r', encoding='utf-8') as color_file:
     color = json.load(color_file)
 with open('./data/emojis.json', 'r', encoding='utf-8') as emojis_file:
     emojis = json.load(emojis_file)
+with open('./data/prefixes.json', 'r', encoding='utf-8') as prefixes_file:
+    prefixes = json.load(prefixes_file)['prefixes']
+    prefix = prefixes[0]
 
 dbs = {}
 for onedb in os.listdir('./db'):
@@ -133,16 +136,16 @@ db = pymysql.connect(
 )
 cur = db.cursor(pymysql.cursors.DictCursor)
 
-prefix = config['prefix']
-client = Azalea(command_prefix=prefix, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
+client = Azalea(command_prefix=prefixes, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
 client.remove_command('help')
 msglog = msglogger.Msglog(logger)
 
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
 
-check = checks.Checks(cur=cur)
+check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
+imgr = itemmgr.ItemMgr(cur, dbs['items']['itemdb'])
 
 gamenum = 0
 
@@ -254,6 +257,9 @@ async def on_command_error(ctx: commands.Context, error: Exception):
     await ctx.send(embed=embed)
     msglog.log(ctx, '[커맨드 오류]')
 
+def awaiter(coro):
+    return asyncio.ensure_future(coro)
+
 client.add_check(check.notbot)
 
 client.add_data('config', config)
@@ -271,6 +277,8 @@ client.add_data('guildshards', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
 client.add_data('dbs', dbs)
+client.add_data('awaiter', awaiter)
+client.add_data('imgr', imgr)
 client.add_data('start', datetime.datetime.now())
 
 client.datas['allexts'] = []

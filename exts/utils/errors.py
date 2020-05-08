@@ -1,5 +1,4 @@
 from discord.ext import commands
-from typing import List, Tuple, Union
 
 class AzaleaError(Exception):
     pass
@@ -30,15 +29,14 @@ class ParamsNotExist(AzaleaError):
 class NotGuildChannel(commands.CheckFailure):
     pass
 
-class UserAlreadyMatched(AzaleaError):
+class ItemNotExistsInDB(AzaleaError):
     def __init__(self, uid):
         self.uid = uid
-        super().__init__('이미 매치된 유저입니다: {}'.format(uid))
+        super().__init__('DB에 존재하지 않는 아이템 ID: {}'.format(uid))
 
-class UserAlreadyInQueue(AzaleaError):
-    def __init__(self, uid):
+class MaxCountExceeded(AzaleaError):
+    def __init__(self, uid, count, maxcount):
         self.uid = uid
-        super().__init__('이미 매칭 중인 유저입니다: {}'.format(uid))
-
-class MatchCanceled(AzaleaError):
-    pass
+        self.count = count
+        self.maxcount = maxcount
+        super().__init__('아이템 개수 {}개가 지정된 한도 {}개보다 많습니다: {}'.format(count, maxcount, uid))

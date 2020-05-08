@@ -4,6 +4,7 @@
     {
       "id": 0,
       "name": "갤럭시 S20 Ultra",
+      "maxcount": 100,
       "icon": {
         "default": "📱"
       },
@@ -21,6 +22,7 @@
     {
       "id": 1,
       "name": "ODROID N2",
+      "maxcount": 100,
       "icon": {
         "default": "⚙"
       },

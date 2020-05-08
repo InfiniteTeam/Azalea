@@ -20,8 +20,10 @@ class Mastercmds(BaseCog):
             rst = eval(arg)
         except:
             evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
+            self.msglog.log(ctx, '[EVAL ERROR]')
         else:
             evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
+            self.msglog.log(ctx, '[EVAL]')
         embed=discord.Embed(title='**💬 EVAL**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=evalout)
         await ctx.send(embed=embed)
 
@@ -31,8 +33,10 @@ class Mastercmds(BaseCog):
             rst = exec(arg)
         except:
             evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
+            self.msglog.log(ctx, '[EXEC ERROR]')
         else:
             evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
+            self.msglog.log(ctx, '[EXEC]')
         embed=discord.Embed(title='**💬 EXEC**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=evalout)
         await ctx.send(embed=embed)
 
@@ -42,8 +46,10 @@ class Mastercmds(BaseCog):
             rst = await eval(arg)
         except:
             evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
+            self.msglog.log(ctx, '[AWAIT ERROR]')
         else:
             evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
+            self.msglog.log(ctx, '[AWAIT]')
         embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=evalout)
         await ctx.send(embed=embed)
 
@@ -53,6 +59,10 @@ class Mastercmds(BaseCog):
             await eval(arg)
         except:
             await ctx.send(embed=discord.Embed(title='❌ 오류', color=self.color['error']))
+            self.msglog.log(ctx, '[HAWAIT ERROR]')
+        else:
+            self.msglog.log(ctx, '[HAWAIT]')
+
 
     @commands.command(name='noti')
     async def _noti(self, ctx: commands.Context, *, noti):
