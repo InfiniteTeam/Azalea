@@ -39,7 +39,7 @@ class InGamecmds(BaseCog):
         await ctx.send(embed=self.backpack_embed(ctx, pgr))
 
     @commands.command(name='내놔')
-    async def _get(self, ctx: commands.Context, uid, count: int):
+    async def _giveme(self, ctx: commands.Context, uid: int, count: int):
         print(type(count))
         self.imgr.give_item(ctx, uid, count)
 
