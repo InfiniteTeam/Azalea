@@ -4,7 +4,7 @@ import datetime
 import asyncio
 import datetime
 import json
-from exts.utils import pager, itemmgr
+from exts.utils import pager, itemmgr, emojibuttons, errors
 from exts.utils.basecog import BaseCog
 
 class InGamecmds(BaseCog):
@@ -12,17 +12,16 @@ class InGamecmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
-            if cmd.name in ['내놔']:
-                cmd.add_check(self.check.master)
 
-    def backpack_embed(self, ctx, pgr: pager.Pager):
+    async def backpack_embed(self, ctx, pgr: pager.Pager):
         items = pgr.get_thispage()
         itemstr = ''
         for one in items:
             founditem = self.imgr.fetch_itemdb_by_id(one['id'])
             icon = founditem['icon']['default']
             name = founditem['name']
-            itemstr += '{} {}\n'.format(icon, name)
+            count = one['count']
+            itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
         embed = discord.Embed(title=f'💼 `{ctx.author.name}`님의 가방', color=self.color['info'], timestamp=datetime.datetime.utcnow())
         if items:
             embed.description = itemstr + '```{}/{} 페이지```'.format(pgr.now_pagenum()+1, len(pgr.pages()))
@@ -32,16 +31,29 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='가방')
     async def _backpack(self, ctx: commands.Context):
+        perpage = 4
         items = self.imgr.get_useritems(ctx.author.id)
         
         print(items)
-        pgr = pager.Pager(items, perpage=8)
-        await ctx.send(embed=self.backpack_embed(ctx, pgr))
-
-    @commands.command(name='내놔')
-    async def _giveme(self, ctx: commands.Context, uid: int, count: int):
-        print(type(count))
-        self.imgr.give_item(ctx, uid, count)
+        pgr = pager.Pager(items, perpage=perpage)
+        msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr))
+        self.msglog.log(ctx, '[가방]')
+        for emj in emojibuttons.PageButton.emojis:
+            await msg.add_reaction(emj)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emojibuttons.PageButton.emojis
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                pass
+            else:
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(
+                        msg.edit(embed=await self.backpack_embed(ctx, pgr)),
+                        do
+                    )
 
 def setup(client):
     cog = InGamecmds(client)

@@ -1,6 +1,5 @@
 {
-  "itemdb":
-  [
+  "itemdb": [
     {
       "id": 0,
       "name": "갤럭시 S20 Ultra",
@@ -36,6 +35,36 @@
           "case": 1
         }
       ]
+    },
+    {
+      "id": 2,
+      "name": "불닭볶음면",
+      "maxcount": 100,
+      "icon": {
+        "default": "🍜"
+      },
+      "typetags": [
+        "ramen",
+        "buldak"
+      ],
+      "enchantments": [
+        {
+          "spicy": 444
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "니코틴아마이드아데닌다이뉴클레오타이드",
+      "maxcount": 100,
+      "icon": {
+        "default": "🧬"
+      },
+      "typetags": [
+        "nucleotid",
+        "dna"
+      ],
+      "enchantments": []
     }
   ]
 }

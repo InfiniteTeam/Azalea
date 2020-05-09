@@ -193,7 +193,7 @@ async def on_error(event, *args, **kwargs):
 @client.event
 async def on_command_error(ctx: commands.Context, error: Exception):
     allerrs = (type(error), type(error.__cause__))
-    tb = traceback.format_exception(type(error), error, error.__traceback__)
+    tb = traceback.format_exception(type(error), error.__cause__, error.__traceback__)
     err = []
     for line in tb:
         err.append(line.rstrip())

@@ -11,38 +11,42 @@ class Pager:
         self.__page = 0
         self.__pageindexes = list(range(0, len(self.__obj), self.__perpage))
 
-    def next(self, r=False):
+    def next(self, exc: bool=False):
         if self.__page + 1< len(self.__pageindexes):
             self.__page += 1
-        elif r:
+        elif exc:
             raise StopIteration
 
-    def prev(self, r=False):
+    def prev(self, exc: bool=False):
         if self.__page > 0:
             self.__page -= 1
-        elif r:
+        elif exc:
             raise StopIteration
 
-    def plus(self, n, r=False, a=True):
+    def plus(self, n, exc: bool=False, a=True):
         if self.__page + 1 + n < len(self.__pageindexes):
             self.__page += n
         elif a:
             self.go_end()
-        elif r:
+        elif exc:
             raise StopIteration
 
-    def minus(self, n, r=False, a=True):
+    def minus(self, n, exc: bool=False, a=True):
         if self.__page - n > 0:
             self.__page -= n
         elif a:
             self.go_first()
-        elif r:
+        elif exc:
             raise StopIteration
 
-    def go_first(self):
+    def go_first(self, exc: bool=False):
+        if self.__page == 0:
+            raise StopIteration
         self.__page = 0
 
-    def go_end(self):
+    def go_end(self, exc: bool=False):
+        if self.__page == len(self.__pageindexes) - 1:
+            raise StopIteration
         self.__page = len(self.__pageindexes) - 1
 
     def setpage(self, page):

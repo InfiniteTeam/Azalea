@@ -36,7 +36,6 @@ class BaseCmds(BaseCog):
 
     @_ext.command(name='reload')
     async def _ext_reload(self, ctx: commands.Context, *names):
-        self._clear(ctx)
         reloads = self.client.extensions
         if (not names) or ('*' in names):
             for onename in reloads:
@@ -59,16 +58,6 @@ class BaseCmds(BaseCog):
                 embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 리로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 리로드 완료]')
-    
-    @_ext.command(name='clear')
-    async def _clear(self, ctx: commands.Context):
-        try:
-            for x in self.client.get_data('clears'):
-                x()
-        except:
-            await ctx.send('clear error')
-        else:
-            await ctx.send('clear done')
         
     @_ext.command(name='load')
     async def _ext_load(self, ctx: commands.Context, *names):
