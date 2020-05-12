@@ -10,18 +10,17 @@ class Azaleacmds(BaseCog):
     def __init__(self, client):
         super().__init__(client)
         for cmd in self.get_commands():
-            if cmd.name != '등록':
+            if cmd.name != 'register':
                 cmd.add_check(self.check.registered)
-            if cmd.name == '공지채널':
-                cmd.add_check(commands.guild_only)
+            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
-    @commands.command(name='도움')
+    @commands.command(name='help')
     async def _help(self, ctx: commands.Context):
         embed = discord.Embed(title='📃 Azalea 전체 명령어', description='**[전체 명령어 보기](https://help.infiniteteam.me/azaleabot)**', color=self.color['primary'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[도움]')
 
-    @commands.command(name='정보')
+    @commands.command(name='info')
     async def _info(self, ctx: commands.Context):
         uptimenow = re.findall('\d+', str(datetime.datetime.now() - self.client.get_data('start')))
         uptimestr = ''
@@ -46,18 +45,19 @@ class Azaleacmds(BaseCog):
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[정보]')
 
-    @commands.command(name='핑')
+    @commands.command(name='ping')
     async def _ping(self, ctx: commands.Context):
         embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{self.client.get_data("ping")[0]}ms - {self.client.get_data("ping")[1]}\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=self.color['primary'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[핑]')
 
-    @commands.command(name='샤드')
+    @commands.command(name='shard')
     async def _shard_id(self, ctx: commands.Context):
         await ctx.send(embed=discord.Embed(description=f'**이 서버의 샤드 아이디는 `{ctx.guild.shard_id}`입니다.**\n현재 총 {self.client.get_data("guildshards").__len__()} 개의 샤드가 활성 상태입니다.', color=self.color['info'], timestamp=datetime.datetime.utcnow()))
         self.msglog.log(ctx, '[샤드]')
 
-    @commands.command(name='공지채널')
+    @commands.command(name='notichannel')
+    @commands.guild_only()
     @commands.has_guild_permissions(administrator=True)
     async def _notice(self, ctx: commands.Context, *mention):
         mention = ctx.message.channel_mentions
@@ -97,7 +97,7 @@ class Azaleacmds(BaseCog):
                         await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
                         self.msglog.log(ctx, '[공지채널: 취소됨]')
 
-    @commands.command(name='등록')
+    @commands.command(name='register')
     async def _register(self, ctx: commands.Context):
         if self.cur.execute('select * from userdata where id=%s', ctx.author.id) != 0:
             await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 이미 등록된 사용자입니다!', color=self.color['info']))
@@ -134,7 +134,7 @@ class Azaleacmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[등록: 취소됨]')
 
-    @commands.command(name='탈퇴')
+    @commands.command(name='withdraw')
     async def _withdraw(self, ctx: commands.Context):
         embed = discord.Embed(title='Azalea 탈퇴',
         description='''**Azalea 이용약관 및 개인정보 취급방침 동의를 철회하고, Azalea를 탈퇴하게 됩니다.**

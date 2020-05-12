@@ -1,0 +1,110 @@
+{
+    "commands": {
+        "exts.ingamecmds": {
+            "backpack": {
+                "name": "가방",
+                "aliases": [
+                    "템"
+                ]
+            },
+            "char": {
+                "name": "캐릭터",
+                "aliases": [
+                    "캐"
+                ]
+            }
+        },
+        "exts.mastercmds": {
+            "daconbabo": {
+                "aliases": [
+                    "다쿤바보"
+                ]
+            },
+            "log": {
+                "aliases": [
+                    "로그"
+                ]
+            },
+            "sys": {
+                "aliases": [
+                    "실행"
+                ]
+            },
+            "eval": {},
+            "exec": {},
+            "await": {},
+            "hawait": {},
+            "noti": {
+                "aliases": [
+                    "공지"
+                ]
+            },
+            "thearpa": {
+                "aliases": [
+                    "알파찬양"
+                ]
+            }
+        },
+        "exts.azaleacmds": {
+            "help": {
+                "aliases": [
+                    "도움"
+                ]
+            },
+            "info": {
+                "aliases": [
+                    "정보"
+                ]
+            },
+            "ping": {
+                "aliases": [
+                    "핑"
+                ]
+            },
+            "shard": {
+                "aliases": [
+                    "샤드"
+                ]
+            },
+            "notichannel": {
+                "aliases": [
+                    "공지채널"
+                ]
+            },
+            "register": {
+                "aliases": [
+                    "등록"
+                ]
+            },
+            "withdraw": {
+                "aliases": [
+                    "탈퇴"
+                ]
+            }
+        },
+        "exts.basecmds": {
+            "ext": {
+                "aliases": [
+                    "확장"
+                ]
+            },
+            "r": {
+                "aliases": [
+                    "리"
+                ]
+            },
+            "long": {
+                "aliases": [
+                    "기일게"
+                ]
+            }
+        },
+        "exts.gamedebugcmds": {
+            "giveme": {
+                "aliases": [
+                    "내놔"
+                ]
+            }
+        }
+    }
+}

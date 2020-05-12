@@ -10,6 +10,7 @@ class BaseCmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(client.get_data('check').master)
+            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
     @commands.group(name='ext')
     async def _ext(self, ctx: commands.Context):
@@ -145,6 +146,7 @@ class BaseCmds(BaseCog):
     @commands.command(name='r')
     async def _ext_reload_wrapper(self, ctx: commands.Context, *names):
         await self._ext_reload(ctx, *names)
+        self.dbc.reload()
 
     @commands.command(name='long')
     async def _long(self, ctx: commands.Context, *names):

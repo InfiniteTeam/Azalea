@@ -43,3 +43,9 @@ class MaxCountExceeded(AzaleaError):
         self.count = count
         self.maxcount = maxcount
         super().__init__('아이템 개수 {}개가 지정된 한도 {}개보다 많습니다: {}'.format(count, maxcount, uid))
+
+class CmdNameNotFoundInDB(AzaleaError):
+    def __init__(self, extname, cmdid):
+        self.id = cmdid
+        self.extname = extname
+        super().__init__('"{}"확장의 명령어 아이디 "{}"의 이름 또는 별명값이 DB에 존재하지 않습니다'.format(extname, cmdid))

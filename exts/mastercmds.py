@@ -14,6 +14,7 @@ class Mastercmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.master)
+            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
     @commands.command(name='eval')
     async def _eval(self, ctx: commands.Context, *, arg):
@@ -107,15 +108,15 @@ class Mastercmds(BaseCog):
         await ctx.send(embed=embed)
         await ctx.send(file=logfile)
 
-    @commands.command(name='boom')
+    @commands.command(name='thearpa')
     async def _errortest(self, ctx: commands.Context):
         raise errors.ArpaIsGenius('알파는 천재입니다.')
 
-    @commands.command(name='daconbabo', aliases=['다쿤바보'])
+    @commands.command(name='daconbabo')
     async def _daconbabo(self, ctx: commands.Context):
         await ctx.send(self.emj.get(ctx, 'daconbabo'))
 
-    @commands.command(name='log', aliases=['로그'])
+    @commands.command(name='log')
     async def _log(self, ctx: commands.Context, arg):
         async with ctx.channel.typing():
             name = arg.lower()
@@ -130,16 +131,13 @@ class Mastercmds(BaseCog):
                 f = discord.File(fp='./logs/error/error.log', filename='error.log')
                 await ctx.send(file=f)
 
-    @commands.command(name='sys', aliases=['시스템명령'])
-    async def _dbcmd(self, ctx: commands.Context, where, *, cmd):
-        if where.lower() == 'dsv':
-            dbcmd = self.client.get_data('dbcmd')
-            rst = await dbcmd(cmd)
-            out = f'📥INPUT: ```\n{cmd}```\n📤OUTPUT: ```\n{rst}```'
-            embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=out)
-            await ctx.send(embed=embed)
-        else:
-            raise errors.ParamsNotExist(where)
+    @commands.command(name='sys')
+    async def _dbcmd(self, ctx: commands.Context, *, cmd):
+        dbcmd = self.client.get_data('dbcmd')
+        rst = await dbcmd(cmd)
+        out = f'📥INPUT: ```\n{cmd}```\n📤OUTPUT: ```\n{rst}```'
+        embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=out)
+        await ctx.send(embed=embed)
 
 def setup(client):
     cog = Mastercmds(client)

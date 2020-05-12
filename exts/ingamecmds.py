@@ -12,8 +12,9 @@ class InGamecmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
-            if cmd.name != '캐릭터변경':
+            if cmd.name != 'charchange':
                 cmd.add_check(self.check.char_online)
+            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager):
         items = pgr.get_thispage()
@@ -31,7 +32,7 @@ class InGamecmds(BaseCog):
             embed.description = '\n가방에 아무것도 없네요! ~~아, 공기는 있어요!~~'
         return embed
 
-    @commands.command(name='가방')
+    @commands.command(name='backpack')
     async def _backpack(self, ctx: commands.Context):
         perpage = 4
         items = self.imgr.get_useritems(ctx.author.id)
@@ -56,8 +57,8 @@ class InGamecmds(BaseCog):
                         msg.edit(embed=await self.backpack_embed(ctx, pgr)),
                     )
 
-    @commands.command(name='캐릭터변경')
-    async def _charchange(self, ctx: commands.Context):
+    @commands.group(name='char')
+    async def _char(self, ctx: commands.Context):
         perpage = 4
         cmgr = charmgr.CharMgr(self.cur)
         chars = cmgr.get_characters(ctx.author.id)

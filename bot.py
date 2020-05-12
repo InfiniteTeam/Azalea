@@ -13,7 +13,7 @@ import logging.handlers
 import traceback
 import paramiko
 from random import randint
-from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr
+from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr, dbctrl, cmdnamesutil
 from exts.utils.azalea import Azalea
 
 # Local Data Load
@@ -29,12 +29,10 @@ with open('./data/prefixes.json', 'r', encoding='utf-8') as prefixes_file:
     prefixes = json.load(prefixes_file)['prefixes']
     prefix = prefixes[0]
 
-dbs = {}
-for onedb in os.listdir('./db'):
-    with open('./db/' + onedb, 'r', encoding='utf-8') as dbfile:
-        dbs[os.path.splitext(onedb)[0]] = json.load(dbfile)
+dbc = dbctrl.DBctrl('./db')
 
-print(dbs)
+
+print(dbc.dbs)
 
 templates = {}
 # Load Templates
@@ -140,13 +138,14 @@ cur = db.cursor(pymysql.cursors.DictCursor)
 client = Azalea(command_prefix=prefixes, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
 client.remove_command('help')
 msglog = msglogger.Msglog(logger)
+cnameutil = cmdnamesutil.CmdnamesUtil(logger, dbc, 'cmdnames')
 
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
 
 check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
-imgr = itemmgr.ItemMgr(cur, dbs['items']['itemdb'])
+imgr = itemmgr.ItemMgr(cur, dbc.dbs['items']['itemdb'])
 
 gamenum = 0
 
@@ -294,7 +293,8 @@ client.add_data('ping', None)
 client.add_data('guildshards', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
-client.add_data('dbs', dbs)
+client.add_data('dbc', dbc)
+client.add_data('cnameutil', cnameutil)
 client.add_data('awaiter', awaiter)
 client.add_data('imgr', imgr)
 client.add_data('start', datetime.datetime.now())
