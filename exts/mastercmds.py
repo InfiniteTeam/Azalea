@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import asyncio
 import datetime
 import time
 import math
@@ -110,28 +111,26 @@ class Mastercmds(BaseCog):
     async def _errortest(self, ctx: commands.Context):
         raise errors.ArpaIsGenius('알파는 천재입니다.')
 
-    @commands.command(name='daconbabo')
+    @commands.command(name='daconbabo', aliases=['다쿤바보'])
     async def _daconbabo(self, ctx: commands.Context):
         await ctx.send(self.emj.get(ctx, 'daconbabo'))
 
-    @commands.command(name='log')
+    @commands.command(name='log', aliases=['로그'])
     async def _log(self, ctx: commands.Context, arg):
         async with ctx.channel.typing():
             name = arg.lower()
-            if name == 'azalea':
-                with open('./logs/azalea/azalea.log', 'rb') as logfile:
-                    f = discord.File(fp=logfile, filename='azalea.log')
+            if name in ['azalea', '아젤리아']:
+                f = discord.File(fp='./logs/azalea/azalea.log', filename='azalea.log')
+                print('d')
                 await ctx.send(file=f)
-            elif name == 'ping':
-                with open('./logs/ping/ping.log', 'rb') as logfile:
-                    f = discord.File(fp=logfile, filename='ping.log')
+            elif name in ['ping', '핑']:
+                f = discord.File(fp='./logs/ping/ping.log', filename='ping.log')
                 await ctx.send(file=f)
-            elif name == 'error':
-                with open('./logs/error/error.log', 'rb') as logfile:
-                    f = discord.File(fp=logfile, filename='error.log')
+            elif name in ['error', '에러']:
+                f = discord.File(fp='./logs/error/error.log', filename='error.log')
                 await ctx.send(file=f)
 
-    @commands.command(name='sys')
+    @commands.command(name='sys', aliases=['시스템명령'])
     async def _dbcmd(self, ctx: commands.Context, where, *, cmd):
         if where.lower() == 'dsv':
             dbcmd = self.client.get_data('dbcmd')

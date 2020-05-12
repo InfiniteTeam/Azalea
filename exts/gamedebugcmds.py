@@ -12,6 +12,7 @@ class GameDebugcmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.master)
+            cmd.add_check(self.check.char_online)
 
     @commands.command(name='내놔')
     async def _giveme(self, ctx: commands.Context, uid: int, count: int):

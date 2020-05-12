@@ -12,6 +12,7 @@ class InGamecmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
+            cmd.add_check(self.check.char_online)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager):
         items = pgr.get_thispage()
@@ -50,10 +51,14 @@ class InGamecmds(BaseCog):
             else:
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
-                    await asyncio.gather(
+                    await asyncio.gather(do,
                         msg.edit(embed=await self.backpack_embed(ctx, pgr)),
-                        do
                     )
+
+    @commands.command(name='캐릭터변경')
+    async def _charchange(self, ctx: commands.Context):
+        perpage = 4
+        chars = 
 
 def setup(client):
     cog = InGamecmds(client)

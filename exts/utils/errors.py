@@ -21,6 +21,9 @@ class LockedExtensionUnloading(AzaleaError):
 class ArpaIsGenius(AzaleaError):
     pass
 
+class NoCharOnline(commands.CheckFailure):
+    pass
+
 class ParamsNotExist(AzaleaError):
     def __init__(self, param):
         self.param = param

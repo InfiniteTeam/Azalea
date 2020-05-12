@@ -1,4 +1,4 @@
-﻿import discord
+import discord
 from discord.ext import commands, tasks
 import datetime
 import json
@@ -6,6 +6,7 @@ import asyncio
 import platform
 import pymysql
 import os
+import io
 import sys
 import logging
 import logging.handlers
@@ -193,11 +194,12 @@ async def on_error(event, *args, **kwargs):
 @client.event
 async def on_command_error(ctx: commands.Context, error: Exception):
     allerrs = (type(error), type(error.__cause__))
-    tb = traceback.format_exception(type(error), error.__cause__, error.__traceback__)
-    err = []
-    for line in tb:
-        err.append(line.rstrip())
+    tb = traceback.format_exception(type(error), error, error.__traceback__)
+    origintb = traceback.format_exception(type(error), error, error.__traceback__)
+    err = [line.rstrip() for line in tb]
     errstr = '\n'.join(err)
+    originerr = err = [line.rstrip() for line in origintb]
+    originerrstr = '\n'.join(originerr)
     if hasattr(ctx.command, 'on_error'):
         return
     elif commands.errors.MissingRequiredArgument in allerrs:
@@ -207,6 +209,10 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         msglog.log(ctx, '[미등록 사용자]')
         return
     elif isinstance(error, errors.NotMaster):
+        return
+    elif isinstance(error, errors.NoCharOnline):
+        await ctx.send(embed=discord.Embed(title='❗ 캐릭터가 선택되지 않았습니다!', description=f'`{prefix}캐릭터변경` 명령으로 플레이할 캐릭터를 선택해주세요!', color=color['error']))
+        msglog.log(ctx, '[로그인되지 않음]')
         return
     elif errors.ParamsNotExist in allerrs:
         embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {", ".join(str(error.__cause__.param))}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
@@ -220,25 +226,25 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         return
     elif isinstance(error, errors.SentByBotUser):
         return
-    elif isinstance(error, commands.errors.NoPrivateMessage):
+    elif isinstance(error, commands.NoPrivateMessage):
         embed = discord.Embed(title='⛔ 길드 전용 명령어', description='이 명령어는 길드 채널에서만 사용할 수 있습니다!', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         msglog.log(ctx, '[길드 전용 명령]')
         return
-    elif isinstance(error, commands.errors.PrivateMessageOnly):
+    elif isinstance(error, commands.PrivateMessageOnly):
         embed = discord.Embed(title='⛔ DM 전용 명령어', description='이 명령어는 개인 메시지에서만 사용할 수 있습니다!', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         msglog.log(ctx, '[DM 전용 명령]')
         return
-    elif isinstance(error, (commands.errors.CheckFailure, commands.errors.MissingPermissions)):
+    elif isinstance(error, (commands.CheckFailure, commands.MissingPermissions)):
         perms = [permutil.format_perm_by_name(perm) for perm in error.missing_perms]
-        embed = discord.Embed(title='⛔ 멤버 권한 부족!', description=f'{ctx.author.mention}, 이 명령어를 사용하려면 다음과 같은 길드 권한이 필요합니다!\n`' + '`, `'.join(perms) + '`', color=color['error'], timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(title='⛔ 멤버 권한 부족!', description=f'{ctx.author.mention}, 이 명령어를 사용하려면 다음과 같은 길드 권한이 필요합니다!\n` ' + '`, `'.join(perms) + '`', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         msglog.log(ctx, '[멤버 권한 부족]')
         return
     elif isinstance(error.__cause__, discord.HTTPException):
         if error.__cause__.code == 50013:
-            missings = permutil.find_missing_perms_by_tbstr(errstr)
+            missings = permutil.find_missing_perms_by_tbstr(originerrstr)
             fmtperms = [permutil.format_perm_by_name(perm) for perm in missings]
             embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n`' + '`, `'.join(fmtperms) + '`', color=color['error'], timestamp=datetime.datetime.utcnow())
             await ctx.send(embed=embed)
@@ -252,10 +258,22 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         else:
             await ctx.send('오류 코드: ' + str(error.__cause__.code))
     
-    errlogger.error('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
-    embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```\n오류가 기록되었습니다. 나중에 개발자가 확인하고 처리하게 됩니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
-    await ctx.send(embed=embed)
-    msglog.log(ctx, '[커맨드 오류]')
+    if cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) == 0:
+        errlogger.error('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
+        embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다! 오류 메시지:\n```python\n{str(error)}```\n오류 정보가 기록되었습니다. 나중에 개발자가 처리하게 되며 빠른 처리를 위해서는 서포트 서버에 문의하십시오.', color=color['error'], timestamp=datetime.datetime.utcnow())
+        await ctx.send(embed=embed)
+    else:
+        print('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
+        embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```', color=color['error'], timestamp=datetime.datetime.utcnow())
+        if ctx.channel.type != discord.ChannelType.private:
+            await ctx.send(ctx.author.mention, embed=discord.Embed(title='❌ 오류!', description='개발자용 오류 메시지를 DM으로 전송했습니다.', color=color['error']))
+        try:
+            await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
+        except discord.HTTPException as exc:
+            if exc.code == 50035:
+                await ctx.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.'), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
+        finally:
+            msglog.log(ctx, '[커맨드 오류]')
 
 def awaiter(coro):
     return asyncio.ensure_future(coro)
