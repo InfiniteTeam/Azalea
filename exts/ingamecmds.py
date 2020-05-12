@@ -4,7 +4,7 @@ import datetime
 import asyncio
 import datetime
 import json
-from exts.utils import pager, itemmgr, emojibuttons, errors
+from exts.utils import pager, itemmgr, emojibuttons, errors, charmgr
 from exts.utils.basecog import BaseCog
 
 class InGamecmds(BaseCog):
@@ -12,7 +12,8 @@ class InGamecmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
-            cmd.add_check(self.check.char_online)
+            if cmd.name != '캐릭터변경':
+                cmd.add_check(self.check.char_online)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager):
         items = pgr.get_thispage()
@@ -58,7 +59,9 @@ class InGamecmds(BaseCog):
     @commands.command(name='캐릭터변경')
     async def _charchange(self, ctx: commands.Context):
         perpage = 4
-        chars = 
+        cmgr = charmgr.CharMgr(self.cur)
+        chars = cmgr.get_characters(ctx.author.id)
+        await ctx.send(chars)
 
 def setup(client):
     cog = InGamecmds(client)
