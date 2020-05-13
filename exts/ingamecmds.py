@@ -12,7 +12,7 @@ class InGamecmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
-            if cmd.name != 'charchange':
+            if cmd.name != 'char':
                 cmd.add_check(self.check.char_online)
             self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
@@ -25,7 +25,11 @@ class InGamecmds(BaseCog):
             name = founditem['name']
             count = one['count']
             itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
-        embed = discord.Embed(title=f'💼 `{ctx.author.name}`님의 가방', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(
+            title=f'💼 `{ctx.author.name}`님의 가방',
+            color=self.color['info'],
+            timestamp=datetime.datetime.utcnow()
+        )
         if items:
             embed.description = itemstr + '```{}/{} 페이지```'.format(pgr.now_pagenum()+1, len(pgr.pages()))
         else:
@@ -62,7 +66,16 @@ class InGamecmds(BaseCog):
         perpage = 4
         cmgr = charmgr.CharMgr(self.cur)
         chars = cmgr.get_characters(ctx.author.id)
-        await ctx.send(chars)
+        if chars:
+            pass
+        else:
+            await ctx.send(embed=discord.Embed(
+                title='🎲 캐릭터가 하나도 없네요!',
+                description='`{}{}` 명령으로 캐릭터를 생성해서 게임을 시작하세요!'.format(self.prefix, self.cnameutil.get_anyname('char.create')),
+                color=self.color['warn'],
+                timestamp=datetime.datetime.utcnow()
+            ))
+            
 
 def setup(client):
     cog = InGamecmds(client)

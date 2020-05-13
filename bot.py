@@ -40,7 +40,7 @@ with open('./templates/baseitem.json', encoding='utf-8') as baseitem_file:
     templates['baseitem'] = json.load(baseitem_file)
 
 # Make Dir
-reqdirs = ['./logs', './logs/azalea', './logs/error', './logs/ping']
+reqdirs = ['./logs', './logs/azalea', './logs/error', './logs/ping', './logs/discord']
 for dit in reqdirs:
     if not os.path.isdir(dit):
         os.makedirs(dit)
@@ -54,6 +54,16 @@ logger.addHandler(log_streamh)
 log_fileh = logging.handlers.RotatingFileHandler('./logs/azalea/azalea.log', maxBytes=config['maxlogbytes'], backupCount=10)
 log_fileh.setFormatter(log_formatter)
 logger.addHandler(log_fileh)
+
+dlogger = logging.getLogger('discord')
+dlogger.setLevel(logging.INFO)
+dhandler = logging.handlers.RotatingFileHandler(filename='./logs/discord/discord.log', maxBytes=config['maxlogbytes'], backupCount=10)
+dformatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s: %(message)s')
+dlog_streamh = logging.StreamHandler()
+dhandler.setFormatter(dformatter)
+dlog_streamh.setFormatter(dformatter)
+dlogger.addHandler(dhandler)
+dlogger.addHandler(dlog_streamh)
 
 pinglogger = logging.getLogger('ping')
 pinglogger.setLevel(logging.INFO)

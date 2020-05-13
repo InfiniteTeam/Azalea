@@ -12,6 +12,9 @@
                 "aliases": [
                     "캐"
                 ]
+            },
+            "char.create": {
+                "name": "생성"
             }
         },
         "exts.mastercmds": {
