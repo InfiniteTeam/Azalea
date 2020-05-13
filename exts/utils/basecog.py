@@ -5,6 +5,7 @@ from exts.utils import msglogger, checks, itemmgr, azalea, dbctrl, cmdnamesutil
 class BaseCog(commands.Cog):
     def __init__(self, client):
         self.client: azalea.Azalea = client
+        self.config = client.get_data('config')
         self.color = client.get_data('color')
         self.emj = client.get_data('emojictrl')
         self.msglog: msglogger.Msglog = client.get_data('msglog')
@@ -12,6 +13,7 @@ class BaseCog(commands.Cog):
         self.cur: pymysql.cursors.Cursor = client.get_data('cur')
         self.check: checks.Checks = client.get_data('check')
         self.errlogger = client.get_data('errlogger')
+        self.pinglogger = client.get_data('pinglogger')
         self.templates = client.get_data('templates')
         self.dbc: dbctrl.DBctrl = client.get_data('dbc')
         self.cnameutil: cmdnamesutil.CmdnamesUtil = client.get_data('cnameutil')

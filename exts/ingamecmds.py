@@ -31,7 +31,7 @@ class InGamecmds(BaseCog):
             timestamp=datetime.datetime.utcnow()
         )
         if items:
-            embed.description = itemstr + '```{}/{} 페이지```'.format(pgr.now_pagenum()+1, len(pgr.pages()))
+            embed.description = itemstr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         else:
             embed.description = '\n가방에 아무것도 없네요! ~~아, 공기는 있어요!~~'
         return embed
@@ -61,20 +61,58 @@ class InGamecmds(BaseCog):
                         msg.edit(embed=await self.backpack_embed(ctx, pgr)),
                     )
 
+    async def char_embed(self, ctx: commands.Context, pgr: pager.Pager):
+        chars = pgr.get_thispage()
+        charstr = ''
+        for one in chars:
+            name = one['name']
+            level = one['level']
+            chartype = one['type']
+            online = one['online']
+            onlinestr = ''
+            if online:
+                onlinestr = '(**현재 플레이중**)'
+            charstr += '**{}** {}\n레벨: {} \\| 직업: {}'.format(name, onlinestr, level, chartype)
+        embed = discord.Embed(
+            title=f'🎲 `{ctx.author.name}`님의 캐릭터 목록',
+            description=charstr,
+            color=self.color['info'],
+            timestamp=datetime.datetime.utcnow()
+        )
+        embed.description = charstr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+        return embed
+
     @commands.group(name='char')
     async def _char(self, ctx: commands.Context):
         perpage = 4
         cmgr = charmgr.CharMgr(self.cur)
         chars = cmgr.get_characters(ctx.author.id)
-        if chars:
-            pass
-        else:
+        if not chars:
             await ctx.send(embed=discord.Embed(
                 title='🎲 캐릭터가 하나도 없네요!',
                 description='`{}{}` 명령으로 캐릭터를 생성해서 게임을 시작하세요!'.format(self.prefix, self.cnameutil.get_anyname('char.create')),
                 color=self.color['warn'],
                 timestamp=datetime.datetime.utcnow()
             ))
+            return
+        pgr = pager.Pager(chars)
+        msg = await ctx.send(embed=await self.char_embed(ctx, pgr))
+        self.msglog.log(ctx, '[캐릭터 목록]')
+        for emj in emojibuttons.PageButton.emojis:
+            await msg.add_reaction(emj)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emojibuttons.PageButton.emojis
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                pass
+            else:
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(do,
+                        msg.edit(embed=await self.char_embed(ctx, pgr)),
+                    )
             
 
 def setup(client):

@@ -71,3 +71,6 @@ class Pager:
         this = [self.__obj[x] for x in indexes]
         
         return this
+
+    def objlen(self):
+        return len(self.__obj)

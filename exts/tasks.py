@@ -9,12 +9,39 @@ class Tasks(BaseCog):
     def __init__(self, client):
         super().__init__(client)
         self.gamenum = 0
+        self.logger.info('백그라운드 루프를 시작합니다.')
         self.sync_guilds.start()
         self.presence_loop.start()
+        self.pingloop.start()
 
     def cog_unload(self):
         self.sync_guilds.cancel()
         self.presence_loop.cancel()
+        self.pingloop.cancel()
+
+    @tasks.loop(seconds=5)
+    async def pingloop(self):
+        try:
+            ping = int(self.client.latency*100000)/100
+            if ping <= 100:
+                pinglevel = '🔵 매우좋음'
+            elif ping <= 300:
+                pinglevel = '🟢 양호함'
+            elif ping <= 500:
+                pinglevel = '🟡 보통'
+            elif ping <= 700:
+                pinglevel = '🔴 나쁨'
+            else:
+                pinglevel = '⚪ 매우나쁨'
+            self.client.set_data('ping', (ping, pinglevel))
+            self.pinglogger.info(f'{ping}ms')
+            self.pinglogger.info(f'CLIENT_CONNECTED: {not self.client.is_closed()}')
+            guildshards = {}
+            for one in self.client.latencies:
+                guildshards[one[0]] = tuple(filter(lambda guild: guild.shard_id == one[0], self.client.guilds))
+            self.client.set_data('guildshards', guildshards)
+        except:
+            self.errlogger.error(traceback.format_exc())
 
     @tasks.loop(seconds=5)
     async def sync_guilds(self):
@@ -71,10 +98,6 @@ class Tasks(BaseCog):
         except:
             self.client.get_data('errlogger').error(traceback.format_exc())
 
-    @sync_guilds.before_loop
-    async def b_register_guilds(self):
-        await self.client.wait_until_ready()
-
     @tasks.loop(seconds=7)
     async def presence_loop(self):
         try:
@@ -87,8 +110,10 @@ class Tasks(BaseCog):
         except:
             self.errlogger.error(traceback.format_exc())
 
+    @pingloop.before_loop
+    @sync_guilds.before_loop
     @presence_loop.before_loop
-    async def b_presence_loop(self):
+    async def before_loop(self):
         await self.client.wait_until_ready()
 
 def setup(client):

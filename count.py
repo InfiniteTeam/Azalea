@@ -100,3 +100,4 @@ for result in file_count:
 
 print(f'\n프로젝트 전체 파일 수: {total_file_count} 개')
 print(f'프로젝트 전체 코드 라인 수: {total_line_count} 줄\n')
+input()
