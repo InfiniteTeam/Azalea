@@ -14,7 +14,6 @@ class Mastercmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.master)
-            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
     @commands.command(name='eval')
     async def _eval(self, ctx: commands.Context, *, arg):
@@ -66,7 +65,7 @@ class Mastercmds(BaseCog):
             self.msglog.log(ctx, '[HAWAIT]')
 
 
-    @commands.command(name='noti')
+    @commands.command(name='noti', aliases=['공지전송'])
     async def _noti(self, ctx: commands.Context, *, noti):
         self.cur.execute('select * from serverdata where noticechannel is not NULL')
         guild_dbs = self.cur.fetchall()
@@ -108,15 +107,15 @@ class Mastercmds(BaseCog):
         await ctx.send(embed=embed)
         await ctx.send(file=logfile)
 
-    @commands.command(name='thearpa')
+    @commands.command(name='thearpa', aliases=['알파찬양'])
     async def _errortest(self, ctx: commands.Context):
         raise errors.ArpaIsGenius('알파는 천재입니다.')
 
-    @commands.command(name='daconbabo')
+    @commands.command(name='daconbabo', aliases=['다쿤바보'])
     async def _daconbabo(self, ctx: commands.Context):
         await ctx.send(self.emj.get(ctx, 'daconbabo'))
 
-    @commands.command(name='log')
+    @commands.command(name='log', aliases=['로그'])
     async def _log(self, ctx: commands.Context, arg):
         async with ctx.channel.typing():
             name = arg.lower()
@@ -131,7 +130,7 @@ class Mastercmds(BaseCog):
                 f = discord.File(fp='./logs/error/error.log', filename='error.log')
                 await ctx.send(file=f)
 
-    @commands.command(name='sys')
+    @commands.command(name='sys', aliases=['실행'])
     async def _dbcmd(self, ctx: commands.Context, *, cmd):
         dbcmd = self.client.get_data('dbcmd')
         rst = await dbcmd(cmd)

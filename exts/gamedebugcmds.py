@@ -13,9 +13,8 @@ class GameDebugcmds(BaseCog):
         for cmd in self.get_commands():
             cmd.add_check(self.check.master)
             cmd.add_check(self.check.char_online)
-            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
-    @commands.command(name='giveme')
+    @commands.command(name='내놔')
     async def _giveme(self, ctx: commands.Context, uid: int, count: int):
         self.imgr.give_item(ctx, uid, count)
 

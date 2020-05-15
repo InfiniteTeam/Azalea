@@ -13,7 +13,7 @@ import logging.handlers
 import traceback
 import paramiko
 from random import randint
-from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr, dbctrl, cmdnamesutil
+from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr, dbctrl
 from exts.utils.azalea import Azalea
 
 # Local Data Load
@@ -145,7 +145,6 @@ cur = db.cursor(pymysql.cursors.DictCursor)
 client = Azalea(command_prefix=prefixes, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
 client.remove_command('help')
 msglog = msglogger.Msglog(logger)
-cnameutil = cmdnamesutil.CmdnamesUtil(logger, dbc, 'cmdnames')
 
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
@@ -175,7 +174,6 @@ client.add_data('guildshards', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
 client.add_data('dbc', dbc)
-client.add_data('cnameutil', cnameutil)
 client.add_data('awaiter', awaiter)
 client.add_data('imgr', imgr)
 client.add_data('start', datetime.datetime.now())

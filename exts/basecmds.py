@@ -10,13 +10,12 @@ class BaseCmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(client.get_data('check').master)
-            self.cnameutil.replace_name_and_aliases(cmd, cmd.name, __name__)
 
-    @commands.group(name='ext')
+    @commands.group(name='ext', aliases=['확장'])
     async def _ext(self, ctx: commands.Context):
         pass
 
-    @_ext.command(name='list')
+    @_ext.command(name='list', aliases=['목록'])
     async def _ext_list(self, ctx: commands.Context):
         allexts = ''
         for oneext in self.client.get_data('allexts'):
@@ -35,7 +34,7 @@ class BaseCmds(BaseCog):
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[전체 확장 목록]')
 
-    @_ext.command(name='reload')
+    @_ext.command(name='reload', aliases=['리로드'])
     async def _ext_reload(self, ctx: commands.Context, *names):
         reloads = self.client.extensions
         if (not names) or ('*' in names):
@@ -60,7 +59,7 @@ class BaseCmds(BaseCog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 리로드 완료]')
         
-    @_ext.command(name='load')
+    @_ext.command(name='load', aliases=['로드'])
     async def _ext_load(self, ctx: commands.Context, *names):
         if not names or '*' in names:
             loads = list(set(self.client.get_data('allexts')) - set(self.client.extensions.keys()))
@@ -101,7 +100,7 @@ class BaseCmds(BaseCog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 로드 완료]')
 
-    @_ext.command(name='unload')
+    @_ext.command(name='unload', aliases=['언로드'])
     async def _ext_unload(self, ctx: commands.Context, *names):
         if not names or '*' in names:
             unloads = list(self.client.extensions.keys())
@@ -143,14 +142,10 @@ class BaseCmds(BaseCog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 언로드 완료]')
 
-    @commands.command(name='r')
+    @commands.command(name='r', aliases=['리'])
     async def _ext_reload_wrapper(self, ctx: commands.Context, *names):
         await self._ext_reload(ctx, *names)
         self.dbc.reload()
-
-    @commands.command(name='long')
-    async def _long(self, ctx: commands.Context, *names):
-        await ctx.send('d'*20000)
 
 def setup(client):
     cog = BaseCmds(client)
