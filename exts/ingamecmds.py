@@ -7,13 +7,14 @@ import re
 import json
 from exts.utils import pager, itemmgr, emojibuttons, errors, charmgr
 from exts.utils.basecog import BaseCog
+from templates import errembeds
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
-            if cmd.name != '캐릭터':
+            if cmd.name not in ['캐릭터', '로그아웃']:
                 cmd.add_check(self.check.char_online)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager):
@@ -122,10 +123,10 @@ class InGamecmds(BaseCog):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
         charcount = len(cmgr.get_characters())
         if charcount >= self.config['max_charcount']:
-            await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error'], timestamp=datetime.datetime.utcnow()))
+            await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 슬롯 부족]')
             return
-        namemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 이름', description='새 캐릭터를 생성합니다. 캐릭터의 이름을 입력하세요.\n취소하려면 `취소` 를 입력하세요!', color=self.color['ask'], timestamp=datetime.datetime.utcnow()))
+        namemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 이름', description='새 캐릭터를 생성합니다. 캐릭터의 이름을 입력하세요.\n취소하려면 `취소` 를 입력하세요!', color=self.color['ask']))
         self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기]')
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content
@@ -153,7 +154,7 @@ class InGamecmds(BaseCog):
                 return
             else:
                 charname = m.content
-        typemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 직업', color=self.color['ask'], timestamp=datetime.datetime.utcnow(),
+        typemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 직업', color=self.color['ask'],
             description="""\
                 `{}` 의 직업을 선택합니다.
                 ⚔: 전사
@@ -189,32 +190,39 @@ class InGamecmds(BaseCog):
             
             charcount = len(cmgr.get_characters())
             if charcount >= self.config['max_charcount']:
-                await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error'], timestamp=datetime.datetime.utcnow()))
+                await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
             cmgr.add_character(charname, chartype, self.templates['baseitem'])
             if charcount == 0:
+                cmgr.change_character(charname)
                 desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
             else:
-                cmgr.change_character(charname)
                 desc = '`{}캐릭터 변경` 명령으로 이 캐릭터를 선텍해 게임을 시작할 수 있습니다!'.format(self.prefix)
-            await ctx.send(embed=discord.Embed(title='{} 캐릭터를 생성했습니다! - `{}`'.format(self.emj.get(ctx, 'check'), charname), description=desc, color=self.color['success'], timestamp=datetime.datetime.utcnow()))
+            await ctx.send(embed=discord.Embed(title='{} 캐릭터를 생성했습니다! - `{}`'.format(self.emj.get(ctx, 'check'), charname), description=desc, color=self.color['success']))
             self.msglog.log(ctx, '[캐릭터 생성: 완료]')
 
     @_char.command(name='변경')
     async def _char_change(self, ctx: commands.Context, *, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))[0]
+        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
         if char:
-            if not char['online']:
+            if not char[0]['online']:
                 cmgr.change_character(name)
-                await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), name)))
+                await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), name), color=self.color['success']))
             else:
-                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{name}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.'))
+                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{name}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['warn']))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
         else:
-            await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!'))
+            await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 변경: 존재하지 않는 캐릭터]')
+
+    @_char_change.error
+    async def _e_char_change(self, ctx: commands.Context, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'name':
+                missing = '캐릭터의 이름'
+            await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
 def setup(client):
     cog = InGamecmds(client)

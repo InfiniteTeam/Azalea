@@ -56,7 +56,7 @@ class Tasks(BaseCog):
             added = list(map(lambda one: self.client.get_guild(one), added_ids))
             for guild in added:
                 self.logger.info(f'새 서버를 발견했습니다: {guild.name}({guild.id})')
-                sendables = list(filter(lambda ch: ch.permissions_for(guild.get_member(self.client.user.id)).send_messages, guild.text_channels))
+                sendables = list(filter(lambda ch: ch.permissions_for(guild.me).send_messages, guild.text_channels))
                 if sendables:
                     selected = []
                     for sch in sendables:

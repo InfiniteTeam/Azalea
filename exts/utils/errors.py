@@ -49,3 +49,9 @@ class CmdNameNotFoundInDB(AzaleaError):
         self.id = cmdid
         self.extname = extname
         super().__init__('"{}"확장의 명령어 아이디 "{}"의 이름 또는 별명값이 DB에 존재하지 않습니다'.format(extname, cmdid))
+
+class MissingRequiredArgument(AzaleaError):
+    def __init__(self, param, paramdesc):
+        self.param = param
+        self.paramdesc = paramdesc
+        super().__init__('명령어 파라미터 "{}"({})이 필요합니다'.format(param.name, paramdesc))

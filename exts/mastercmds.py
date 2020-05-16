@@ -25,7 +25,7 @@ class Mastercmds(BaseCog):
         else:
             evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
             self.msglog.log(ctx, '[EVAL]')
-        embed=discord.Embed(title='**💬 EVAL**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=evalout)
+        embed=discord.Embed(title='**💬 EVAL**', color=self.color['primary'], description=evalout)
         await ctx.send(embed=embed)
 
     @commands.command(name='exec')
@@ -38,7 +38,7 @@ class Mastercmds(BaseCog):
         else:
             evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
             self.msglog.log(ctx, '[EXEC]')
-        embed=discord.Embed(title='**💬 EXEC**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=evalout)
+        embed=discord.Embed(title='**💬 EXEC**', color=self.color['primary'], description=evalout)
         await ctx.send(embed=embed)
 
     @commands.command(name='await')
@@ -51,7 +51,7 @@ class Mastercmds(BaseCog):
         else:
             evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
             self.msglog.log(ctx, '[AWAIT]')
-        embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=evalout)
+        embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], description=evalout)
         await ctx.send(embed=embed)
 
     @commands.command(name='hawait')
@@ -64,9 +64,31 @@ class Mastercmds(BaseCog):
         else:
             self.msglog.log(ctx, '[HAWAIT]')
 
-
     @commands.command(name='noti', aliases=['공지전송'])
-    async def _noti(self, ctx: commands.Context, *, noti):
+    async def _noti(self, ctx: commands.Context, title, desc):
+        notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'], timestamp=datetime.datetime.utcnow())
+        notiembed.set_footer(text='작성자: ' + ctx.author.name, icon_url=ctx.author.avatar_url)
+        preview = await ctx.send('다음과 같이 공지를 보냅니다. 계속할까요?', embed=notiembed)
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await preview.add_reaction(em)
+        self.msglog.log(ctx, '[공지전송: 미리보기]')
+        def check(reaction, user):
+            return user == ctx.author and preview.id == reaction.message.id and str(reaction.emoji) in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=60*5, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            self.msglog.log(ctx, '[공지전송: 시간 초과]')
+        else:
+            remj = str(reaction.emoji)
+            if remj == '⭕':
+                pass
+            elif remj == '❌':
+                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[공지전송: 취소됨]')
+                return
+
         self.cur.execute('select * from serverdata where noticechannel is not NULL')
         guild_dbs = self.cur.fetchall()
         guild_ids = list(map(lambda one: one['id'], guild_dbs))
@@ -75,12 +97,14 @@ class Mastercmds(BaseCog):
         guild_ids = list(map(lambda one: one.id, guilds))
 
         start = time.time()
-        embed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['primary'], timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['primary'])
         rst = {'suc': 0, 'exc': 0}
         logstr = ''
         embed.add_field(name='성공', value='0 서버')
         embed.add_field(name='실패', value='0 서버')
+
         notimsg = await ctx.send(embed=embed)
+        notis = []
         for onedb in guild_dbs:
             guild = self.client.get_guild(onedb['id'])
             if not guild:
@@ -89,7 +113,7 @@ class Mastercmds(BaseCog):
                 continue
             notich = guild.get_channel(onedb['noticechannel'])
             try:
-                await notich.send(noti)
+                await notich.send(embed=notiembed)
             except discord.errors.Forbidden:
                 rst['exc'] += 1
                 logstr += f'권한이 없습니다: {guild.id}({guild.name}) 서버의 {notich.id}({notich.name}) 채널.\n'
@@ -102,10 +126,11 @@ class Mastercmds(BaseCog):
                 await notimsg.edit(embed=embed)
         end = time.time()
         alltime = math.trunc(end - start)
-        embed = discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 전송을 완료했습니다!', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['primary'], timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 전송을 완료했습니다!', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['primary'])
         logfile = discord.File(fp=io.StringIO(logstr), filename='notilog.log')
         await ctx.send(embed=embed)
         await ctx.send(file=logfile)
+        self.msglog.log(ctx, '[공지전송: 완료]')
 
     @commands.command(name='thearpa', aliases=['알파찬양'])
     async def _errortest(self, ctx: commands.Context):
@@ -135,7 +160,7 @@ class Mastercmds(BaseCog):
         dbcmd = self.client.get_data('dbcmd')
         rst = await dbcmd(cmd)
         out = f'📥INPUT: ```\n{cmd}```\n📤OUTPUT: ```\n{rst}```'
-        embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], timestamp=datetime.datetime.utcnow(), description=out)
+        embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], description=out)
         await ctx.send(embed=embed)
 
 def setup(client):
