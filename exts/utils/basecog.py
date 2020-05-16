@@ -1,13 +1,13 @@
 import pymysql
 from discord.ext import commands
-from exts.utils import msglogger, checks, itemmgr, azalea, dbctrl
+from exts.utils import msglogger, checks, itemmgr, azalea, dbctrl, emojictrl
 
 class BaseCog(commands.Cog):
     def __init__(self, client):
         self.client: azalea.Azalea = client
         self.config = client.get_data('config')
         self.color = client.get_data('color')
-        self.emj = client.get_data('emojictrl')
+        self.emj: emojictrl.Emoji = client.get_data('emojictrl')
         self.msglog: msglogger.Msglog = client.get_data('msglog')
         self.logger = client.get_data('logger')
         self.cur: pymysql.cursors.Cursor = client.get_data('cur')

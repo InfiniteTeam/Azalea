@@ -54,9 +54,9 @@ class Events(BaseCog):
             self.msglog.log(ctx, '[존재하지 않는 명령 옵션]')
             return
         elif isinstance(error, commands.errors.CommandNotFound):
-            embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=self.color['error'], timestamp=datetime.datetime.utcnow())
-            await ctx.send(embed=embed)
-            self.msglog.log(ctx, '[존재하지 않는 명령]')
+            # embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=self.color['error'], timestamp=datetime.datetime.utcnow())
+            # await ctx.send(embed=embed)
+            # self.msglog.log(ctx, '[존재하지 않는 명령]')
             return
         elif isinstance(error, errors.SentByBotUser):
             return
@@ -105,7 +105,7 @@ class Events(BaseCog):
                 await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
             except discord.HTTPException as exc:
                 if exc.code == 50035:
-                    await ctx.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.'), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
+                    await ctx.author.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.', color=self.color['error']), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
             finally:
                 self.msglog.log(ctx, '[커맨드 오류]')
 

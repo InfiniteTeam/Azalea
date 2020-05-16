@@ -70,6 +70,8 @@ class Tasks(BaseCog):
                             pass
                         elif 'noti' in sname:
                             pass
+                        elif 'announce' in sname:
+                            pass
 
                         elif '봇' in sname:
                             pass

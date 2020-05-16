@@ -16,5 +16,6 @@
     "dbIP": "192.168.0.7",
     "localRun": false,
     "betamode": true,
-    "ims_host": "arpa.kro.kr"
+    "ims_host": "arpa.kro.kr",
+    "max_charcount": 5
 }
