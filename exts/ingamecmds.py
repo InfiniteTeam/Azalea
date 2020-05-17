@@ -217,12 +217,26 @@ class InGamecmds(BaseCog):
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 변경: 존재하지 않는 캐릭터]')
 
+    @_char.command(name='삭제')
+    async def _char_delete(self, ctx: commands.Context, name):
+        raise Exception
+        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
+        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
+        if char:
+            pass
+        else:
+            await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
+            self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
+
     @_char_change.error
-    async def _e_char_change(self, ctx: commands.Context, error):
+    @_char_delete.error
+    async def _e_char(self, ctx: commands.Context, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'name':
                 missing = '캐릭터의 이름'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+        else:
+            await self.client.on_command_error(ctx, error)
 
 def setup(client):
     cog = InGamecmds(client)
