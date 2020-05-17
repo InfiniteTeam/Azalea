@@ -20,8 +20,9 @@ class InGamecmds(BaseCog):
     async def backpack_embed(self, ctx, pgr: pager.Pager):
         items = pgr.get_thispage()
         itemstr = ''
+        imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
         for one in items:
-            founditem = self.imgr.fetch_itemdb_by_id(one['id'])
+            founditem = imgr.fetch_itemdb_by_id(one['id'])
             icon = founditem['icon']['default']
             name = founditem['name']
             count = one['count']
@@ -40,7 +41,9 @@ class InGamecmds(BaseCog):
     @commands.command(name='가방', aliases=['템'])
     async def _backpack(self, ctx: commands.Context):
         perpage = 4
-        items = self.imgr.get_useritems(ctx.author.id)
+        imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
+        imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
+        items = imgr.get_useritems()
         
         print(items)
         pgr = pager.Pager(items, perpage=perpage)
@@ -83,7 +86,7 @@ class InGamecmds(BaseCog):
         embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         return embed
 
-    @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
+    @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=False)
     async def _char(self, ctx: commands.Context):
         perpage = 5
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
@@ -202,7 +205,7 @@ class InGamecmds(BaseCog):
             await ctx.send(embed=discord.Embed(title='{} 캐릭터를 생성했습니다! - `{}`'.format(self.emj.get(ctx, 'check'), charname), description=desc, color=self.color['success']))
             self.msglog.log(ctx, '[캐릭터 생성: 완료]')
 
-    @_char.command(name='변경')
+    @_char.command(name='변경', aliases=['선택'])
     async def _char_change(self, ctx: commands.Context, *, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
         char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))

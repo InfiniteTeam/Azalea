@@ -151,7 +151,6 @@ for i in color.keys(): # convert HEX to DEC
 
 check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
-imgr = itemmgr.ItemMgr(cur, dbc.dbs['items']['itemdb'])
 
 def awaiter(coro):
     return asyncio.ensure_future(coro)
@@ -175,7 +174,7 @@ client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
 client.add_data('dbc', dbc)
 client.add_data('awaiter', awaiter)
-client.add_data('imgr', imgr)
+client.add_data('eventcogname', 'Event')
 client.add_data('start', datetime.datetime.now())
 
 client.datas['allexts'] = []

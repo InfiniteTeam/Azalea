@@ -16,6 +16,6 @@ class BaseCog(commands.Cog):
         self.pinglogger = client.get_data('pinglogger')
         self.templates = client.get_data('templates')
         self.dbc: dbctrl.DBctrl = client.get_data('dbc')
+        self.itemdb = self.dbc.dbs['items']['itemdb']
         self.awaiter = client.get_data('awaiter')
-        self.imgr: itemmgr.ItemMgr = client.get_data('imgr')
         self.prefix = self.client.command_prefix[0]
