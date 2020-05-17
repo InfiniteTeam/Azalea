@@ -6,7 +6,7 @@ class CharMgr:
         self.uid = int(userid)
     
     def get_characters(self):
-        self.cur.execute('select * from chardata where id=%s order by birthdatetime asc', self.uid)
+        self.cur.execute('select * from chardata where id=%s and forgotten=%s order by birthdatetime asc', (self.uid, False))
         chars = self.cur.fetchall()
         for x in chars:
             del x['id']
@@ -18,6 +18,9 @@ class CharMgr:
     def change_character(self, name: str):
         self.cur.execute('update chardata set online=%s where online=%s', (False, True))
         self.cur.execute('update chardata set online=%s where name=%s', (True, name))
+        
+    def forget_character(self, name: str):
+        self.cur.execute('update chardata set forgotten=%s where name=%s', (True, name))
         
 class CharType:
     chartypes = {

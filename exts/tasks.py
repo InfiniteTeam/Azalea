@@ -121,7 +121,7 @@ class Tasks(BaseCog):
         try:
             self.cur.execute('select * from chardata where delete-request is not NULL')
             delreqs = self.fetchall()
-            delnow = list(filter(lambda x: x['delete-request'], delreqs))
+            delnow = list(filter(lambda x: (datetime.datetime.now() - x['delete-request']) > datetime.timedelta(hours=24), delreqs))
             for one in delnow:
                 cmgr = charmgr.CharMgr(self.cur, one)
         except:
