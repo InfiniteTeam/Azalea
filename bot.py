@@ -174,7 +174,7 @@ client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
 client.add_data('dbc', dbc)
 client.add_data('awaiter', awaiter)
-client.add_data('eventcogname', 'Event')
+client.add_data('eventcogname', 'Events')
 client.add_data('start', datetime.datetime.now())
 
 client.datas['allexts'] = []

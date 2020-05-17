@@ -19,3 +19,9 @@ class BaseCog(commands.Cog):
         self.itemdb = self.dbc.dbs['items']['itemdb']
         self.awaiter = client.get_data('awaiter')
         self.prefix = self.client.command_prefix[0]
+        self.eventcogname = client.get_data('eventcogname')
+
+    def getlistener(self, name):
+        listeners = self.client.get_cog(self.eventcogname).get_listeners()
+        listener = list(filter(lambda x: x[0] == name, listeners))[0][1]
+        return listener

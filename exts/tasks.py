@@ -1,7 +1,9 @@
 import discord
 from discord.ext import commands, tasks
 from exts.utils.basecog import BaseCog
+from exts.utils import charmgr
 import traceback
+import datetime
 
 # pylint: disable=no-member
 
@@ -13,11 +15,13 @@ class Tasks(BaseCog):
         self.sync_guilds.start()
         self.presence_loop.start()
         self.pingloop.start()
+        self.delete_char.start()
 
     def cog_unload(self):
         self.sync_guilds.cancel()
         self.presence_loop.cancel()
         self.pingloop.cancel()
+        self.delete_char.cancel()
 
     @tasks.loop(seconds=5)
     async def pingloop(self):
@@ -112,9 +116,21 @@ class Tasks(BaseCog):
         except:
             self.errlogger.error(traceback.format_exc())
 
+    @tasks.loop(seconds=10)
+    async def delete_char(self):
+        try:
+            self.cur.execute('select * from chardata where delete-request is not NULL')
+            delreqs = self.fetchall()
+            delnow = list(filter(lambda x: x['delete-request'], delreqs))
+            for one in delnow:
+                cmgr = charmgr.CharMgr(self.cur, one)
+        except:
+            self.errlogger.error(traceback.format_exc())
+
     @pingloop.before_loop
     @sync_guilds.before_loop
     @presence_loop.before_loop
+    @delete_char.before_loop
     async def before_loop(self):
         await self.client.wait_until_ready()
 

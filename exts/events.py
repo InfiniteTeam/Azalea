@@ -15,7 +15,7 @@ class Events(BaseCog):
     async def on_ready(self):
         self.logger.info(f'로그인: {self.client.user.id}')
         await self.client.change_presence(status=discord.Status.online)
-        if self.config['betamode']:  
+        if self.config['betamode']:
             self.logger.warning('BETA MODE ENABLED')
 
     @commands.Cog.listener()
@@ -27,6 +27,7 @@ class Events(BaseCog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
+        print('d')
         allerrs = (type(error), type(error.__cause__))
         tb = traceback.format_exception(type(error), error, error.__traceback__)
         origintb = traceback.format_exception(type(error), error, error.__traceback__)
@@ -34,9 +35,11 @@ class Events(BaseCog):
         errstr = '\n'.join(err)
         originerr = err = [line.rstrip() for line in origintb]
         originerrstr = '\n'.join(originerr)
+        """
         if hasattr(ctx.command, 'on_error'):
             return
-        elif isinstance(error, errors.MissingRequiredArgument):
+        """
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send(embed=discord.Embed(title='❗ 명령어에 빠진 부분이 있습니다!', description=f'**`{error.paramdesc}`이(가) 필요합니다!**\n자세한 명령어 사용법은 `{self.prefix}도움` 을 통해 확인하세요!', color=self.color['error']))
             self.msglog.log(ctx, f'[필요한 명령 인자 없음: "{error.param.name}"({error.paramdesc})]')
             return

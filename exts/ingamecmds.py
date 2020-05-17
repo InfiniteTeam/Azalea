@@ -86,7 +86,7 @@ class InGamecmds(BaseCog):
         embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         return embed
 
-    @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=False)
+    @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
     async def _char(self, ctx: commands.Context):
         perpage = 5
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
@@ -134,7 +134,7 @@ class InGamecmds(BaseCog):
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content
         try:
-            m = await self.client.wait_for('message', check=check, timeout=60*5)
+            m = await self.client.wait_for('message', check=check, timeout=60)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 시간 초과]')
@@ -174,7 +174,7 @@ class InGamecmds(BaseCog):
             return user == ctx.author and typemsg.id == reaction.message.id and str(reaction.emoji) in emjs
         self.msglog.log(ctx, '[캐릭터 생성: 직업 선택]')
         try:
-            reaction, user = await self.client.wait_for('reaction_add', check=rcheck, timeout=60*5)
+            reaction, user = await self.client.wait_for('reaction_add', check=rcheck, timeout=20)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 시간 초과]')
@@ -222,15 +222,37 @@ class InGamecmds(BaseCog):
 
     @_char.command(name='삭제')
     async def _char_delete(self, ctx: commands.Context, name):
-        raise Exception
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
         char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
-        if char:
-            pass
-        else:
+        if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
+            return
 
+        msg = await ctx.send(embed=discord.Embed(
+            title=f'⚠ `{name}` 이 캐릭터를 정말로 삭제할까요?',
+            description=f'캐릭터는 삭제 버튼을 누른 후 24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
+            color=self.color['warn']
+        ))
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        self.msglog.log(ctx, '[캐릭터 삭제: 캐릭터 삭제 경고]')
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            self.msglog.log(ctx, '[캐릭터 삭제: 시간 초과]')
+        else:
+            remj = str(reaction.emoji)
+            if remj == '⭕':
+                pass
+            elif remj == '❌':
+                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[캐릭터 삭제: 취소됨]')
+    
     @_char_change.error
     @_char_delete.error
     async def _e_char(self, ctx: commands.Context, error):
@@ -238,8 +260,6 @@ class InGamecmds(BaseCog):
             if error.param.name == 'name':
                 missing = '캐릭터의 이름'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
-        else:
-            await self.client.on_command_error(ctx, error)
 
 def setup(client):
     cog = InGamecmds(client)
