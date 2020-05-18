@@ -119,11 +119,13 @@ class Tasks(BaseCog):
     @tasks.loop(seconds=10)
     async def delete_char(self):
         try:
-            self.cur.execute('select * from chardata where delete-request is not NULL')
-            delreqs = self.fetchall()
-            delnow = list(filter(lambda x: (datetime.datetime.now() - x['delete-request']) > datetime.timedelta(hours=24), delreqs))
+            self.cur.execute('select * from chardata where delete_request is not NULL')
+            delreqs = self.cur.fetchall()
+            delnow = list(filter(lambda x: (datetime.datetime.now() - x['delete_request']) > datetime.timedelta(hours=24), delreqs))
             for one in delnow:
-                cmgr = charmgr.CharMgr(self.cur, one)
+                cmgr = charmgr.CharMgr(self.cur, one['id'])
+                cmgr.delete_character(one['name'])
+                self.logger.info('{}({}) 의 "{}"캐릭터가 예약된 시간이 지나 잊혀졌습니다.'.format(self.client.get_user(one['id']), one['id'], one['name']))
         except:
             self.errlogger.error(traceback.format_exc())
 

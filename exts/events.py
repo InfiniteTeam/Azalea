@@ -27,7 +27,6 @@ class Events(BaseCog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
-        print('d')
         allerrs = (type(error), type(error.__cause__))
         tb = traceback.format_exception(type(error), error, error.__traceback__)
         origintb = traceback.format_exception(type(error), error, error.__traceback__)

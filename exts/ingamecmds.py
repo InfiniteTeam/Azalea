@@ -3,6 +3,7 @@ from discord.ext import commands
 import datetime
 import asyncio
 import datetime
+import typing
 import re
 import json
 from exts.utils import pager, itemmgr, emojibuttons, errors, charmgr
@@ -14,7 +15,7 @@ class InGamecmds(BaseCog):
         super().__init__(client)
         for cmd in self.get_commands():
             cmd.add_check(self.check.registered)
-            if cmd.name not in ['캐릭터', '로그아웃']:
+            if cmd.name not in ['캐릭터', '로그아웃', '캐생', '캐삭']:
                 cmd.add_check(self.check.char_online)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager):
@@ -65,11 +66,14 @@ class InGamecmds(BaseCog):
                         msg.edit(embed=await self.backpack_embed(ctx, pgr)),
                     )
 
-    async def char_embed(self, ctx: commands.Context, pgr: pager.Pager):
+    async def char_embed(self, username, pgr: pager.Pager, mode='default'):
         chars = pgr.get_thispage()
         charstr = ''
-        for one in chars:
+        for idx in range(len(chars)):
+            one = chars[idx]
             name = one['name']
+            if mode == 'select':
+                name = f'{idx+1}. {name}'
             level = one['level']
             chartype = charmgr.CharType.format_chartype(one['type'])
             online = one['online']
@@ -78,7 +82,7 @@ class InGamecmds(BaseCog):
                 onlinestr = '(**현재 플레이중**)'
             charstr += '**{}** {}\n레벨: `{}` \\| 직업: `{}`\n\n'.format(name, onlinestr, level, chartype)
         embed = discord.Embed(
-            title=f'🎲 `{ctx.author.name}`님의 캐릭터 목록',
+            title=f'🎲 `{username}`님의 캐릭터 목록',
             description=charstr,
             color=self.color['info'],
             timestamp=datetime.datetime.utcnow()
@@ -87,9 +91,11 @@ class InGamecmds(BaseCog):
         return embed
 
     @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
-    async def _char(self, ctx: commands.Context):
+    async def _char(self, ctx: commands.Context, *, user: typing.Optional[discord.User]=None):
+        if not user:
+            user = ctx.author
         perpage = 5
-        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
+        cmgr = charmgr.CharMgr(self.cur, user.id)
         chars = cmgr.get_characters()
         if not chars:
             await ctx.send(embed=discord.Embed(
@@ -100,7 +106,7 @@ class InGamecmds(BaseCog):
             ))
             return
         pgr = pager.Pager(chars, perpage)
-        msg = await ctx.send(embed=await self.char_embed(ctx, pgr))
+        msg = await ctx.send(embed=await self.char_embed(user.name, pgr))
         self.msglog.log(ctx, '[캐릭터 목록]')
         if len(pgr.pages()) <= 1:
             return
@@ -117,12 +123,11 @@ class InGamecmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await self.char_embed(ctx, pgr)),
+                        msg.edit(embed=await self.char_embed(user.name, pgr)),
                     )
 
-    @_char.command(name='생성', aliases=['생'])
-    async def _char_creacte(self, ctx:commands.Context):
-        self._char_creacte.name = '생성'
+    @_char.command(name='생성')
+    async def _char_create(self, ctx:commands.Context):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
         charcount = len(cmgr.get_characters())
         if charcount >= self.config['max_charcount']:
@@ -156,6 +161,11 @@ class InGamecmds(BaseCog):
                 self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이미 사용중인 이름]')
                 return
             else:
+                for pfx in self.client.command_prefix:
+                    if pfx.rstrip().lower() in m.content.lower():
+                        await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='아젤리아 봇 접두사는 이름에 포함할 수 없습니다.\n다시 시도해 주세요!', color=self.color['error']))
+                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 접두사 포함 금지]')
+                        return
                 charname = m.content
         typemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 직업', color=self.color['ask'],
             description="""\
@@ -211,10 +221,14 @@ class InGamecmds(BaseCog):
         char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
         if char:
             if not char[0]['online']:
-                cmgr.change_character(name)
-                await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), name), color=self.color['success']))
+                if not cmgr.is_being_forgotten(name):
+                    cmgr.change_character(name)
+                    await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), name), color=self.color['success']))
+                else:
+                    await ctx.send(embed=discord.Embed(title=f'❓ 삭제 중인 캐릭터입니다: `{name}`', description='이 캐릭터는 삭제 중이여서 로그인할 수 없습니다. `{}캐릭터 삭제취소` 명령으로 취소할 수 있습니다.'.format(self.prefix), color=self.color['error']))
+                self.msglog.log(ctx, '[캐릭터 변경: 삭제 중인 캐릭터]')
             else:
-                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{name}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['warn']))
+                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{name}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
         else:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
@@ -224,13 +238,17 @@ class InGamecmds(BaseCog):
     async def _char_delete(self, ctx: commands.Context, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
         char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
+        if cmgr.is_being_forgotten(name):
+            await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{name}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
+            self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
+            return
         if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
 
         msg = await ctx.send(embed=discord.Embed(
-            title=f'⚠ `{name}` 이 캐릭터를 정말로 삭제할까요?',
+            title=f'⚠ `{name}` 캐릭터를 정말로 삭제할까요?',
             description=f'캐릭터는 삭제 버튼을 누른 후 24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
             color=self.color['warn']
         ))
@@ -248,13 +266,46 @@ class InGamecmds(BaseCog):
         else:
             remj = str(reaction.emoji)
             if remj == '⭕':
-                pass
+                cmgr.schedule_delete(name)
+                await ctx.send(embed=discord.Embed(
+                    title='{} `{}` 캐릭터가 24시간 후에 완전히 지워집니다.'.format(self.emj.get(ctx, 'check'), name),
+                    description=f'24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
+                    color=self.color['success']
+                ))
+                self.msglog.log(ctx, '[캐릭터 삭제: 삭제 작업 예약됨]')
             elif remj == '❌':
                 await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 삭제: 취소됨]')
+
+    @_char.command(name='삭제취소')
+    async def _char_cancel_delete(self, ctx: commands.Context, *, name):
+        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
+        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
+        if not char:
+            await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.', color=self.color['error']))
+            self.msglog.log(ctx, '[캐릭터 삭제취소: 존재하지 않는 캐릭터]')
+            return
+        if not cmgr.is_being_forgotten(name):
+            await ctx.send(embed=discord.Embed(title=f'❓ 삭제중이 아닌 캐릭터입니다: `{name}`', description='이 캐릭터는 삭제 중인 캐릭터가 아닙니다.', color=self.color['error']))
+            self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제중이 아닌 캐릭터]')
+            return
+        cmgr.cancel_delete(name)
+        await ctx.send(embed=discord.Embed(title='{} 캐릭터 삭제를 취소했습니다!: `{}`'.format(self.emj.get(ctx, 'check'), name), color=self.color['success']))
+        self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제 취소 완료]')
+        return
     
+    @commands.command(name='캐생', aliases=['새캐'])
+    async def _w_char_create(self, ctx: commands.Context):
+        await self._char_create(ctx)
+
+    @commands.command(name='캐삭')
+    async def _w_char_delete(self, ctx: commands.Context, *, name):
+        await self._char_delete(ctx, name)
+
     @_char_change.error
     @_char_delete.error
+    @_w_char_delete.error
+    @_char_cancel_delete.error
     async def _e_char(self, ctx: commands.Context, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'name':

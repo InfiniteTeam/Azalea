@@ -4,8 +4,8 @@ from exts.utils import pager, errors
 
 class PageButton:
     emojis = ['⏪','◀', '⏹', '▶', '⏩']
-    @staticmethod
-    async def buttonctrl(reaction: discord.Reaction, user: discord.User, pgr: pager.Pager, willdo=None):
+    @classmethod
+    async def buttonctrl(cls, reaction: discord.Reaction, user: discord.User, pgr: pager.Pager, willdo=None):
         emj = str(reaction.emoji)
         try:
             if emj == '⏪':
