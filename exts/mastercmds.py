@@ -65,9 +65,20 @@ class Mastercmds(BaseCog):
             self.msglog.log(ctx, '[HAWAIT]')
 
     @commands.command(name='noti', aliases=['공지전송'])
-    async def _noti(self, ctx: commands.Context, title, desc):
-        notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'], timestamp=datetime.datetime.utcnow())
+    async def _noti(self, ctx: commands.Context, *args):
+        try:
+            title = args[0]
+            desc = args[1]
+        except IndexError:
+            await ctx.send('공지 타이틀과 내용은 필수입니다')
+            return
+        imgurl = None
+        if args[2]:
+            imgurl = args[2]
+        notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'])
         notiembed.set_footer(text='작성자: ' + ctx.author.name, icon_url=ctx.author.avatar_url)
+        if imgurl:
+            notiembed.set_image(url=imgurl)
         preview = await ctx.send('다음과 같이 공지를 보냅니다. 계속할까요?', embed=notiembed)
         emjs = ['⭕', '❌']
         for em in emjs:

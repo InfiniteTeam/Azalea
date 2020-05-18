@@ -46,7 +46,7 @@ class CharType:
         "Knight": "전사",
         "Archer": "궁수",
         "Wizard": "마법사",
-        "God": "세계의 신"
+        "God": "세계신"
     }
 
     @classmethod

@@ -6,9 +6,10 @@ import datetime
 import typing
 import re
 import json
-from exts.utils import pager, itemmgr, emojibuttons, errors, charmgr
+from exts.utils import pager, itemmgr, emojibuttons, errors, charmgr, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
+from dateutil.relativedelta import relativedelta
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -30,13 +31,12 @@ class InGamecmds(BaseCog):
             itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
         embed = discord.Embed(
             title=f'💼 `{ctx.author.name}`님의 가방',
-            color=self.color['info'],
-            timestamp=datetime.datetime.utcnow()
+            color=self.color['info']
         )
         if items:
             embed.description = itemstr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         else:
-            embed.description = '\n가방에 아무것도 없네요! ~~아, 공기는 있어요!~~'
+            embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
         return embed
 
     @commands.command(name='가방', aliases=['템'])
@@ -80,12 +80,16 @@ class InGamecmds(BaseCog):
             onlinestr = ''
             if online:
                 onlinestr = '(**현재 플레이중**)'
-            charstr += '**{}** {}\n레벨: `{}` \\| 직업: `{}`\n\n'.format(name, onlinestr, level, chartype)
+            deleteleftstr = ''
+            if one['delete_request']:
+                tdleft = timedelta.format_timedelta((one['delete_request'] + relativedelta(hours=24)) - datetime.datetime.now())
+                deleteleft = ' '.join(tdleft.values())
+                deleteleftstr = '\n**`{}` 후에 삭제됨**'.format(deleteleft)
+            charstr += '**{}** {}\n레벨: `{}` \\| 직업: `{}` {}\n\n'.format(name, onlinestr, level, chartype, deleteleftstr)
         embed = discord.Embed(
             title=f'🎲 `{username}`님의 캐릭터 목록',
             description=charstr,
-            color=self.color['info'],
-            timestamp=datetime.datetime.utcnow()
+            color=self.color['info']
         )
         embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         return embed
@@ -101,8 +105,7 @@ class InGamecmds(BaseCog):
             await ctx.send(embed=discord.Embed(
                 title='🎲 캐릭터가 하나도 없네요!',
                 description='`{}생성` 명령으로 캐릭터를 생성해서 게임을 시작하세요!'.format(self.prefix),
-                color=self.color['warn'],
-                timestamp=datetime.datetime.utcnow()
+                color=self.color['warn']
             ))
             return
         pgr = pager.Pager(chars, perpage)
