@@ -3,10 +3,11 @@ from discord.ext import commands
 import asyncio
 import datetime
 import time
+import typing
 import math
 import io
 from exts.utils.basecog import BaseCog
-from exts.utils import errors
+from exts.utils import errors, progressbar
 import traceback
 
 class Mastercmds(BaseCog):
@@ -136,8 +137,9 @@ class Mastercmds(BaseCog):
         async def update_panel():
             nonlocal notilog, rst
             while True:
-                cpembed.set_field_at(0, name='성공', value='{} 서버'.format(rst['suc']))
-                cpembed.set_field_at(1, name='실패', value='{} 서버'.format(rst['exc']))
+                cpembed.set_field_at(0, name='진행률', value='┃{}┃'.format('ㅇ'))
+                cpembed.set_field_at(1, name='성공', value='{} 서버'.format(rst['suc']))
+                cpembed.set_field_at(2, name='실패', value='{} 서버'.format(rst['exc']))
                 await ctrlpanel.edit(embed=cpembed)
                 print(rst['done'])
                 if rst['done']:
@@ -159,7 +161,18 @@ class Mastercmds(BaseCog):
         await ctx.send(embed=doneembed)
         await ctx.send(file=logfile)
         self.msglog.log(ctx, '[공지전송: 완료]')
-        
+    
+    @commands.command(name='프로그레스')
+    async def _progressbar(self, ctx: commands.Context, value: int, mx: int, totallen: typing.Optional[int] = 10):
+        await ctx.send(embed=discord.Embed(description=progressbar.get(ctx, self.emj, value, mx, totallen)))
+
+    @commands.command(name='프그스')
+    async def _pgs(self, ctx: commands.Context):
+        msg = await ctx.send(embed=discord.Embed(description=progressbar.get(ctx, self.emj, 0, 100, 20)))
+        for x in range(0, 100+1, 10):
+            print(x)
+            await msg.edit(embed=discord.Embed(description=progressbar.get(ctx, self.emj, x, 100, 20)))
+            await asyncio.sleep(0.5)
 
     @commands.command(name='thearpa', aliases=['알파찬양'])
     async def _errortest(self, ctx: commands.Context):

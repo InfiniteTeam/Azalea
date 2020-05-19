@@ -16,6 +16,46 @@
         "loading": {
             "default": 703166128465117195,
             "replace": "..."
+        },
+        "pgb1": {
+            "default": 712265104510681115,
+            "replace": "█"
+        },
+        "pgb2": {
+            "default": 712265104368074824,
+            "replace": "█"
+        },
+        "pgb3": {
+            "default": 712265104061628448,
+            "replace": "█"
+        },
+        "pgb4": {
+            "default": 712265104523264051,
+            "replace": "█"
+        },
+        "pgb5": {
+            "default": 712265104590110730,
+            "replace": " "
+        },
+        "pgb6": {
+            "default": 712265104577789972,
+            "replace": "█"
+        },
+        "pgb7": {
+            "default": 712265104661413968,
+            "replace": " "
+        },
+        "pgb8": {
+            "default": 712265104506486784,
+            "replace": " "
+        },
+        "pgb9": {
+            "default": 712267187896975380,
+            "replace": "█"
+        },
+        "pgb10": {
+            "default": 712267197380034560,
+            "replace": "█"
         }
     }
 }
