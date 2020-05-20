@@ -15,7 +15,7 @@ class Checks:
         return commands.check(self.registered)
 
     async def master(self, ctx: commands.Context):
-        if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
+        if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0 and self.cur.execute('select * from serverdata where id=%s and master=%s', (ctx.guild.id, True)) != 0:
             return True
         raise errors.NotMaster('마스터 유저가 아닙니다: {}'.format(ctx.author.id))
 

@@ -115,15 +115,17 @@ class Mastercmds(BaseCog):
                 channels.append(guild.get_channel(one['noticechannel']))
 
         cpembed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 유효한 서버 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['primary'])
+        cpembed.add_field(name='진행률', value=progressbar.get(ctx, self.emj, 0, 1, 12) + ' `0.00%`', inline=False)
         cpembed.add_field(name='성공', value='0 서버')
         cpembed.add_field(name='실패', value='0 서버')
         ctrlpanel = await ctx.send(embed=cpembed)
 
         notilog = ''
         rst = {'suc': 0, 'exc': 0, 'done': False}
+        completed = 0
 
         async def wrapper(coro, guild, channel):
-            nonlocal notilog, rst
+            nonlocal notilog, rst, completed
             try:
                 print('d')
                 await coro
@@ -133,11 +135,13 @@ class Mastercmds(BaseCog):
             else:
                 rst['suc'] += 1
                 notilog += f'공지 전송에 성공했습니다: {guild.id}({guild.name}) 서버의 {channel.id}({channel.name}) 채널.\n'
+            finally:
+                completed += 1
 
         async def update_panel():
-            nonlocal notilog, rst
+            nonlocal notilog, rst, completed
             while True:
-                cpembed.set_field_at(0, name='진행률', value='┃{}┃'.format('ㅇ'))
+                cpembed.set_field_at(0, name='진행률', value=progressbar.get(ctx, self.emj, completed, len(guilds), 12) + ' `{}%`'.format(round(100*(completed/len(guilds)), 2)), inline=False)
                 cpembed.set_field_at(1, name='성공', value='{} 서버'.format(rst['suc']))
                 cpembed.set_field_at(2, name='실패', value='{} 서버'.format(rst['exc']))
                 await ctrlpanel.edit(embed=cpembed)
@@ -155,7 +159,7 @@ class Mastercmds(BaseCog):
         await asyncio.gather(notisendtasks)
         rst['done'] = True
         end = time.time()
-        alltime = math.trunc(end - start)
+        alltime = round(end - start, 2)
         doneembed = discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 전송을 완료했습니다! ({alltime}초)', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['primary'])
         logfile = discord.File(fp=io.StringIO(notilog), filename='notilog.log')
         await ctx.send(embed=doneembed)

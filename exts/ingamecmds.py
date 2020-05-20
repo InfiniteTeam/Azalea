@@ -46,10 +46,11 @@ class InGamecmds(BaseCog):
         imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
         items = imgr.get_useritems()
         
-        print(items)
         pgr = pager.Pager(items, perpage=perpage)
         msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr))
         self.msglog.log(ctx, '[가방]')
+        if not pgr.pages():
+            return
         for emj in emojibuttons.PageButton.emojis:
             await msg.add_reaction(emj)
         def check(reaction, user):
@@ -221,17 +222,18 @@ class InGamecmds(BaseCog):
     @_char.command(name='변경', aliases=['선택'])
     async def _char_change(self, ctx: commands.Context, *, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
+        char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
         if char:
+            cname = char[0]['name']
             if not char[0]['online']:
-                if not cmgr.is_being_forgotten(name):
-                    cmgr.change_character(name)
-                    await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), name), color=self.color['success']))
+                if not cmgr.is_being_forgotten(cname):
+                    cmgr.change_character(cname)
+                    await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
                 else:
-                    await ctx.send(embed=discord.Embed(title=f'❓ 삭제 중인 캐릭터입니다: `{name}`', description='이 캐릭터는 삭제 중이여서 로그인할 수 없습니다. `{}캐릭터 삭제취소` 명령으로 취소할 수 있습니다.'.format(self.prefix), color=self.color['error']))
+                    await ctx.send(embed=discord.Embed(title=f'❓ 삭제 중인 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중이여서 로그인할 수 없습니다. `{}캐릭터 삭제취소` 명령으로 취소할 수 있습니다.'.format(self.prefix), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 변경: 삭제 중인 캐릭터]')
             else:
-                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{name}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
+                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{cname}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
         else:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
@@ -240,18 +242,19 @@ class InGamecmds(BaseCog):
     @_char.command(name='삭제')
     async def _char_delete(self, ctx: commands.Context, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
+        char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
         if cmgr.is_being_forgotten(name):
-            await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{name}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
+            cname = char[0]['name']
+            await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{cname}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
         if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
-
+        cname = char[0]['name']
         msg = await ctx.send(embed=discord.Embed(
-            title=f'⚠ `{name}` 캐릭터를 정말로 삭제할까요?',
+            title=f'⚠ `{cname}` 캐릭터를 정말로 삭제할까요?',
             description=f'캐릭터는 삭제 버튼을 누른 후 24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
             color=self.color['warn']
         ))
@@ -269,9 +272,9 @@ class InGamecmds(BaseCog):
         else:
             remj = str(reaction.emoji)
             if remj == '⭕':
-                cmgr.schedule_delete(name)
+                cmgr.schedule_delete(cname)
                 await ctx.send(embed=discord.Embed(
-                    title='{} `{}` 캐릭터가 24시간 후에 완전히 지워집니다.'.format(self.emj.get(ctx, 'check'), name),
+                    title='{} `{}` 캐릭터가 24시간 후에 완전히 지워집니다.'.format(self.emj.get(ctx, 'check'), cname),
                     description=f'24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
                     color=self.color['success']
                 ))
@@ -283,19 +286,27 @@ class InGamecmds(BaseCog):
     @_char.command(name='삭제취소')
     async def _char_cancel_delete(self, ctx: commands.Context, *, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'] == name, cmgr.get_characters()))
+        char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
         if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 존재하지 않는 캐릭터]')
             return
-        if not cmgr.is_being_forgotten(name):
-            await ctx.send(embed=discord.Embed(title=f'❓ 삭제중이 아닌 캐릭터입니다: `{name}`', description='이 캐릭터는 삭제 중인 캐릭터가 아닙니다.', color=self.color['error']))
+        cname = char[0]['name']
+        if not cmgr.is_being_forgotten(cname):
+            await ctx.send(embed=discord.Embed(title=f'❓ 삭제중이 아닌 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중인 캐릭터가 아닙니다.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제중이 아닌 캐릭터]')
             return
-        cmgr.cancel_delete(name)
-        await ctx.send(embed=discord.Embed(title='{} 캐릭터 삭제를 취소했습니다!: `{}`'.format(self.emj.get(ctx, 'check'), name), color=self.color['success']))
+        cmgr.cancel_delete(cname)
+        await ctx.send(embed=discord.Embed(title='{} 캐릭터 삭제를 취소했습니다!: `{}`'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
         self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제 취소 완료]')
         return
+
+    async def char_settings_embed(self, name, pgr: pager.Pager):
+        pass
+
+    @_char.group(name='설정', invoke_without_command=True)
+    async def _char_settings(self, ctx: commands.Context):
+        pass
     
     @commands.command(name='캐생', aliases=['새캐'])
     async def _w_char_create(self, ctx: commands.Context):
