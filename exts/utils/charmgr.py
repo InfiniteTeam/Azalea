@@ -14,8 +14,13 @@ class CharMgr:
             del x['id']
         return chars
 
-    def add_character(self, name: str, chartype: str, items, level: int=1):
-        self.cur.execute('insert into chardata (id, name, level, type, items) values (%s, %s, %s, %s, %s)', (self.uid, name, level, chartype, json.dumps(items, ensure_ascii=False)))
+    def add_character(self, name: str, chartype: str, items, stat, level: int=1):
+        datas = (
+            self.uid, name, level, chartype,
+            json.dumps(items, ensure_ascii=False),
+            json.dumps(stat, ensure_ascii=False)
+        )
+        self.cur.execute('insert into chardata (id, name, level, type, items, stat) values (%s, %s, %s, %s, %s, %s)', datas)
 
     def logout(self):
         self.cur.execute('update chardata set online=%s where online=%s', (False, True))
@@ -37,7 +42,7 @@ class CharMgr:
         self.cur.execute('update chardata set delete_request=%s where name=%s', (None, name))
 
     def is_being_forgotten(self, name: str):
-        if (self.cur.execute('select * from chardata where name=%s', (name)) != 0) and self.cur.execute('select * from chardata where delete_request is not NULL') != 0:
+        if (self.cur.execute('select * from chardata where name=%s', name) != 0) and self.cur.execute('select * from chardata where name=%s and delete_request is not NULL', name) != 0:
             return True
         return False
         

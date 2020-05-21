@@ -156,7 +156,7 @@ class InGamecmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2글자 이상이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 너무 짧은 이름]')
                 return
-            elif not re.match('^[ |가-힣|a-z|A-Z|0-9|\*]+$', m.content):
+            elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content):
                 await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 올바르지 않은 이름]')
                 return
@@ -210,7 +210,7 @@ class InGamecmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
-            cmgr.add_character(charname, chartype, self.templates['baseitem'])
+            cmgr.add_character(charname, chartype, self.templates['baseitem'], self.templates['basestat'])
             if charcount == 0:
                 cmgr.change_character(charname)
                 desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
@@ -243,16 +243,15 @@ class InGamecmds(BaseCog):
     async def _char_delete(self, ctx: commands.Context, name):
         cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
         char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
-        if cmgr.is_being_forgotten(name):
-            cname = char[0]['name']
-            await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{cname}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
-            self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
-            return
         if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
         cname = char[0]['name']
+        if cmgr.is_being_forgotten(name):
+            await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{cname}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
+            self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
+            return
         msg = await ctx.send(embed=discord.Embed(
             title=f'⚠ `{cname}` 캐릭터를 정말로 삭제할까요?',
             description=f'캐릭터는 삭제 버튼을 누른 후 24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
@@ -307,6 +306,12 @@ class InGamecmds(BaseCog):
     @_char.group(name='설정', invoke_without_command=True)
     async def _char_settings(self, ctx: commands.Context):
         pass
+
+    @commands.command(name='스탯')
+    async def _stat(self, ctx: commands.Context, user: typing.Optional[discord.User] = None):
+        if not user:
+            user = ctx.author
+        
     
     @commands.command(name='캐생', aliases=['새캐'])
     async def _w_char_create(self, ctx: commands.Context):
