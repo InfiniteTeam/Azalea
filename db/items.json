@@ -1,52 +1,48 @@
 {
-  "itemdb": [
+  "items": [
     {
       "id": 0,
       "name": "갤럭시 S20 Ultra",
-      "maxcount": 100,
+      "max_count": 100,
       "icon": {
         "default": "📱"
       },
       "tags": [
-        "phone",
-        "smartphone"
+        "phone"
+      ],
+      "enchantments": [
+        0, 1
       ]
     },
     {
       "id": 1,
       "name": "ODROID N2",
-      "maxcount": 100,
+      "max_count": 100,
       "icon": {
         "default": "⚙"
       },
-      "tags": [
-        "sbc",
-        "odroid"
-      ]
+      "tags": [],
+      "enchantments": []
     },
     {
       "id": 2,
       "name": "불닭볶음면",
-      "maxcount": 100,
+      "max_count": 100,
       "icon": {
         "default": "🍜"
       },
-      "tags": [
-        "ramen",
-        "buldak"
-      ]
+      "tags": [],
+      "enchantments": []
     },
     {
       "id": 3,
       "name": "니코틴아마이드아데닌다이뉴클레오타이드",
-      "maxcount": 100,
+      "max_count": 100,
       "icon": {
         "default": "🧬"
       },
-      "tags": [
-        "nucleotid",
-        "dna"
-      ]
+      "tags": [],
+      "enchantments": []
     }
   ]
 }

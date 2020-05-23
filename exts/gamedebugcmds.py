@@ -16,7 +16,7 @@ class GameDebugcmds(BaseCog):
 
     @commands.command(name='ㄷ')
     async def _d(self, ctx):
-        imgr = datacls.ItemMgr(self.cur, self.itemdb, self.enchantdb)
+        imgr = datacls.ItemMgr(self.cur, self.datadb.items, self.datadb.enchantments)
         print(imgr.fetch_item(0).enchantments[0].type)
 
 def setup(client):

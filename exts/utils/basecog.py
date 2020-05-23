@@ -1,11 +1,11 @@
 import pymysql
 import logging
 from discord.ext import commands
-from exts.utils import msglogger, checks, itemmgr, azalea, dbctrl, emojictrl
+from exts.utils import msglogger, checks, itemmgr, azalea, emojictrl, datacls
 
 class BaseCog(commands.Cog):
-    def __init__(self, client):
-        self.client: azalea.Azalea = client
+    def __init__(self, client: azalea.Azalea):
+        self.client = client
         self.config = client.get_data('config')
         self.color = client.get_data('color')
         self.emj: emojictrl.Emoji = client.get_data('emojictrl')
@@ -16,11 +16,9 @@ class BaseCog(commands.Cog):
         self.errlogger = client.get_data('errlogger')
         self.pinglogger = client.get_data('pinglogger')
         self.templates = client.get_data('templates')
-        self.dbc: dbctrl.DBctrl = client.get_data('dbc')
-        self.itemdb = self.dbc.dbs['items']['itemdb']
-        self.enchantdb = self.dbc.dbs['enchantments']['enchantments']
+        self.datadb: datacls.DataDB = client.get_data('datadb')
         self.awaiter = client.get_data('awaiter')
-        self.prefix = self.client.command_prefix[0]
+        self.prefix = client.command_prefix[0]
         self.eventcogname = client.get_data('eventcogname')
 
     def getlistener(self, name):

@@ -13,7 +13,7 @@ import logging.handlers
 import traceback
 import paramiko
 from random import randint
-from exts.utils import errors, checks, msglogger, emojictrl, permutil, itemmgr, dbctrl
+from exts.utils import errors, checks, msglogger, emojictrl, permutil, datacls
 from exts.utils.azalea import Azalea
 
 # Local Data Load
@@ -28,8 +28,6 @@ with open('./data/emojis.json', 'r', encoding='utf-8') as emojis_file:
 with open('./data/prefixes.json', 'r', encoding='utf-8') as prefixes_file:
     prefixes = json.load(prefixes_file)['prefixes']
     prefix = prefixes[0]
-
-dbc = dbctrl.DBctrl('./db')
 
 templates = {}
 # Load Templates
@@ -152,6 +150,18 @@ for i in color.keys(): # convert HEX to DEC
 check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
+datadb = datacls.DataDB()
+with open('./db/enchantments.json', encoding='utf-8') as dbfile:
+    datadb.enchantments = [datacls.Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
+with open('./db/items.json', encoding='utf-8') as dbfile:
+    for item in json.load(dbfile)['items']:
+        enchants = list(filter(
+            lambda x: x.name == item['name'] and set(x.tags) & set(item['tags']),
+            datadb.enchantments
+        ))
+        datacls.Item(item['id'], item['max_count'], enchants)
+print(datadb.enchantments)
+
 def awaiter(coro):
     return asyncio.ensure_future(coro)
 
@@ -172,7 +182,7 @@ client.add_data('ping', None)
 client.add_data('guildshards', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
-client.add_data('dbc', dbc)
+client.add_data('datadb', datadb)
 client.add_data('awaiter', awaiter)
 client.add_data('eventcogname', 'Events')
 client.add_data('start', datetime.datetime.now())

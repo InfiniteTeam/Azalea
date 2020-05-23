@@ -1,16 +1,16 @@
 {
-  "enchantments": {
-    "phone": [
-      {
-        "id": "long=battery",
-        "maxlevel": 4,
-        "type": "Passive"
-      },
-      {
-        "id": "case",
-        "maxlevel": 1,
-        "type": "Passive"
-      }
-    ]
-  }
+  "enchantments": [
+    {
+      "name": "long-battery",
+      "max_level": 4,
+      "type": "Passive",
+      "tags": []
+    },
+    {
+      "name": "case",
+      "max_level": 1,
+      "type": "Passive",
+      "tags": []
+    }
+  ]
 }
