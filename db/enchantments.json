@@ -1,5 +1,16 @@
 {
-    "enchantments": {
-        
-    }
+  "enchantments": {
+    "phone": [
+      {
+        "id": "long=battery",
+        "maxlevel": 4,
+        "type": "Passive"
+      },
+      {
+        "id": "case",
+        "maxlevel": 1,
+        "type": "Passive"
+      }
+    ]
+  }
 }

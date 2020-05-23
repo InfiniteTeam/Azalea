@@ -7,14 +7,10 @@
       "icon": {
         "default": "📱"
       },
-      "typetags": [
+      "tags": [
         "phone",
         "smartphone"
-      ],
-      "enchantments": {
-        "long-battery": 4,
-        "case": 1
-      }
+      ]
     },
     {
       "id": 1,
@@ -23,14 +19,10 @@
       "icon": {
         "default": "⚙"
       },
-      "typetags": [
+      "tags": [
         "sbc",
         "odroid"
-      ],
-      "enchantments": {
-        "ram": 4,
-        "case": 1
-      }
+      ]
     },
     {
       "id": 2,
@@ -39,13 +31,10 @@
       "icon": {
         "default": "🍜"
       },
-      "typetags": [
+      "tags": [
         "ramen",
         "buldak"
-      ],
-      "enchantments": {
-        "spicy": 444
-      }
+      ]
     },
     {
       "id": 3,
@@ -54,11 +43,10 @@
       "icon": {
         "default": "🧬"
       },
-      "typetags": [
+      "tags": [
         "nucleotid",
         "dna"
-      ],
-      "enchantments": {}
+      ]
     }
   ]
 }

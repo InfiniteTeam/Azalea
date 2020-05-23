@@ -6,7 +6,7 @@ import datetime
 import typing
 import re
 import json
-from exts.utils import pager, itemmgr, emojibuttons, errors, charmgr, timedelta
+from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
 from dateutil.relativedelta import relativedelta
@@ -307,11 +307,13 @@ class InGamecmds(BaseCog):
     async def _char_settings(self, ctx: commands.Context):
         pass
 
-    @commands.command(name='스탯')
+    @commands.command(name='스탯', aliases=['능력치'])
     async def _stat(self, ctx: commands.Context, user: typing.Optional[discord.User] = None):
         if not user:
             user = ctx.author
-        
+        cmgr = charmgr.CharMgr(self.cur, user.id)
+        crnt = cmgr.current_char()
+        print(crnt)
     
     @commands.command(name='캐생', aliases=['새캐'])
     async def _w_char_create(self, ctx: commands.Context):

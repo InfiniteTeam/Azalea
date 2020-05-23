@@ -58,3 +58,9 @@ class MissingRequiredArgument(AzaleaError):
 
 class CannotLoginBeingDeleted(AzaleaError):
     pass
+
+class CharacterNotFound(AzaleaError):
+    pass
+
+class ItemTagNotFound(AzaleaError):
+    pass

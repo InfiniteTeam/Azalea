@@ -36,9 +36,9 @@ class ItemMgr(ItemDB):
             return items.index(exactly_same_items[0])
         return None
 
-    def give_item(self, count: int=1, enchantments: dict=dict()):
+    def give_item(self, uid, count: int=1, enchantments: dict=dict()):
         count = int(count)
-        item = super().fetch_itemdb_by_id(self.userid)
+        item = super().fetch_itemdb_by_id(uid)
         if count > item['maxcount']:
             raise errors.MaxCountExceeded(self.userid, count, item['maxcounts'])
         if not(type(count) == int and count >= 1):
@@ -55,3 +55,7 @@ class ItemMgr(ItemDB):
         else:
             items['items'].append(additem)
         self.cur.execute('update chardata set items=%s where id=%s and online=%s', (json.dumps(items, ensure_ascii=False), self.userid, True))
+
+class Item:
+    def __init__(self, itemid: int, count: int, enchantments):
+        pass

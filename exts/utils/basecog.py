@@ -18,6 +18,7 @@ class BaseCog(commands.Cog):
         self.templates = client.get_data('templates')
         self.dbc: dbctrl.DBctrl = client.get_data('dbc')
         self.itemdb = self.dbc.dbs['items']['itemdb']
+        self.enchantdb = self.dbc.dbs['enchantments']['enchantments']
         self.awaiter = client.get_data('awaiter')
         self.prefix = self.client.command_prefix[0]
         self.eventcogname = client.get_data('eventcogname')

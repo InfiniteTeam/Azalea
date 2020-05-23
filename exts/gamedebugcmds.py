@@ -4,7 +4,7 @@ import datetime
 import asyncio
 import datetime
 import json
-from exts.utils import pager, itemmgr
+from exts.utils import pager, datacls
 from exts.utils.basecog import BaseCog
 
 class GameDebugcmds(BaseCog):
@@ -14,9 +14,10 @@ class GameDebugcmds(BaseCog):
             cmd.add_check(self.check.master)
             cmd.add_check(self.check.char_online)
 
-    @commands.command(name='내놔')
-    async def _giveme(self, ctx: commands.Context, uid: int, count: int):
-        self.imgr.give_item(ctx, uid, count)
+    @commands.command(name='ㄷ')
+    async def _d(self, ctx):
+        imgr = datacls.ItemMgr(self.cur, self.itemdb, self.enchantdb)
+        print(imgr.fetch_item(0).enchantments[0].type)
 
 def setup(client):
     cog = GameDebugcmds(client)
