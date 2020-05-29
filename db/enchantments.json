@@ -4,7 +4,7 @@
       "name": "long-battery",
       "max_level": 4,
       "type": "Passive",
-      "tags": []
+      "tags": ["phone"]
     },
     {
       "name": "case",

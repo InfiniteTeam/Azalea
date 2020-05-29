@@ -1,7 +1,7 @@
 import pymysql
 import logging
 from discord.ext import commands
-from exts.utils import msglogger, checks, itemmgr, azalea, emojictrl, datacls
+from exts.utils import msglogger, checks, itemmgr, azalea, emojictrl, datamgr
 
 class BaseCog(commands.Cog):
     def __init__(self, client: azalea.Azalea):
@@ -16,7 +16,7 @@ class BaseCog(commands.Cog):
         self.errlogger = client.get_data('errlogger')
         self.pinglogger = client.get_data('pinglogger')
         self.templates = client.get_data('templates')
-        self.datadb: datacls.DataDB = client.get_data('datadb')
+        self.datadb: datamgr.DataDB = client.get_data('datadb')
         self.awaiter = client.get_data('awaiter')
         self.prefix = client.command_prefix[0]
         self.eventcogname = client.get_data('eventcogname')

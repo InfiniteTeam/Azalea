@@ -13,7 +13,7 @@ import logging.handlers
 import traceback
 import paramiko
 from random import randint
-from exts.utils import errors, checks, msglogger, emojictrl, permutil, datacls
+from exts.utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from exts.utils.azalea import Azalea
 
 # Local Data Load
@@ -150,17 +150,19 @@ for i in color.keys(): # convert HEX to DEC
 check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
-datadb = datacls.DataDB()
+datadb = datamgr.DataDB()
 with open('./db/enchantments.json', encoding='utf-8') as dbfile:
-    datadb.enchantments = [datacls.Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
+    datadb.enchantments = [datamgr.Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
 with open('./db/items.json', encoding='utf-8') as dbfile:
+    items = []
     for item in json.load(dbfile)['items']:
         enchants = list(filter(
-            lambda x: x.name == item['name'] and set(x.tags) & set(item['tags']),
+            lambda x: set(x.tags) & set(item['tags']),
             datadb.enchantments
         ))
-        datacls.Item(item['id'], item['max_count'], enchants)
-print(datadb.enchantments)
+        items.append(datamgr.Item(item['id'], item['name'], item['max_count'], item['icon']['default'], item['tags'], enchants))
+    datadb.items = items
+print(datadb.items)
 
 def awaiter(coro):
     return asyncio.ensure_future(coro)

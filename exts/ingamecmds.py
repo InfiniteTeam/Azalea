@@ -10,6 +10,7 @@ from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
 from dateutil.relativedelta import relativedelta
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -19,18 +20,19 @@ class InGamecmds(BaseCog):
             if cmd.name not in ['캐릭터', '로그아웃', '캐생', '캐삭']:
                 cmd.add_check(self.check.char_online)
 
-    async def backpack_embed(self, ctx, pgr: pager.Pager):
+    async def backpack_embed(self, ctx, pgr: pager.Pager, charname, mode='default'):
         items = pgr.get_thispage()
         itemstr = ''
-        imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
+        idb = ItemDBMgr(self.datadb)
+        imgr = ItemMgr(self.cur, ctx.author.id)
         for one in items:
-            founditem = imgr.fetch_itemdb_by_id(one['id'])
-            icon = founditem['icon']['default']
-            name = founditem['name']
-            count = one['count']
+            founditem = idb.fetch_item(one.id)
+            icon = founditem.icon
+            name = founditem.name
+            count = one.count
             itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
         embed = discord.Embed(
-            title=f'💼 `{ctx.author.name}`님의 가방',
+            title=f'💼 `{charname}`의 가방',
             color=self.color['info']
         )
         if items:
@@ -40,14 +42,22 @@ class InGamecmds(BaseCog):
         return embed
 
     @commands.command(name='가방', aliases=['템'])
-    async def _backpack(self, ctx: commands.Context):
+    async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         perpage = 4
-        imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
-        imgr = itemmgr.ItemMgr(self.cur, self.itemdb, ctx.author.id)
-        items = imgr.get_useritems()
+        cmgr = CharMgr(self.cur, ctx.author.id)
+        if charname:
+            char = cmgr.get_global_character(charname)
+            if char:
+                imgr = ItemMgr(self.cur, char.name)
+            else:
+                await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다!: {charname}'))
+        else:
+            charname = cmgr.get_active_character().name
+            imgr = ItemMgr(self.cur, charname)
+        items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
-        msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr))
+        msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
         if not pgr.pages():
             return
