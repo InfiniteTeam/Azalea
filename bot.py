@@ -31,8 +31,10 @@ with open('./data/prefixes.json', 'r', encoding='utf-8') as prefixes_file:
 
 templates = {}
 # Load Templates
-with open('./templates/baseitem.json', encoding='utf-8') as baseitem_file:
-    templates['baseitem'] = json.load(baseitem_file)
+with open('./templates/baseitem.json', encoding='utf-8') as tpltfile:
+    templates['baseitem'] = json.load(tpltfile)
+with open('./templates/basestat.json', encoding='utf-8') as tpltfile:
+    templates['basestat'] = json.load(tpltfile)
 
 # Make Dir
 reqdirs = ['./logs', './logs/azalea', './logs/error', './logs/ping', './logs/discord']

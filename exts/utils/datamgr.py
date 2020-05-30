@@ -1,11 +1,9 @@
-import discord
-from discord.ext import commands
 import pymysql
 import datetime
 from enum import Enum
 from typing import List, Union, NamedTuple, Dict, Optional
-from collections import namedtuple
 import json
+from exts.utils import errors
 
 class EnchantType(Enum):
     """
@@ -156,75 +154,81 @@ class ItemMgr:
         return False
 
 class CharMgr:
-    def __init__(self, cur: pymysql.cursors.DictCursor, uid: int = 0):
+    def __init__(self, cur: pymysql.cursors.DictCursor):
         self.cur = cur
-        self.id = uid
 
-    def get_raw_user_chars(self) -> List[Dict]:
-        self.cur.execute('select * from chardata where id=%s', self.id)
+    @classmethod
+    def get_char_from_dict(cls, chardict: Dict) -> CharacterData:
+        itemraw = json.loads(chardict['items'])['items']
+        items = [ItemMgr.get_itemdata_from_dict(item) for item in itemraw]
+        stat = StatData(*json.loads(chardict['stat'])['stat'].values())
+        chartype = CharacterType.__getattr__(chardict['type'])
+        char = CharacterData(chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype, items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'])
+        return char
+
+    def get_raw_chars(self, userid: int=None) -> List[Dict]:
+        if userid:
+            self.cur.execute('select * from chardata where id=%s', userid)
+        else:
+            self.cur.execute('select * from chardata')
         rst = self.cur.fetchall()
         return rst
 
-    def get_raw_global_chars(self) -> List[Dict]:
-        self.cur.execute('select * from chardata')
-        rst = self.cur.fetchall()
-        return rst
-
-    def _getchars(self, mode):
-        if mode == 'user':
-            rst = self.get_raw_user_chars()
-        elif mode == 'global':
-            rst = self.get_raw_global_chars()
-        chars = []
-        for one in rst:
-            itemraw = json.loads(one['items'])['items']
-            items = [ItemMgr.get_itemdata_from_dict(item) for item in itemraw]
-            stat = StatData(*json.loads(one['stat'])['stat'].values())
-            chars.append(CharacterData(one['id'], one['online'], one['name'], one['level'], one['type'], items, stat, one['birthdatetime'], one['last_nick_change'], one['delete_request']))
+    def get_chars(self, userid: int=None) -> List[CharacterData]:
+        raw = self.get_raw_chars(userid)
+        chars = [self.get_char_from_dict(one) for one in raw]
         return chars
 
-    def get_user_chars(self) -> List[CharacterData]:
-        return self._getchars('user')
-    
-    def get_global_chars(self) -> List[CharacterData]:
-        return self._getchars('global')
+    def get_raw_character(self, name: str, userid: int=None) -> Dict:
+        if userid:
+            self.cur.execute('select * from chardata where id=%s and name=%s', (name, userid))
+        else:
+            self.cur.execute('select * from chardata where name=%s', name)
+        raw = self.cur.fetchone()
+        return raw
 
-    def get_raw_user_character(self, name: str) -> Dict:
-        chars = self.get_raw_user_chars()
-        char = list(filter(lambda x: x['name'] == name, chars))
-        if char:
-            return char[0]
+    def get_character(self, name: str, userid: int=None) -> CharacterData:
+        char = self.get_raw_character(name, userid)
+        chardata = self.get_char_from_dict(char)
+        return chardata
 
-    def get_raw_global_character(self, name: str) -> Dict:
-        chars = self.get_raw_global_chars()
-        char = list(filter(lambda x: x['name'] == name, chars))
-        if char:
-            return char[0]
+    def get_current_char(self, userid: int):
+        self.cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
+        char = self.cur.fetchone()
+        chardata = self.get_char_from_dict(char)
+        return chardata
 
-    def get_user_character(self, name: str) -> CharacterData:
-        chars = self.get_user_chars()
-        char = list(filter(lambda x: x.name == name, chars))
-        if char:
-            return char[0]
-        return None
+    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, stat, level: int=1):
+        datas = (
+            userid, name, level, chartype,
+            json.dumps(items, ensure_ascii=False),
+            json.dumps(stat, ensure_ascii=False)
+        )
+        self.cur.execute('insert into chardata (id, name, level, type, items, stat) values (%s, %s, %s, %s, %s, %s)', datas)
 
-    def get_global_character(self, name: str) -> CharacterData:
-        chars = self.get_global_chars()
-        char = list(filter(lambda x: x.name == name, chars))
-        if char:
-            return char[0]
-        return None
-        
-    def get_character_owner_id(self, charname: str) -> Union[int, None]:
-        self.cur.execute('select id from chardata where name=%s', charname)
-        rst = self.cur.fetchone()
-        if rst:
-            return rst['id']
-        return None
+    def logout_all(self, userid: int):
+        self.cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))
 
-    def get_active_character(self):
-        chars = self.get_user_chars()
-        char = list(filter(lambda x: x.online, chars))
-        if char:
-            return char[0]
-        return None
+    def change_character(self, userid: int, name: str):
+        if self.cur.execute('select * from chardata where name=%s and delete_request is not NULL', name) != 0:
+            raise errors.CannotLoginBeingDeleted
+        self.logout_all(userid)
+        self.cur.execute('update chardata set online=%s where name=%s', (True, name))
+
+    def delete_character(self, name: str):
+        if self.cur.execute('delete from chardata where name=%s', name) == 0:
+            raise errors.CharacterNotFound
+
+    def schedule_delete(self, userid: int, name: str):
+        self.logout_all(self.get_character(name).id)
+        if self.cur.execute('update chardata set delete_request=%s where name=%s', (datetime.datetime.now(), name)) == 0:
+            raise errors.CharacterNotFound
+
+    def cancel_delete(self, name: str):
+        if self.cur.execute('update chardata set delete_request=%s where name=%s', (None, name)) == 0:
+            raise errors.CharacterNotFound
+
+    def is_being_forgotten(self, name: str):
+        if (self.cur.execute('select * from chardata where name=%s', name) != 0) and self.cur.execute('select * from chardata where name=%s and delete_request is not NULL', name) != 0:
+            return True
+        return False

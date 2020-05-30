@@ -10,7 +10,7 @@ from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -44,22 +44,22 @@ class InGamecmds(BaseCog):
     @commands.command(name='가방', aliases=['템'])
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         perpage = 4
-        cmgr = CharMgr(self.cur, ctx.author.id)
+        cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_global_character(charname)
+            char = cmgr.get_character(charname)
             if char:
                 imgr = ItemMgr(self.cur, char.name)
             else:
                 await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다!: {charname}'))
         else:
-            charname = cmgr.get_active_character().name
+            charname = cmgr.get_current_char(ctx.author.id).name
             imgr = ItemMgr(self.cur, charname)
         items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
         msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
-        if not pgr.pages():
+        if len(pgr.pages()) <= 1:
             return
         for emj in emojibuttons.PageButton.emojis:
             await msg.add_reaction(emj)
@@ -74,7 +74,7 @@ class InGamecmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await self.backpack_embed(ctx, pgr)),
+                        msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
                     )
 
     async def char_embed(self, username, pgr: pager.Pager, mode='default'):
@@ -82,18 +82,18 @@ class InGamecmds(BaseCog):
         charstr = ''
         for idx in range(len(chars)):
             one = chars[idx]
-            name = one['name']
+            name = one.name
             if mode == 'select':
                 name = f'{idx+1}. {name}'
-            level = one['level']
-            chartype = charmgr.CharType.format_chartype(one['type'])
-            online = one['online']
+            level = one.level
+            chartype = one.type.value
+            online = one.online
             onlinestr = ''
             if online:
                 onlinestr = '(**현재 플레이중**)'
             deleteleftstr = ''
-            if one['delete_request']:
-                tdleft = timedelta.format_timedelta((one['delete_request'] + relativedelta(hours=24)) - datetime.datetime.now())
+            if one.delete_request:
+                tdleft = timedelta.format_timedelta((one.delete_request + relativedelta(hours=24)) - datetime.datetime.now())
                 deleteleft = ' '.join(tdleft.values())
                 deleteleftstr = '\n**`{}` 후에 삭제됨**'.format(deleteleft)
             charstr += '**{}** {}\n레벨: `{}` \\| 직업: `{}` {}\n\n'.format(name, onlinestr, level, chartype, deleteleftstr)
@@ -110,8 +110,8 @@ class InGamecmds(BaseCog):
         if not user:
             user = ctx.author
         perpage = 5
-        cmgr = charmgr.CharMgr(self.cur, user.id)
-        chars = cmgr.get_characters()
+        cmgr = CharMgr(self.cur)
+        chars = cmgr.get_chars(user.id)
         if not chars:
             await ctx.send(embed=discord.Embed(
                 title='🎲 캐릭터가 하나도 없네요!',
@@ -142,8 +142,8 @@ class InGamecmds(BaseCog):
 
     @_char.command(name='생성')
     async def _char_create(self, ctx:commands.Context):
-        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        charcount = len(cmgr.get_characters())
+        cmgr = CharMgr(self.cur)
+        charcount = len(cmgr.get_chars(ctx.author.id))
         if charcount >= self.config['max_charcount']:
             await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 슬롯 부족]')
@@ -209,20 +209,20 @@ class InGamecmds(BaseCog):
                 self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 취소됨]')
                 return
             elif e == '⚔':
-                chartype = charmgr.CharType.Knight()
+                chartype = CharacterType.Knight.name
             elif e == '🏹':
-                chartype = charmgr.CharType.Archer()
+                chartype = CharacterType.Archer.name
             elif e == '🔯':
-                chartype = charmgr.CharType.Wizard()
+                chartype = CharacterType.Wizard.name
             
-            charcount = len(cmgr.get_characters())
+            charcount = len(cmgr.get_chars(ctx.author.id))
             if charcount >= self.config['max_charcount']:
                 await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
-            cmgr.add_character(charname, chartype, self.templates['baseitem'], self.templates['basestat'])
+            cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], self.templates['basestat'])
             if charcount == 0:
-                cmgr.change_character(charname)
+                cmgr.change_character(ctx.author.id, charname)
                 desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
             else:
                 desc = '`{}캐릭터 변경` 명령으로 이 캐릭터를 선텍해 게임을 시작할 수 있습니다!'.format(self.prefix)
@@ -231,13 +231,13 @@ class InGamecmds(BaseCog):
 
     @_char.command(name='변경', aliases=['선택'])
     async def _char_change(self, ctx: commands.Context, *, name):
-        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
+        cmgr = CharMgr(self.cur)
+        char = list(filter(lambda x: x.name.lower() == name.lower(), cmgr.get_chars(ctx.author.id)))
         if char:
-            cname = char[0]['name']
-            if not char[0]['online']:
+            cname = char[0].name
+            if not char[0].online:
                 if not cmgr.is_being_forgotten(cname):
-                    cmgr.change_character(cname)
+                    cmgr.change_character(ctx.author.id, cname)
                     await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
                 else:
                     await ctx.send(embed=discord.Embed(title=f'❓ 삭제 중인 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중이여서 로그인할 수 없습니다. `{}캐릭터 삭제취소` 명령으로 취소할 수 있습니다.'.format(self.prefix), color=self.color['error']))
@@ -251,13 +251,13 @@ class InGamecmds(BaseCog):
 
     @_char.command(name='삭제')
     async def _char_delete(self, ctx: commands.Context, name):
-        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
+        cmgr = CharMgr(self.cur)
+        char = list(filter(lambda x: x.name.lower() == name.lower(), cmgr.get_chars(ctx.author.id)))
         if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
-        cname = char[0]['name']
+        cname = char[0].name
         if cmgr.is_being_forgotten(name):
             await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{cname}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
@@ -281,7 +281,7 @@ class InGamecmds(BaseCog):
         else:
             remj = str(reaction.emoji)
             if remj == '⭕':
-                cmgr.schedule_delete(cname)
+                cmgr.schedule_delete(ctx.author.id, cname)
                 await ctx.send(embed=discord.Embed(
                     title='{} `{}` 캐릭터가 24시간 후에 완전히 지워집니다.'.format(self.emj.get(ctx, 'check'), cname),
                     description=f'24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
@@ -294,13 +294,13 @@ class InGamecmds(BaseCog):
 
     @_char.command(name='삭제취소')
     async def _char_cancel_delete(self, ctx: commands.Context, *, name):
-        cmgr = charmgr.CharMgr(self.cur, ctx.author.id)
-        char = list(filter(lambda x: x['name'].lower() == name.lower(), cmgr.get_characters()))
+        cmgr = CharMgr(self.cur)
+        char = list(filter(lambda x: x.name.lower() == name.lower(), cmgr.get_chars(ctx.author.id)))
         if not char:
             await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다: `{name}`', description='캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 존재하지 않는 캐릭터]')
             return
-        cname = char[0]['name']
+        cname = char[0].name
         if not cmgr.is_being_forgotten(cname):
             await ctx.send(embed=discord.Embed(title=f'❓ 삭제중이 아닌 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중인 캐릭터가 아닙니다.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제중이 아닌 캐릭터]')
@@ -321,8 +321,8 @@ class InGamecmds(BaseCog):
     async def _stat(self, ctx: commands.Context, user: typing.Optional[discord.User] = None):
         if not user:
             user = ctx.author
-        cmgr = charmgr.CharMgr(self.cur, user.id)
-        crnt = cmgr.current_char()
+        cmgr = CharMgr(self.cur)
+        crnt = cmgr.get_current_char(user.id)
         print(crnt)
     
     @commands.command(name='캐생', aliases=['새캐'])
