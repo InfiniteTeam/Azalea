@@ -50,7 +50,8 @@ class InGamecmds(BaseCog):
             if char:
                 imgr = ItemMgr(self.cur, char.name)
             else:
-                await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다!: {charname}'))
+                await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다!: {charname}', color=self.color['error']))
+                return
         else:
             charname = cmgr.get_current_char(ctx.author.id).name
             imgr = ItemMgr(self.cur, charname)
@@ -229,7 +230,7 @@ class InGamecmds(BaseCog):
             await ctx.send(embed=discord.Embed(title='{} 캐릭터를 생성했습니다! - `{}`'.format(self.emj.get(ctx, 'check'), charname), description=desc, color=self.color['success']))
             self.msglog.log(ctx, '[캐릭터 생성: 완료]')
 
-    @_char.command(name='변경', aliases=['선택'])
+    @_char.command(name='변경', aliases=['선택', '변'])
     async def _char_change(self, ctx: commands.Context, *, name):
         cmgr = CharMgr(self.cur)
         char = list(filter(lambda x: x.name.lower() == name.lower(), cmgr.get_chars(ctx.author.id)))
@@ -318,12 +319,14 @@ class InGamecmds(BaseCog):
         pass
 
     @commands.command(name='스탯', aliases=['능력치'])
-    async def _stat(self, ctx: commands.Context, user: typing.Optional[discord.User] = None):
-        if not user:
-            user = ctx.author
+    async def _stat(self, ctx: commands.Context, charname: typing.Optional[str] = None):
         cmgr = CharMgr(self.cur)
-        crnt = cmgr.get_current_char(user.id)
-        print(crnt)
+        if not charname:
+            char = cmgr.get_current_char(ctx.author.id)
+        else:
+            char = cmgr.get_character(charname)
+        print(char.stat)
+        await ctx.send(embed=discord.Embed(title=f'📊 `{char.name}` 의 능력치', description=str(char.stat), color=self.color['info']))
     
     @commands.command(name='캐생', aliases=['새캐'])
     async def _w_char_create(self, ctx: commands.Context):

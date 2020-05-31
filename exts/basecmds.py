@@ -145,7 +145,6 @@ class BaseCmds(BaseCog):
     @commands.command(name='r', aliases=['리'])
     async def _ext_reload_wrapper(self, ctx: commands.Context, *names):
         await self._ext_reload(ctx, *names)
-        self.dbc.reload()
 
 def setup(client):
     cog = BaseCmds(client)

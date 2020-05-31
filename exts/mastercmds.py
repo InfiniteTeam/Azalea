@@ -77,7 +77,7 @@ class Mastercmds(BaseCog):
             imgurl = args[2]
         except:
             imgurl = None
-        notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'])
+        notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'], timestamp=datetime.datetime.utcnow())
         notiembed.set_footer(text='작성자: ' + ctx.author.name, icon_url=ctx.author.avatar_url)
         if imgurl:
             notiembed.set_image(url=imgurl)

@@ -122,7 +122,6 @@ class ItemMgr:
 
     @classmethod
     def get_dict_from_itemdata(cls, item: ItemData) -> Dict:
-        print(item)
         enchants = {}
         for enchant in item.enchantments:
             enchants[enchant.name] = enchant.level
@@ -152,6 +151,18 @@ class ItemMgr:
             self._save_item_by_dict(items)
             return True
         return False
+
+    def give_item(self, itemdata: ItemData):
+        items = self.get_items_dict()
+        giveitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
+        sameitem = list(filter(lambda one: one['id'] == giveitem['id'] and one['enchantments'] == giveitem['enchantments'], items))
+        if sameitem:
+            idx = items.index(sameitem[0])
+            items[idx]['count'] += itemdata.count
+        else:
+            items.append(giveitem)
+        self._save_item_by_dict(items)
+        return True
 
 class CharMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor):
@@ -189,8 +200,10 @@ class CharMgr:
 
     def get_character(self, name: str, userid: int=None) -> CharacterData:
         char = self.get_raw_character(name, userid)
-        chardata = self.get_char_from_dict(char)
-        return chardata
+        if char:
+            chardata = self.get_char_from_dict(char)
+            return chardata
+        return None
 
     def get_current_char(self, userid: int):
         self.cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
