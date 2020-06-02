@@ -4,5 +4,6 @@
     "warn": "0xffcd00",
     "error": "0xff0000",
     "ask": "0xa566ff",
-    "success": "0x1ddb16"
+    "success": "0x1ddb16",
+    "g-fishing": "0x0062f1"
 }

@@ -74,6 +74,7 @@ class CharacterData(NamedTuple):
     name: str
     level: int
     type: CharacterType
+    money: int
     items: List[Item]
     stat: StatData
     birth: datetime.datetime
@@ -174,7 +175,7 @@ class CharMgr:
         items = [ItemMgr.get_itemdata_from_dict(item) for item in itemraw]
         stat = StatData(*json.loads(chardict['stat'])['stat'].values())
         chartype = CharacterType.__getattr__(chardict['type'])
-        char = CharacterData(chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype, items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'])
+        char = CharacterData(chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype, chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'])
         return char
 
     def get_raw_chars(self, userid: int=None) -> List[Dict]:

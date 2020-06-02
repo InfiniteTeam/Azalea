@@ -5,6 +5,7 @@ import asyncio
 import datetime
 import typing
 import re
+import random
 import json
 from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
@@ -19,10 +20,14 @@ class InGamecmds(BaseCog):
             cmd.add_check(self.check.registered)
             if cmd.name not in ['캐릭터', '로그아웃', '캐생', '캐삭']:
                 cmd.add_check(self.check.char_online)
+            if cmd.name in ['캐릭터']:
+                cmd.add_check(self.check.subcmd_vaild)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager, charname, mode='default'):
         items = pgr.get_thispage()
         itemstr = ''
+        cmgr = CharMgr(self.cur)
+        char = cmgr.get_character(charname)
         idb = ItemDBMgr(self.datadb)
         imgr = ItemMgr(self.cur, ctx.author.id)
         for one in items:
@@ -36,13 +41,14 @@ class InGamecmds(BaseCog):
             color=self.color['info']
         )
         if items:
-            embed.description = itemstr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+            embed.description = itemstr + f'\n**💵 {char.money} 골드**' + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         else:
             embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
         return embed
 
     @commands.command(name='가방', aliases=['템'])
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
+        print(ctx.subcommand_passed)
         perpage = 4
         cmgr = CharMgr(self.cur)
         if charname:
@@ -108,6 +114,7 @@ class InGamecmds(BaseCog):
 
     @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
     async def _char(self, ctx: commands.Context, *, user: typing.Optional[discord.User]=None):
+        
         if not user:
             user = ctx.author
         perpage = 5
@@ -345,6 +352,62 @@ class InGamecmds(BaseCog):
             if error.param.name == 'name':
                 missing = '캐릭터의 이름'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+
+    @commands.command(name='낚시')
+    async def _fishing(self, ctx: commands.Context):
+        embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
+        msg = await ctx.send(embed=embed)
+        await msg.edit()
+        emjs = ['⁉']
+        await msg.add_reaction('⁉')
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+
+        async def do():
+            todo = []
+            try:
+                lastmsg = await ctx.channel.fetch_message(ctx.channel.last_message_id)
+            except discord.NotFound:
+                todo += [
+                    msg.delete(),
+                    ctx.send(embed=embed)
+                ]
+            else:
+                if msg.id == lastmsg.id:
+                    todo += [
+                        msg.edit(embed=embed),
+                        msg.clear_reactions()
+                    ]
+                else:
+                    todo += [
+                        msg.delete(),
+                        ctx.send(embed=embed)
+                    ]
+            finally:
+                print(todo)
+                await asyncio.gather(*todo, return_exceptions=True)
+
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(1, 5))
+        except asyncio.TimeoutError:
+            pass
+        else:
+            if reaction.emoji == '⁉':
+                embed.description = '아무것도 잡히지 않았어요! 너무 빨리 당긴것 같아요.'
+                await do()
+                return
+        embed.description = '뭔가가 걸렸습니다! 지금이에요!'
+        await msg.edit(embed=embed)
+
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(1, 2))
+        except asyncio.TimeoutError:
+            embed.description = '놓쳐 버렸네요... 너무 천천히 당긴것 같아요.'
+            await do()
+        else:
+            if reaction.emoji == '⁉':
+                embed.description = '잡았습니다!'
+                await do()
 
 def setup(client):
     cog = InGamecmds(client)

@@ -39,3 +39,11 @@ class Checks:
 
     def if_char_online(self):
         return commands.check(self.char_online)
+
+    async def subcmd_vaild(self, ctx: commands.Context):
+        if ctx.subcommand_passed == None:
+            return True
+        raise commands.CommandNotFound
+
+    def if_subcmd_vaild(self):
+        return commands.check(self.subcmd_vaild)
