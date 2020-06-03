@@ -33,6 +33,9 @@ class GameDebugcmds(BaseCog):
 
         idgr = ItemDBMgr(self.datadb)
         item = idgr.fetch_item(itemid)
+        if not item:
+            await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 아이템 아이디: {itemid}', color=self.color['error']))
+            return
         embed = discord.Embed(title='📦 아이템 받기', description='다음과 같이 아이템을 받습니다. 계속할까요?', color=self.color['ask'])
         embed.add_field(name='아이템', value='[ {} ] {} {}'.format(item.id, item.icon, item.name))
         embed.add_field(name='개수', value=f'{count}개')

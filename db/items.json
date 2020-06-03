@@ -2,7 +2,8 @@
   "items": [
     {
       "id": 0,
-      "name": "갤럭시 S20 Ultra",
+      "name": "갤럭시 Z플립",
+      "description": "모 회사의 폴더블 스마트폰이다.",
       "max_count": 100,
       "icon": {
         "default": "📱"
@@ -17,6 +18,7 @@
     {
       "id": 1,
       "name": "ODROID N2",
+      "description": "오드로이드 N2.",
       "max_count": 100,
       "icon": {
         "default": "⚙"
@@ -27,6 +29,7 @@
     {
       "id": 2,
       "name": "불닭볶음면",
+      "description": "개맛있다.",
       "max_count": 100,
       "icon": {
         "default": "🍜"
@@ -37,6 +40,7 @@
     {
       "id": 3,
       "name": "니코틴아마이드아데닌다이뉴클레오타이드",
+      "description": "길다.",
       "max_count": 100,
       "icon": {
         "default": "🧬"

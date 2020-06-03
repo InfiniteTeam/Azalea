@@ -107,7 +107,11 @@ class Tasks(BaseCog):
     @tasks.loop(seconds=7)
     async def presence_loop(self):
         try:
-            games = [f'{self.prefix}개발중...', f'{len(self.client.guilds)}개의 서버와 함께', f'{len(self.client.users)}명의 사용자와 함께']
+            games = [
+                f'〔{self.prefix} 도움〕 입력!',
+                f'{self.prefix} 도움 | {len(self.client.guilds)} 서버',
+                f'{self.prefix} 도움 | {len(self.client.users)} 사용자'
+            ]
             await self.client.change_presence(status=discord.Status.online, activity=discord.Game(games[self.gamenum]))
             if self.gamenum == len(games)-1:
                 self.gamenum = 0

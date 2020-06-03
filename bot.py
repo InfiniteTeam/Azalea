@@ -154,16 +154,8 @@ emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
 datadb = datamgr.DataDB()
 with open('./db/enchantments.json', encoding='utf-8') as dbfile:
-    datadb.enchantments = [datamgr.Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
-with open('./db/items.json', encoding='utf-8') as dbfile:
-    items = []
-    for item in json.load(dbfile)['items']:
-        enchants = list(filter(
-            lambda x: set(x.tags) & set(item['tags']),
-            datadb.enchantments
-        ))
-        items.append(datamgr.Item(item['id'], item['name'], item['max_count'], item['icon']['default'], item['tags'], enchants))
-    datadb.items = items
+    datadb.load_enchantments(json.load(dbfile))
+
 print(datadb.items)
 
 def awaiter(coro):

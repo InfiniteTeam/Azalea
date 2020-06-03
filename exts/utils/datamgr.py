@@ -4,6 +4,7 @@ from enum import Enum
 from typing import List, Union, NamedTuple, Dict, Optional
 import json
 from exts.utils import errors
+import os
 
 class EnchantType(Enum):
     """
@@ -34,6 +35,7 @@ class Item(NamedTuple):
     """
     id: int
     name: str
+    description: str
     max_count: int
     icon: str
     tags: List[str]
@@ -87,6 +89,21 @@ class DataDB:
         self.items = items
         for x in kwargs:
             self.__setattr__(x, kwargs[x])
+
+    def load_enchantments(self, db: os.PathLike):
+        with open('./db/items.json', encoding='utf-8') as dbfile:
+    
+        self.enchantments = [Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in db['enchantments']]
+
+    def load_items(self, db: dict):
+        items = []
+        for item in db['items']:
+            enchants = list(filter(
+                lambda x: set(x.tags) & set(item['tags']),
+                self.enchantments
+            ))
+            items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants))
+        self.items = items
 
 class ItemDBMgr:
     def __init__(self, datadb: DataDB):

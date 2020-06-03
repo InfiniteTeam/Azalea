@@ -106,15 +106,16 @@ class Events(BaseCog):
         else:
             print('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
             embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```', color=self.color['error'])
-            if ctx.channel.type != discord.ChannelType.private:
-                await ctx.send(ctx.author.mention, embed=discord.Embed(title='❌ 오류!', description='개발자용 오류 메시지를 DM으로 전송했습니다.', color=self.color['error']))
             try:
-                await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
+                msg = await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
             except discord.HTTPException as exc:
                 if exc.code == 50035:
                     await ctx.author.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.', color=self.color['error']), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
             finally:
                 self.msglog.log(ctx, '[커맨드 오류]')
+
+            if ctx.channel.type != discord.ChannelType.private:
+                await ctx.send(ctx.author.mention, embed=discord.Embed(title='❌ 오류!', description=f'개발자용 오류 메시지를 [DM]({msg.jump_url})으로 전송했습니다.', color=self.color['error']))
 
 def setup(client):
     cog = Events(client)

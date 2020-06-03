@@ -15,8 +15,10 @@ class Azaleacmds(BaseCog):
 
     @commands.command(name='도움')
     async def _help(self, ctx: commands.Context):
-        embed = discord.Embed(title='📃 Azalea 전체 명령어', description='**[전체 명령어 보기](https://help.infiniteteam.me/azaleabot)**', color=self.color['primary'])
+        embed = discord.Embed(title='📃 Azalea 전체 명령어', description='(소괄호)는 필수 입력, [대괄호]는 선택 입력입니다.\n\n', color=self.color['primary'])
         await ctx.send(embed=embed)
+        if ctx.channel.type != discord.ChannelType.private:
+            await ctx.send(embed=discord.Embed(title='{} DM으로 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description='DM을 확인하세요!', color=self.color['success']))
         self.msglog.log(ctx, '[도움]')
 
     @commands.command(name='정보')
