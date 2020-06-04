@@ -76,12 +76,14 @@ class InGamecmds(BaseCog):
         self.msglog.log(ctx, '[가방]')
         extemjs = ['❔']
         emjs = emojibuttons.PageButton.emojis + extemjs
-        if len(pgr.pages()) <= 1:
-            for emj in extemjs:
-                await msg.add_reaction(emj)
-        else:
-            for emj in emjs:
-                await msg.add_reaction(emj)
+        async def addreaction(m):
+            if len(pgr.pages()) <= 1:
+                for emj in extemjs:
+                    await m.add_reaction(emj)
+            else:
+                for emj in emjs:
+                    await m.add_reaction(emj)
+        await addreaction(msg)
         def check(reaction, user):
             return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
         while True:
@@ -91,8 +93,87 @@ class InGamecmds(BaseCog):
                 pass
             else:
                 if reaction.emoji == '❔':
-                    await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
-                    await ctx.send(embed=discord.Embed(description='ㅇㅅㅇ'))
+                    if ctx.channel.last_message_id == msg.id:
+                        await msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
+                    else:
+                        results = await asyncio.gather(
+                            msg.delete(),
+                            ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
+                        )
+                        msg = results[1]
+                        await addreaction(msg)
+                        reaction.message = msg
+
+                    infomsg = await ctx.send(embed=discord.Embed(title='🔍 정보를 확인할 아이템의 번호를 선택하세요!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
+                    await infomsg.add_reaction('❌')
+                    
+                    def msgcheck(m):
+                        return m.author == ctx.author and m.channel == ctx.channel and m.content
+
+                    async def wait_for_cancel(msg):
+                        def check(reaction, user):
+                            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in ['❌']
+                        try:
+                            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=20)
+                        except asyncio.TimeoutError:
+                            pass
+                        else:
+                            embed = discord.Embed(title='❗ 취소되었습니다.', color=self.color['error'])
+                            embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                            await ctx.send(embed=embed, delete_after=5)
+                        finally:
+                            try:
+                                await infomsg.delete()
+                            except discord.NotFound:
+                                pass
+                    
+                    async def wait_for_message():
+                        try:
+                            m = await self.client.wait_for('message', check=msgcheck, timeout=20)
+                        except asyncio.TimeoutError:
+                            pass
+                        else:
+                            nowpage = pgr.get_thispage()
+                            if not m.content.isdecimal():
+                                embed = discord.Embed(title='❌ 숫자만을 입력해주세요!', color=self.color['error'])
+                                embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                                await ctx.send(embed=embed, delete_after=5)
+                            else:
+                                idx = int(m.content)
+                                if 1 <= idx <= len(nowpage):
+                                    return int(m.content)
+                                else:
+                                    embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.', color=self.color['error'])
+                                    embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                                    await ctx.send(embed=embed, delete_after=5)
+                        finally:
+                            try:
+                                await infomsg.delete()
+                            except discord.NotFound:
+                                pass
+
+                    canceltask = asyncio.create_task(wait_for_cancel(infomsg))
+                    msgtask = asyncio.create_task(wait_for_message())
+
+                    async def looper():
+                        while True:
+                            if canceltask.done():
+                                return canceltask
+                            elif msgtask.done():
+                                return msgtask
+                            await asyncio.sleep(0.1)
+
+                    rst = await looper()
+                    if rst == msgtask and type(msgtask.result()) == int:
+                        idx = msgtask.result()
+                        nowpage = pgr.get_thispage()
+                        selected_item = nowpage[idx-1]
+                        idgr = ItemDBMgr(self.datadb)
+                        item = idgr.fetch_item(selected_item.id)
+                        embed = discord.Embed(title=item.name, description=item.description, color=self.color['info'])
+                        embed.set_author(name='📔 아이템 상세 정보')
+                        await ctx.send(embed=embed)
+                    
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
                     msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
