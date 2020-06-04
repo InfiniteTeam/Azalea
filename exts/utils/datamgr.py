@@ -90,20 +90,20 @@ class DataDB:
         for x in kwargs:
             self.__setattr__(x, kwargs[x])
 
-    def load_enchantments(self, db: os.PathLike):
-        with open('./db/items.json', encoding='utf-8') as dbfile:
-    
-        self.enchantments = [Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in db['enchantments']]
+    def load_enchantments(self, path: str):
+        with open(path, encoding='utf-8') as dbfile:
+            self.enchantments = [Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
 
-    def load_items(self, db: dict):
-        items = []
-        for item in db['items']:
-            enchants = list(filter(
-                lambda x: set(x.tags) & set(item['tags']),
-                self.enchantments
-            ))
-            items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants))
-        self.items = items
+    def load_items(self, path: str):
+        with open(path, encoding='utf-8') as dbfile:
+            items = []
+            for item in json.load(dbfile)['items']:
+                enchants = list(filter(
+                    lambda x: set(x.tags) & set(item['tags']),
+                    self.enchantments
+                ))
+                items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants))
+            self.items = items
 
 class ItemDBMgr:
     def __init__(self, datadb: DataDB):

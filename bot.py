@@ -153,8 +153,8 @@ check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
 datadb = datamgr.DataDB()
-with open('./db/enchantments.json', encoding='utf-8') as dbfile:
-    datadb.load_enchantments(json.load(dbfile))
+datadb.load_enchantments('./db/enchantments.json')
+datadb.load_items('./db/items.json')
 
 print(datadb.items)
 

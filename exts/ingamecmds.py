@@ -27,27 +27,34 @@ class InGamecmds(BaseCog):
     async def backpack_embed(self, ctx, pgr: pager.Pager, charname, mode='default'):
         items = pgr.get_thispage()
         itemstr = ''
+        moneystr = ''
         cmgr = CharMgr(self.cur)
         char = cmgr.get_character(charname)
         idb = ItemDBMgr(self.datadb)
-        imgr = ItemMgr(self.cur, ctx.author.id)
-        for one in items:
+        for idx in range(len(items)):
+            one = items[idx]
             founditem = idb.fetch_item(one.id)
             icon = founditem.icon
             name = founditem.name
             count = one.count
-            itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
+            if mode == 'select':
+                itemstr += '{}. {} **{}** ({}개)\n'.format(idx+1, icon, name, count)
+            else:
+                itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
         embed = discord.Embed(
             title=f'💼 `{charname}`의 가방',
             color=self.color['info']
         )
+        if mode == 'select':
+            moneystr = f'\n**💵 {char.money} 골드**'
+            embed.title += ' - 선택 모드'
         if items:
-            embed.description = itemstr + f'\n**💵 {char.money} 골드**' + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+            embed.description = itemstr + moneystr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         else:
             embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
         return embed
 
-    @commands.command(name='가방', aliases=['템'])
+    @commands.command(name='가방', aliases=['템', '아이템'])
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         perpage = 8
         cmgr = CharMgr(self.cur)
@@ -67,23 +74,29 @@ class InGamecmds(BaseCog):
         pgr = pager.Pager(items, perpage=perpage)
         msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
+        extemjs = ['❔']
+        emjs = emojibuttons.PageButton.emojis + extemjs
         if len(pgr.pages()) <= 1:
-            return
-        for emj in emojibuttons.PageButton.emojis:
-            await msg.add_reaction(emj)
+            for emj in extemjs:
+                await msg.add_reaction(emj)
+        else:
+            for emj in emjs:
+                await msg.add_reaction(emj)
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emojibuttons.PageButton.emojis
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
         while True:
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
             except asyncio.TimeoutError:
                 pass
             else:
+                if reaction.emoji == '❔':
+                    await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
+                    await ctx.send(embed=discord.Embed(description='ㅇㅅㅇ'))
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
-                if asyncio.iscoroutine(do):
-                    await asyncio.gather(do,
-                        msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
-                    )
+                await asyncio.gather(do,
+                    msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
+                )
 
     async def char_embed(self, username, pgr: pager.Pager, mode='default'):
         chars = pgr.get_thispage()
@@ -376,27 +389,17 @@ class InGamecmds(BaseCog):
 
         async def do():
             todo = []
-            try:
-                lastmsg = await ctx.channel.fetch_message(ctx.channel.last_message_id)
-            except discord.NotFound:
+            if msg.id == ctx.channel.last_message_id:
+                todo += [
+                    msg.edit(embed=embed),
+                    msg.clear_reactions()
+                ]
+            else:
                 todo += [
                     msg.delete(),
                     ctx.send(embed=embed)
                 ]
-            else:
-                if msg.id == lastmsg.id:
-                    todo += [
-                        msg.edit(embed=embed),
-                        msg.clear_reactions()
-                    ]
-                else:
-                    todo += [
-                        msg.delete(),
-                        ctx.send(embed=embed)
-                    ]
-            finally:
-                print(todo)
-                await asyncio.gather(*todo, return_exceptions=True)
+            await asyncio.gather(*todo, return_exceptions=True)
 
         try:
             reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(1, 5))

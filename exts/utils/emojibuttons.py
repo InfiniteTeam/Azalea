@@ -5,7 +5,7 @@ from exts.utils import pager, errors
 class PageButton:
     emojis = ['⏪','◀', '⏹', '▶', '⏩']
     @classmethod
-    async def buttonctrl(cls, reaction: discord.Reaction, user: discord.User, pgr: pager.Pager, willdo=None):
+    async def buttonctrl(cls, reaction: discord.Reaction, user: discord.User, pgr: pager.Pager):
         emj = str(reaction.emoji)
         try:
             if emj == '⏪':
@@ -18,9 +18,9 @@ class PageButton:
                 pgr.next(exc=True)
             elif emj == '⏹':
                 await reaction.message.clear_reactions()
-                return None
+                return
         except StopIteration:
             await reaction.message.remove_reaction(emj, user)
-            return None
+            return
         else:
             return reaction.message.remove_reaction(emj, user)
