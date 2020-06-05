@@ -161,11 +161,16 @@ class ItemMgr:
         items = {'items': itemdicts}
         self.cur.execute('update chardata set items=%s where name=%s', (json.dumps(items, ensure_ascii=False), self.charname))
 
-    def delete_item(self, itemdata: ItemData) -> bool:
+    def delete_item(self, itemdata: ItemData, count: int= None) -> bool:
+        count = int(count)
         items = self.get_items_dict()
         delitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
         if delitem in items:
-            items.remove(delitem)
+            idx = items.index(delitem)
+            if count == None or items[idx]['count'] - count == 0:
+                items.remove(delitem)
+            else:
+                items[idx]['count'] -= count
             self._save_item_by_dict(items)
             return True
         return False
