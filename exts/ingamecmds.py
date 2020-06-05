@@ -107,8 +107,8 @@ class InGamecmds(BaseCog):
                             pass
                         else:
                             embed = discord.Embed(title='❗ 취소되었습니다.', color=self.color['error'])
-                            embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
-                            await ctx.send(embed=embed, delete_after=5)
+                            embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                            await ctx.send(embed=embed, delete_after=7)
                             self.msglog.log(ctx, '[가방/아이템정보: 아이템 번쨰 입력: 취소됨]')
                         finally:
                             try:
@@ -128,8 +128,8 @@ class InGamecmds(BaseCog):
                             nowpage = pgr.get_thispage()
                             if not m.content.isdecimal():
                                 embed = discord.Embed(title='❌ 숫자만을 입력해주세요!', color=self.color['error'])
-                                embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
-                                await ctx.send(embed=embed, delete_after=5)
+                                embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                                await ctx.send(embed=embed, delete_after=7)
                                 self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 숫자만 입력]')
                             else:
                                 idx = int(m.content)
@@ -137,8 +137,8 @@ class InGamecmds(BaseCog):
                                     return int(m.content)
                                 else:
                                     embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.', color=self.color['error'])
-                                    embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
-                                    await ctx.send(embed=embed, delete_after=5)
+                                    embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                                    await ctx.send(embed=embed, delete_after=7)
                                     self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 올바르지 않은 번째수]')
                         finally:
                             try:
@@ -211,12 +211,12 @@ class InGamecmds(BaseCog):
                                 if reaction.emoji == oxemjs[0]:
                                     imgr.delete_item(selected_item)
                                     embed = discord.Embed(title='{} 아이템을 버렸습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success'])
-                                    embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다')
-                                    await ctx.send(embed=embed, delete_after=5)
+                                    embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다')
+                                    await ctx.send(embed=embed, delete_after=7)
                                 elif reaction.emoji == oxemjs[1]:
                                     embed = discord.Embed(title='❌ 취소되었습니다.', color=self.color['error'])
-                                    embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다')
-                                    await ctx.send(embed=embed, delete_after=5)
+                                    embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다')
+                                    await ctx.send(embed=embed, delete_after=7)
                             finally:
                                 try:
                                     await itemdelmsg.delete()
@@ -226,8 +226,8 @@ class InGamecmds(BaseCog):
                         await wait_for_delete_ox()
                     elif rst == msgtask and msgtask.result() == asyncio.TimeoutError:
                         embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-                        embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
-                        await ctx.send(embed=embed, delete_after=5)
+                        embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
+                        await ctx.send(embed=embed, delete_after=7)
                         self.msglog.log(ctx, '[가방: 시간 초과]')
 
                 elif reaction.emoji == '❔':
@@ -272,8 +272,8 @@ class InGamecmds(BaseCog):
                         await wait_for_close_iteminfo()
                     elif rst == msgtask and msgtask.result() == asyncio.TimeoutError:
                         embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-                        embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
-                        await ctx.send(embed=embed, delete_after=5)
+                        embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
+                        await ctx.send(embed=embed, delete_after=7)
                         self.msglog.log(ctx, '[가방: 시간 초과]')
                 
                 pgr.set_obj(imgr.get_items())
@@ -368,8 +368,8 @@ class InGamecmds(BaseCog):
             m = await self.client.wait_for('message', check=check, timeout=60)
         except asyncio.TimeoutError:
             embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=5)
+            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
+            await ctx.send(embed=embed, delete_after=7)
             self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 시간 초과]')
         else:
             if m.content == '취소':
@@ -415,8 +415,8 @@ class InGamecmds(BaseCog):
             reaction, user = await self.client.wait_for('reaction_add', check=rcheck, timeout=20)
         except asyncio.TimeoutError:
             embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=5)
+            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
+            await ctx.send(embed=embed, delete_after=7)
             self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 시간 초과]')
         else:
             e = str(reaction.emoji)
@@ -495,8 +495,8 @@ class InGamecmds(BaseCog):
             reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
         except asyncio.TimeoutError:
             embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=5)
+            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
+            await ctx.send(embed=embed, delete_after=7)
             self.msglog.log(ctx, '[캐릭터 삭제: 시간 초과]')
         else:
             remj = str(reaction.emoji)
