@@ -42,6 +42,9 @@ class Events(BaseCog):
             await ctx.send(embed=discord.Embed(title='❗ 명령어에 빠진 부분이 있습니다!', description=f'**`{error.paramdesc}`이(가) 필요합니다!**\n자세한 명령어 사용법은 `{self.prefix}도움` 을 통해 확인하세요!', color=self.color['error']))
             self.msglog.log(ctx, f'[필요한 명령 인자 없음: "{error.param.name}"({error.paramdesc})]')
             return
+        elif isinstance(error, discord.NotFound):
+            self.msglog.log(ctx, f'[찾을 수 없음]')
+            return
         elif commands.errors.MissingRequiredArgument in allerrs:
             self.msglog.log(ctx, '[필요한 명령 인자 없음]')
             return

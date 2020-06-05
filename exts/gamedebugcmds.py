@@ -24,7 +24,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = cmgr.get_character(charname)
             if not char :
-                await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 캐릭터입니다!: {charname}', color=self.color['error']))
+                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
@@ -67,7 +67,7 @@ class GameDebugcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='{} 아이템을 성공적으로 받았습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success']))
                 self.msglog.log(ctx, '[아이템 받기: 완료]')
             elif remj == '❌':
-                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[아이템 받기: 취소됨]')
 
     @_giveme.error

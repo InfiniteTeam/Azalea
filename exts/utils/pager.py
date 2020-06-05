@@ -74,3 +74,6 @@ class Pager:
 
     def objlen(self):
         return len(self.__obj)
+
+    def set_obj(self, obj):
+        self.__obj = obj

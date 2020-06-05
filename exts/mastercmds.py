@@ -209,6 +209,20 @@ class Mastercmds(BaseCog):
         embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], description=out)
         await ctx.send(embed=embed)
 
+    @commands.group(name='master', aliases=['마스터'], invoke_without_command=False)
+    async def _master(self, ctx):
+        pass
+
+    @_master.command(name='add', aliases=['추가'])
+    async def _master_add(self, ctx: commands.Context, *, user: discord.Member):
+        self.cur.execute('update userdata set type=%s where id=%s', ('Master', user.id))
+        await ctx.send('함')
+
+    @_master.command(name='delete', aliases=['삭제'])
+    async def _master_delete(self, ctx: commands.Context, *, user: discord.Member):
+        self.cur.execute('update userdata set type=%s where id=%s', ('User', user.id))
+        await ctx.send('함')
+
 def setup(client):
     cog = Mastercmds(client)
     client.add_cog(cog)

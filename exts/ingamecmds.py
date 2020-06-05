@@ -74,7 +74,7 @@ class InGamecmds(BaseCog):
         pgr = pager.Pager(items, perpage=perpage)
         msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
-        extemjs = ['❔']
+        extemjs = ['❔', '🗑']
         emjs = emojibuttons.PageButton.emojis + extemjs
         async def addreaction(m):
             if len(pgr.pages()) <= 1:
@@ -90,9 +90,72 @@ class InGamecmds(BaseCog):
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
             except asyncio.TimeoutError:
-                pass
+                try:
+                    await msg.clear_reactions()
+                except discord.Forbidden:
+                    pass
+                finally:
+                    break
             else:
-                if reaction.emoji == '❔':
+                if reaction.emoji in extemjs:
+                    async def wait_for_cancel(msg):
+                        def cancelcheck(reaction, user):
+                            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in ['❌']
+                        try:
+                            reaction, user = await self.client.wait_for('reaction_add', check=cancelcheck, timeout=20)
+                        except asyncio.TimeoutError:
+                            pass
+                        else:
+                            embed = discord.Embed(title='❗ 취소되었습니다.', color=self.color['error'])
+                            embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                            await ctx.send(embed=embed, delete_after=5)
+                            self.msglog.log(ctx, '[가방/아이템정보: 아이템 번쨰 입력: 취소됨]')
+                        finally:
+                            try:
+                                await msg.delete()
+                            except:
+                                pass
+
+                    def msgcheck(m):
+                        return m.author == ctx.author and m.channel == ctx.channel and m.content
+                    
+                    async def wait_for_message(askmsg):
+                        try:
+                            m = await self.client.wait_for('message', check=msgcheck, timeout=20)
+                        except asyncio.TimeoutError:
+                            return asyncio.TimeoutError
+                        else:
+                            nowpage = pgr.get_thispage()
+                            if not m.content.isdecimal():
+                                embed = discord.Embed(title='❌ 숫자만을 입력해주세요!', color=self.color['error'])
+                                embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                                await ctx.send(embed=embed, delete_after=5)
+                                self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 숫자만 입력]')
+                            else:
+                                idx = int(m.content)
+                                if 1 <= idx <= len(nowpage):
+                                    return int(m.content)
+                                else:
+                                    embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.', color=self.color['error'])
+                                    embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                                    await ctx.send(embed=embed, delete_after=5)
+                                    self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 올바르지 않은 번째수]')
+                        finally:
+                            try:
+                                await askmsg.delete()
+                            except:
+                                pass
+
+                    async def looper(canceltask, msgtask):
+                        while True:
+                            if canceltask.done():
+                                return canceltask
+                            elif msgtask.done():
+                                return msgtask
+                            await asyncio.sleep(0.1)
+
+                    oxemjs = [self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross')]
+
                     if ctx.channel.last_message_id == msg.id:
                         await msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
                     else:
@@ -104,76 +167,116 @@ class InGamecmds(BaseCog):
                         await addreaction(msg)
                         reaction.message = msg
 
-                    infomsg = await ctx.send(embed=discord.Embed(title='🔍 정보를 확인할 아이템의 번호를 선택하세요!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
-                    await infomsg.add_reaction('❌')
-                    
-                    def msgcheck(m):
-                        return m.author == ctx.author and m.channel == ctx.channel and m.content
+                if reaction.emoji == '🗑':
+                    delmsg = await ctx.send(embed=discord.Embed(title='📮 아이템 버리기 - 버릴 아이템의 번호를 선택하세요!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
+                    await delmsg.add_reaction('❌')
+                    self.msglog.log(ctx, '[가방/아이템버리기: 버릴 아이템 번호 선택]')
+                    canceltask = asyncio.create_task(wait_for_cancel(delmsg))
+                    msgtask = asyncio.create_task(wait_for_message(delmsg))
+                    rst = await looper(canceltask, msgtask)
 
-                    async def wait_for_cancel(msg):
-                        def check(reaction, user):
-                            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in ['❌']
-                        try:
-                            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=20)
-                        except asyncio.TimeoutError:
-                            pass
-                        else:
-                            embed = discord.Embed(title='❗ 취소되었습니다.', color=self.color['error'])
-                            embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
-                            await ctx.send(embed=embed, delete_after=5)
-                        finally:
+                    if rst == msgtask and type(msgtask.result()) == int:
+                        idx = msgtask.result()
+                        nowpage = pgr.get_thispage()
+                        selected_item = nowpage[idx-1]
+
+                        idx = msgtask.result()
+                        nowpage = pgr.get_thispage()
+                        selected_item = nowpage[idx-1]
+                        idgr = ItemDBMgr(self.datadb)
+                        item = idgr.fetch_item(selected_item.id)
+                        embed = discord.Embed(title=item.icon + ' ' + item.name, description='**아이템을 버리면 다시 취소할 수 없습니다.** 계속할까요?', color=self.color['info'])
+                        embed.set_author(name='⚠ 이 아이템을 버립니다.')
+                        enchantstr = ''
+                        for enchant in selected_item.enchantments:
+                            enchantstr += '{}: {}\n'.format(enchant.name, enchant.level)
+                        if not enchantstr:
+                            enchantstr = '없음'
+                        embed.add_field(name='아이템 설명', value=item.description)
+                        embed.add_field(name='마법부여', value=enchantstr)
+                        embed.add_field(name='개수', value='{}개'.format(selected_item.count))
+                        itemdelmsg = await ctx.send(embed=embed)
+                        for em in oxemjs:
+                            await itemdelmsg.add_reaction(em)
+
+                        def oxcheck(reaction, user):
+                            return user == ctx.author and itemdelmsg.id == reaction.message.id and reaction.emoji in oxemjs
+
+                        async def wait_for_delete_ox():
                             try:
-                                await infomsg.delete()
-                            except discord.NotFound:
-                                pass
-                    
-                    async def wait_for_message():
-                        try:
-                            m = await self.client.wait_for('message', check=msgcheck, timeout=20)
-                        except asyncio.TimeoutError:
-                            pass
-                        else:
-                            nowpage = pgr.get_thispage()
-                            if not m.content.isdecimal():
-                                embed = discord.Embed(title='❌ 숫자만을 입력해주세요!', color=self.color['error'])
-                                embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
-                                await ctx.send(embed=embed, delete_after=5)
+                                reaction, user = await self.client.wait_for('reaction_add', check=oxcheck, timeout=20)
+                            except asyncio.TimeoutError:
+                                return asyncio.TimeoutError
                             else:
-                                idx = int(m.content)
-                                if 1 <= idx <= len(nowpage):
-                                    return int(m.content)
-                                else:
-                                    embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.', color=self.color['error'])
-                                    embed.set_footer(text='이 메시지는 5초후 삭제됩니다')
+                                if reaction.emoji == oxemjs[0]:
+                                    imgr.delete_item(selected_item)
+                                    embed = discord.Embed(title='{} 아이템을 버렸습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success'])
+                                    embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다')
                                     await ctx.send(embed=embed, delete_after=5)
-                        finally:
-                            try:
-                                await infomsg.delete()
-                            except discord.NotFound:
-                                pass
+                                elif reaction.emoji == oxemjs[1]:
+                                    embed = discord.Embed(title='❌ 취소되었습니다.', color=self.color['error'])
+                                    embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다')
+                                    await ctx.send(embed=embed, delete_after=5)
+                            finally:
+                                try:
+                                    await itemdelmsg.delete()
+                                except:
+                                    pass
 
+                        await wait_for_delete_ox()
+                    elif rst == msgtask and msgtask.result() == asyncio.TimeoutError:
+                        embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
+                        embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
+                        await ctx.send(embed=embed, delete_after=5)
+                        self.msglog.log(ctx, '[가방: 시간 초과]')
+
+                elif reaction.emoji == '❔':
+                    infomsg = await ctx.send(embed=discord.Embed(title='🔍 아이템 정보 - 자세한 정보를 볼 아이템의 번호를 선택하세요!', description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
+                    await infomsg.add_reaction('❌')
+                    self.msglog.log(ctx, '[가방/아이템정보: 아이템 번쨰 입력]')
                     canceltask = asyncio.create_task(wait_for_cancel(infomsg))
-                    msgtask = asyncio.create_task(wait_for_message())
-
-                    async def looper():
-                        while True:
-                            if canceltask.done():
-                                return canceltask
-                            elif msgtask.done():
-                                return msgtask
-                            await asyncio.sleep(0.1)
-
-                    rst = await looper()
+                    msgtask = asyncio.create_task(wait_for_message(infomsg))
+                    rst = await looper(canceltask, msgtask)
+                    
                     if rst == msgtask and type(msgtask.result()) == int:
                         idx = msgtask.result()
                         nowpage = pgr.get_thispage()
                         selected_item = nowpage[idx-1]
                         idgr = ItemDBMgr(self.datadb)
                         item = idgr.fetch_item(selected_item.id)
-                        embed = discord.Embed(title=item.name, description=item.description, color=self.color['info'])
+                        embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=self.color['info'])
                         embed.set_author(name='📔 아이템 상세 정보')
-                        await ctx.send(embed=embed)
-                    
+                        enchantstr = ''
+                        for enchant in selected_item.enchantments:
+                            enchantstr += '{}: {}\n'.format(enchant.name, enchant.level)
+                        if not enchantstr:
+                            enchantstr = '없음'
+                        embed.add_field(name='마법부여', value=enchantstr)
+                        embed.add_field(name='개수', value='{}개'.format(selected_item.count))
+                        embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다. 5분 후에 버튼이 사라집니다.')
+                        iteminfomsg = await ctx.send(embed=embed)
+                        await iteminfomsg.add_reaction('❌')
+                        self.msglog.log(ctx, '[가방/아이템정보]')
+                        async def wait_for_close_iteminfo():
+                            def cancelcheck(reaction, user):
+                                return user == ctx.author and iteminfomsg.id == reaction.message.id and reaction.emoji in ['❌']
+                            try:
+                                reaction, user = await self.client.wait_for('reaction_add', check=cancelcheck, timeout=60*5)
+                            except asyncio.TimeoutError:
+                                try:
+                                    await iteminfomsg.clear_reactions()
+                                except:
+                                    pass
+                            else:
+                                await iteminfomsg.delete()
+                        await wait_for_close_iteminfo()
+                    elif rst == msgtask and msgtask.result() == asyncio.TimeoutError:
+                        embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
+                        embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
+                        await ctx.send(embed=embed, delete_after=5)
+                        self.msglog.log(ctx, '[가방: 시간 초과]')
+                
+                pgr.set_obj(imgr.get_items())
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
                     msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
@@ -264,7 +367,9 @@ class InGamecmds(BaseCog):
         try:
             m = await self.client.wait_for('message', check=check, timeout=60)
         except asyncio.TimeoutError:
-            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
+            embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
+            await ctx.send(embed=embed, delete_after=5)
             self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 시간 초과]')
         else:
             if m.content == '취소':
@@ -309,7 +414,9 @@ class InGamecmds(BaseCog):
         try:
             reaction, user = await self.client.wait_for('reaction_add', check=rcheck, timeout=20)
         except asyncio.TimeoutError:
-            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
+            embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
+            await ctx.send(embed=embed, delete_after=5)
             self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 시간 초과]')
         else:
             e = str(reaction.emoji)
@@ -387,7 +494,9 @@ class InGamecmds(BaseCog):
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
         except asyncio.TimeoutError:
-            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
+            embed.set_footer(text='이 메시지는 5초 후에 삭제됩니다.')
+            await ctx.send(embed=embed, delete_after=5)
             self.msglog.log(ctx, '[캐릭터 삭제: 시간 초과]')
         else:
             remj = str(reaction.emoji)
