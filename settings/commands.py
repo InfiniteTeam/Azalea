@@ -1,0 +1,2 @@
+class Fishing:
+    pass

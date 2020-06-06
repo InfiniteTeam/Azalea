@@ -12,8 +12,10 @@
         "phone"
       ],
       "enchantments": [
-        0, 1
-      ]
+        0,
+        1
+      ],
+      "meta": {}
     },
     {
       "id": 1,
@@ -24,7 +26,8 @@
         "default": "⚙"
       },
       "tags": [],
-      "enchantments": []
+      "enchantments": [],
+      "meta": {}
     },
     {
       "id": 2,
@@ -35,7 +38,8 @@
         "default": "🍜"
       },
       "tags": [],
-      "enchantments": []
+      "enchantments": [],
+      "meta": {}
     },
     {
       "id": 3,
@@ -46,7 +50,56 @@
         "default": "🧬"
       },
       "tags": [],
-      "enchantments": []
+      "enchantments": [],
+      "meta": {}
+    },
+    {
+      "id": 4,
+      "name": "붕어",
+      "description": "붕어.",
+      "max_count": 100,
+      "icon": {
+        "default": "🐟"
+      },
+      "tags": [
+        "fishing"
+      ],
+      "enchantments": [],
+      "meta": {
+        "percentage": 1
+      }
+    },
+    {
+      "id": 5,
+      "name": "잉어",
+      "description": "잉어.",
+      "max_count": 100,
+      "icon": {
+        "default": "🐟"
+      },
+      "tags": [
+        "fishing"
+      ],
+      "enchantments": [],
+      "meta": {
+        "percentage": 1
+      }
+    },
+    {
+      "id": 6,
+      "name": "연어",
+      "description": "연어.",
+      "max_count": 100,
+      "icon": {
+        "default": "🐟"
+      },
+      "tags": [
+        "fishing"
+      ],
+      "enchantments": [],
+      "meta": {
+        "percentage": 1
+      }
     }
   ]
 }

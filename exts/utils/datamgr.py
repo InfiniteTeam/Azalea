@@ -40,6 +40,7 @@ class Item(NamedTuple):
     icon: str
     tags: List[str]
     enchantments: List[Enchantment]
+    meta: Dict
 
 class ItemData(NamedTuple):
     """
@@ -102,7 +103,7 @@ class DataDB:
                     lambda x: set(x.tags) & set(item['tags']),
                     self.enchantments
                 ))
-                items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants))
+                items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants, item['meta']))
             self.items = items
 
 class ItemDBMgr:
@@ -116,10 +117,18 @@ class ItemDBMgr:
             enchants.append(Enchantment(x.id, x.name, x.max_level, x.type))
         return enchants
 
-    def fetch_item(self, itemid: int) -> Union[Item, None]:
+    def fetch_item(self, itemid: int) -> Item:
         found = list(filter(lambda x: x.id == itemid, self.datadb.items))
         if found:
             return found[0]
+        return None
+
+    def fetch_items_with(self, tags: Optional[list]=None) -> List[Item]:
+        if tags:
+            found = list(filter(lambda x: set(x.tags) & set(tags), self.datadb.items))
+            if found:
+                return found
+            return None
         return None
 
 class ItemMgr:

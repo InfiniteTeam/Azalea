@@ -77,10 +77,6 @@ class GameDebugcmds(BaseCog):
                 missing = '아이템 아이디'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
-    @commands.command(name='버려')
-    async def _throw_away(self, ctx: commands.Context):
-        pass
-
 def setup(client):
     cog = GameDebugcmds(client)
     client.add_cog(cog)

@@ -11,7 +11,7 @@ from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -68,14 +68,19 @@ class InGamecmds(BaseCog):
                 self.msglog.log(ctx, '[가방: 존재하지 않는 캐릭터]')
                 return
         else:
-            charname = cmgr.get_current_char(ctx.author.id).name
+            char = cmgr.get_current_char(ctx.author.id)
+            charname = char.name
             imgr = ItemMgr(self.cur, charname)
         items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
         msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
-        extemjs = ['❔', '🗑']
+        extemjs = ['❔']
+        owner = False
+        if char.id == ctx.author.id:
+            owner = True
+            extemjs.append('🗑')
         emjs = emojibuttons.PageButton.emojis + extemjs
         async def addreaction(m):
             if len(pgr.pages()) <= 1:
@@ -159,26 +164,25 @@ class InGamecmds(BaseCog):
                             return asyncio.TimeoutError
                         else:
                             nowpage = pgr.get_thispage()
-                            if not m.content.isdecimal():
+                            
+                            if m.content in ['모두', '전부']:
+                                return nowpage[idx].count
+                            elif m.content.isdecimal() and 1 <= int(m.content) <= nowpage[idx].count:
+                                return int(m.content)
+                            elif not m.content.isdecimal():
                                 embed = discord.Embed(title='❌ 숫자만을 입력해주세요!', color=self.color['error'])
                                 embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
                                 await ctx.send(embed=embed, delete_after=7)
                                 self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 숫자만 입력]')
                             else:
-                                count = int(m.content)
-                                if m.content.isdecimal() and 1 <= count <= nowpage[idx].count:
-                                    return int(m.content)
-                                elif m.content in ['모두', '전부']:
-                                    return nowpage[idx].count
-                                else:
-                                    embed = discord.Embed(
-                                        title='❓ 입력한 개수가 올바르지 않거나 총 개수보다 많습니다!',
-                                        description='아이템 개수는 최소 1개, 아이템의 총 개수 이하여야 합니다.\n`모두` 를 입력해 전부 버릴 수 있습니다.',
-                                        color=self.color['error']
-                                    )
-                                    embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
-                                    await ctx.send(embed=embed, delete_after=7)
-                                    self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 올바르지 않은 개수]')
+                                embed = discord.Embed(
+                                    title='❓ 입력한 개수가 올바르지 않거나 총 개수보다 많습니다!',
+                                    description='아이템 개수는 최소 1개, 아이템의 총 개수 이하여야 합니다.\n`모두` 를 입력해 전부 버릴 수 있습니다.',
+                                    color=self.color['error']
+                                )
+                                embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                                await ctx.send(embed=embed, delete_after=7)
+                                self.msglog.log(ctx, '[가방: 아이템 번쨰 입력: 올바르지 않은 개수]')
                         finally:
                             try:
                                 await askmsg.delete()
@@ -188,8 +192,10 @@ class InGamecmds(BaseCog):
                     async def looper(canceltask, msgtask):
                         while True:
                             if canceltask.done():
+                                msgtask.cancel()
                                 return canceltask
                             elif msgtask.done():
+                                canceltask.cancel()
                                 return msgtask
                             await asyncio.sleep(0.1)
 
@@ -206,7 +212,7 @@ class InGamecmds(BaseCog):
                         await addreaction(msg)
                         reaction.message = msg
 
-                if reaction.emoji == '🗑':
+                if reaction.emoji == '🗑' and owner:
                     delmsg = await ctx.send(embed=discord.Embed(
                         title='📮 아이템 버리기 - 버릴 아이템의 번호를 선택하세요!',
                         description='위의 가방 메시지에 아이템 앞마다 번호가 있습니다.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.',
@@ -634,6 +640,7 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='낚시')
     async def _fishing(self, ctx: commands.Context):
+        cmgr = CharMgr(self.cur)
         embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
         msg = await ctx.send(embed=embed)
         await msg.edit()
@@ -675,7 +682,13 @@ class InGamecmds(BaseCog):
             await do()
         else:
             if reaction.emoji == '⁉':
-                embed.description = '잡았습니다!'
+                idgr = ItemDBMgr(self.datadb)
+                fishes = idgr.fetch_items_with(tags=['fishing'])
+                fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
+                imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
+                imgr.give_item(ItemData(fish.id, 1, []))
+                embed.title += ' - 잡았습니다!'
+                embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
                 await do()
 
 def setup(client):
