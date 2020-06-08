@@ -4,6 +4,7 @@ import datetime
 import re
 import json
 import asyncio
+import typing
 from exts.utils.basecog import BaseCog
 
 class Azaleacmds(BaseCog):
@@ -16,6 +17,17 @@ class Azaleacmds(BaseCog):
     @commands.command(name='도움')
     async def _help(self, ctx: commands.Context):
         embed = discord.Embed(title='📃 Azalea 전체 명령어', description='(소괄호)는 필수 입력, [대괄호]는 선택 입력입니다.\n\n', color=self.color['primary'])
+        embed.add_field(
+            name='기본 명령어',
+            value=
+            """\
+            `{p}도움`: 도움말 메시지를 표시합니다.
+            `{p}정보`: 봇 정보를 확인합니다.
+            `{p}핑`: 봇 정보를 확인합니다.
+            `{p}샤드`: 현재 서버의 Azalea 샤드 번호를 확인합니다.
+            `{p}공지채널 [#채널멘션]`: Azalea 공지를 받을 채널을 설정합니다.
+            """.format(p=self.prefix)
+        )
         await ctx.send(embed=embed)
         if ctx.channel.type != discord.ChannelType.private:
             await ctx.send(embed=discord.Embed(title='{} DM으로 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description='DM을 확인하세요!', color=self.color['success']))
@@ -60,43 +72,68 @@ class Azaleacmds(BaseCog):
     @commands.command(name='공지채널')
     @commands.guild_only()
     @commands.has_guild_permissions(administrator=True)
-    async def _notice(self, ctx: commands.Context, *mention):
-        mention = ctx.message.channel_mentions
-        if mention:
-            notich = mention[0]
+    async def _notice(self, ctx: commands.Context, *, channel: typing.Optional[discord.TextChannel]=None):
+        embed = embed = discord.Embed(
+            title='📢 공지채널 설정',
+            description='',
+            color=self.color['ask']
+        )
+        if channel:
+            notich = channel
         else:
             notich = ctx.channel
-        current_id = self.cur.execute('select * from serverdata where id=%s', ctx.guild.id)
-        if current_id:
-            ch = ctx.guild.get_channel(self.cur.fetchone()['noticechannel'])
+        
+        notiemjs = ['⭕', '❌']
+        self.cur.execute('select * from serverdata where id=%s', ctx.guild.id)
+        ch = ctx.guild.get_channel(self.cur.fetchone()['noticechannel'])
+        if ch:
             if notich == ch:
-                await ctx.send(embed=discord.Embed(title=f'❓ 이미 이 채널이 공지채널로 설정되어 있습니다!', color=self.color['error']))
-                self.msglog.log(ctx, '[공지채널: 이미 설정된 채널]')
-            elif ch:
-                if mention:
-                    embed = discord.Embed(title='📢 공지채널 설정', description=f'**현재 공지채널은 {ch.mention} 로 설정되어 있습니다.**\n{notich.mention} 을 공지채널로 설정할까요?\n20초 안에 선택해주세요.', color=self.color['ask'])
+                embed = discord.Embed(
+                    title=f'❓ 이미 이 채널이 공지채널로 설정되어 있습니다!',
+                    description='',
+                    color=self.color['ask']
+                )
+                
+                notiemjs = ['⛔', '❌']
+            else:
+                embed.description = f'**현재 공지채널은 {ch.mention} 로 설정되어 있습니다.**'
+                if channel:
+                    embed.description += f'\n{notich.mention} 을 공지채널로 설정할까요?'
                 else:
-                    embed = discord.Embed(title='📢 공지채널 설정', description=f'**현재 공지채널은 {ch.mention} 로 설정되어 있습니다.**\n현재 채널을 공지채널로 설정할까요?\n20초 안에 선택해주세요.', color=self.color['ask'])
-                msg = await ctx.send(embed=embed)
-                self.msglog.log(ctx, '[공지채널: 공지채널 설정]')
-                for rct in ['⭕', '❌']:
-                    await msg.add_reaction(rct)
-                def notich_check(reaction, user):
-                    return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in ['⭕', '❌']
-                try:
-                    reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=notich_check)
-                except asyncio.TimeoutError:
-                    await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
-                    self.msglog.log(ctx, '[공지채널: 시간 초과]')
-                else:
-                    em = str(reaction.emoji)
-                    if em == '⭕':
-                        self.cur.execute('update serverdata set noticechannel=%s where id=%s', (notich.id, ctx.guild.id))
-                        await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 채널을 성공적으로 설정했습니다!', description=f'이제 {notich.mention} 채널에 공지를 보냅니다.', color=self.color['info']))
-                        self.msglog.log(ctx, '[공지채널: 설정 완료]')
-                    elif em == '❌':
-                        await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
-                        self.msglog.log(ctx, '[공지채널: 취소됨]')
+                    embed.description += '\n현재 채널을 공지채널로 설정할까요?'
+                notiemjs = ['⭕', '⛔', '❌']
+            embed.description += '\n공지를 끄려면 ⛔ 로 반응해주세요! 취소하려면 ❌ 로 반응해주세요.'
+        else:
+            embed.description = f'**이 서버에는 공지채널이 설정되어있지 않아 공지가 꺼져있습니다.**'
+            if channel:
+                embed.description += f'\n{notich.mention} 을 공지채널로 설정할까요?'
+            else:
+                embed.description += '\n현재 채널을 공지채널로 설정할까요?'
+        msg = await ctx.send(embed=embed)
+        for rct in notiemjs:
+            await msg.add_reaction(rct)
+        self.msglog.log(ctx, '[공지채널: 공지채널 설정]')
+        def notich_check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in notiemjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=notich_check)
+        except asyncio.TimeoutError:
+            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            self.msglog.log(ctx, '[공지채널: 시간 초과]')
+        else:
+            em = str(reaction.emoji)
+            if em == '⭕':
+                self.cur.execute('update serverdata set noticechannel=%s where id=%s', (notich.id, ctx.guild.id))
+                await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 채널을 성공적으로 설정했습니다!', description=f'이제 {notich.mention} 채널에 공지를 보냅니다.', color=self.color['info']))
+                self.msglog.log(ctx, '[공지채널: 설정 완료]')
+            elif em == '❌':
+                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[공지채널: 취소됨]')
+            elif em == '⛔':
+                self.cur.execute('update serverdata set noticechannel=%s where id=%s', (None, ctx.guild.id))
+                await ctx.send(embed=discord.Embed(title=f'❌ 공지 기능을 껐습니다!', color=self.color['error']))
+                self.msglog.log(ctx, '[공지채널: 비활성화]')
+
 
     @commands.command(name='등록')
     async def _register(self, ctx: commands.Context):

@@ -676,7 +676,7 @@ class InGamecmds(BaseCog):
         await msg.edit(embed=embed)
 
         try:
-            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(1, 2))
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(0.8, 1.7))
         except asyncio.TimeoutError:
             embed.description = '놓쳐 버렸네요... 너무 천천히 당긴것 같아요.'
             await do()
@@ -690,6 +690,19 @@ class InGamecmds(BaseCog):
                 embed.title += ' - 잡았습니다!'
                 embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
                 await do()
+
+    @commands.command(name='돈받기')
+    @commands.cooldown(rate=1, per=24*60*60, type=commands.BucketType.user)
+    async def _getmoney(self, ctx: commands.Context):
+        cmgr = CharMgr(self.cur)
+        imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
+        imgr.money += 1000
+        await ctx.send(embed=discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info']))
+
+    @_getmoney.error
+    async def _e_getmoney(self, ctx: commands.Context, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
 
 def setup(client):
     cog = InGamecmds(client)

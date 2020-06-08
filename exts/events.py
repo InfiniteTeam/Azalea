@@ -5,7 +5,8 @@ import datetime
 import io
 import sys
 from exts.utils.basecog import BaseCog
-from exts.utils import errors, permutil
+from exts.utils import errors, permutil, timedelta
+from dateutil.relativedelta import relativedelta
 
 class Events(BaseCog):
     def __init__(self, client):
@@ -45,6 +46,14 @@ class Events(BaseCog):
         elif isinstance(error, discord.NotFound):
             self.msglog.log(ctx, f'[찾을 수 없음]')
             return
+        elif isinstance(error, commands.CommandOnCooldown):
+            """
+            cooldown = timedelta.format_timedelta(datetime.timedelta(seconds=error.retry_after))
+            cdstr = ' '.join(cooldown.values())
+            await ctx.send(embed=discord.Embed(title='⏱ 쿨타임 중입니다!', description='{} 후에 다시 할수 있어요.'.format(cdstr), color=self.color['info']))
+            self.msglog.log(ctx, f'[쿨다운 중]')
+            """
+            return
         elif commands.errors.MissingRequiredArgument in allerrs:
             self.msglog.log(ctx, '[필요한 명령 인자 없음]')
             return
@@ -63,7 +72,7 @@ class Events(BaseCog):
             await ctx.send(embed=embed)
             self.msglog.log(ctx, '[존재하지 않는 명령 옵션]')
             return
-        elif isinstance(error, commands.errors.CommandNotFound):
+        elif isinstance(error, commands.CommandNotFound):
             # embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=self.color['error'])
             # await ctx.send(embed=embed)
             # self.msglog.log(ctx, '[존재하지 않는 명령]')

@@ -196,6 +196,16 @@ class ItemMgr:
         self._save_item_by_dict(items)
         return True
 
+    @property
+    def money(self):
+        self.cur.execute('select money from chardata where name=%s', self.charname)
+        money = self.cur.fetchone()['money']
+        return money
+
+    @money.setter
+    def money(self, value):
+        self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
+
 class CharMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor):
         self.cur = cur

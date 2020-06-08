@@ -131,3 +131,6 @@ dmypy.json
 
 # Visual Studio
 .venv/
+
+# logging
+.logs/
