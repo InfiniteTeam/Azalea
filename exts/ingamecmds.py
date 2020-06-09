@@ -56,6 +56,7 @@ class InGamecmds(BaseCog):
         return embed
 
     @commands.command(name='가방', aliases=['템', '아이템'])
+    @commands.guild_only()
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         perpage = 8
         cmgr = CharMgr(self.cur)
@@ -691,18 +692,24 @@ class InGamecmds(BaseCog):
                 embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
                 await do()
 
-    @commands.command(name='돈받기')
-    @commands.cooldown(rate=1, per=24*60*60, type=commands.BucketType.user)
+    @commands.command(name='돈받기', aliases=['돈줘', '돈내놔'])
     async def _getmoney(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
+        char = cmgr.get_current_char(ctx.author.id)
+        rcv_money = cmgr.get_raw_character(char.name)['received_money']
+        if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
+            pass
+        elif rcv_money:
+            await ctx.send(embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
+            return
         imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
         imgr.money += 1000
+        self.cur.execute('update chardata set received_money=%s where name=%s', (True, char.name))
         await ctx.send(embed=discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info']))
 
-    @_getmoney.error
-    async def _e_getmoney(self, ctx: commands.Context, error):
-        if isinstance(error, commands.CommandOnCooldown):
-            await ctx.send(embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
+    @commands.command(name='상점')
+    async def _market(self, ctx: commands.Context):
+        pass
 
 def setup(client):
     cog = InGamecmds(client)

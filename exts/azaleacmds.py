@@ -21,16 +21,17 @@ class Azaleacmds(BaseCog):
             name='기본 명령어',
             value=
             """\
-            `{p}도움`: 도움말 메시지를 표시합니다.
-            `{p}정보`: 봇 정보를 확인합니다.
-            `{p}핑`: 봇 정보를 확인합니다.
-            `{p}샤드`: 현재 서버의 Azalea 샤드 번호를 확인합니다.
-            `{p}공지채널 [#채널멘션]`: Azalea 공지를 받을 채널을 설정합니다.
+            **`{p}도움`**: 도움말 메시지를 표시합니다.
+            **`{p}정보`**: 봇 정보를 확인합니다.
+            **`{p}핑`**: 봇 정보를 확인합니다.
+            **`{p}샤드`**: 현재 서버의 Azalea 샤드 번호를 확인합니다.
+            **`{p}공지채널 [#채널멘션]`**: Azalea 공지를 받을 채널을 설정합니다.
+            **`{p}등록`**: Azalea에 등록해 사용을 시작합니다.
             """.format(p=self.prefix)
         )
-        await ctx.send(embed=embed)
+        msg = await ctx.author.send(embed=embed)
         if ctx.channel.type != discord.ChannelType.private:
-            await ctx.send(embed=discord.Embed(title='{} DM으로 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description='DM을 확인하세요!', color=self.color['success']))
+            await ctx.send(embed=discord.Embed(title='{} 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description=f'**[DM 메시지]({msg.jump_url})**를 확인하세요!', color=self.color['success']))
         self.msglog.log(ctx, '[도움]')
 
     @commands.command(name='정보')
