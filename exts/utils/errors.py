@@ -64,3 +64,6 @@ class CharacterNotFound(AzaleaError):
 
 class ItemTagNotFound(AzaleaError):
     pass
+
+class SettingNotFound(AzaleaError):
+    pass

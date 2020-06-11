@@ -1,0 +1,13 @@
+{
+  "market": [
+    {
+      "id": 0,
+      "count": 1,
+      "price": {
+        "purchace": 10000,
+        "selling": 8000,
+        "discount": 6000
+      }
+    }
+  ]
+}

@@ -20,7 +20,7 @@ class PageButton:
                 await reaction.message.clear_reactions()
                 return
         except StopIteration:
-            await reaction.message.remove_reaction(emj, user)
+            await reaction.remove(user)
             return
         else:
-            return reaction.message.remove_reaction(emj, user)
+            return reaction.remove(user)

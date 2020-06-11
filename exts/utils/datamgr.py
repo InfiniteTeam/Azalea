@@ -1,10 +1,20 @@
 import pymysql
 import datetime
 from enum import Enum
-from typing import List, Union, NamedTuple, Dict, Optional
+from typing import List, Union, NamedTuple, Dict, Optional, Any
 import json
 from exts.utils import errors
 import os
+
+class Setting(NamedTuple):
+    name: str
+    title: str
+    description: str
+    default: Any
+
+class SettingData(NamedTuple):
+    name: str
+    value: Any
 
 class EnchantType(Enum):
     """
@@ -83,6 +93,7 @@ class CharacterData(NamedTuple):
     birth: datetime.datetime
     last_nick_change: datetime.datetime
     delete_request: Union[None, datetime.datetime]
+    settings: List[SettingData]
 
 class DataDB:
     def __init__(self, items: list = [], enchantments: list = [], **kwargs):
@@ -92,11 +103,11 @@ class DataDB:
             self.__setattr__(x, kwargs[x])
 
     def load_enchantments(self, path: str):
-        with open(path, encoding='utf-8') as dbfile:
+        with open(path, 'r', encoding='utf-8') as dbfile:
             self.enchantments = [Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
 
     def load_items(self, path: str):
-        with open(path, encoding='utf-8') as dbfile:
+        with open(path, 'r', encoding='utf-8') as dbfile:
             items = []
             for item in json.load(dbfile)['items']:
                 enchants = list(filter(
@@ -105,6 +116,59 @@ class DataDB:
                 ))
                 items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants, item['meta']))
             self.items = items
+    
+    def load_settings(self, path: str):
+        with open(path, 'r', encoding='utf-8') as dbfile:
+            settings = []
+            for setting in json.load(dbfile)['charsettings']:
+                settings.append(Setting(setting['name'], setting['title'], setting['description'], setting['default']))
+            self.settings = settings
+
+class SettingDBMgr:
+    def __init__(self, datadb: DataDB):
+        self.settings = datadb.settings
+
+    def fetch_setting(self, name: str):
+        sets = list(filter(lambda x: x.name == name, self.settings))
+        if sets:
+            return sets[0]
+        return None
+
+    def get_base_settings(self):
+        base = {}
+        for one in self.settings:
+            base[one.name] = one.default
+        return base
+
+class SettingMgr:
+    def __init__(self, cur: pymysql.cursors.Cursor, sdgr: SettingDBMgr, character: CharacterData):
+        self.cur = cur
+        self.sdgr = sdgr
+        self.char = character
+
+    def get_dict_from_settings(self, settings: List[SettingData]):
+        setdict = {}
+        for one in settings:
+            setdict[one.name] = one.value
+        return setdict
+
+    def _save_settings(self, settings: Dict):
+        return self.cur.execute('update chardata set settings=%s where name=%s', (json.dumps(settings, ensure_ascii=False), self.char.name))
+
+    def get_setting(self, name) -> Any:
+        sets = self.char.settings
+        rawset = self.get_dict_from_settings(sets)
+        setting = list(filter(lambda x: x.name == name, sets))
+        if setting:
+            return setting[0].value
+        setting = list(filter(lambda x: x.name == name, self.sdgr.settings))
+        if setting:
+            setadd = self.sdgr.fetch_setting(name)
+            rawset[setadd.name] = setadd.default
+            self._save_settings(rawset)
+            return setadd.default
+        else:
+            raise errors.SettingNotFound
 
 class ItemDBMgr:
     def __init__(self, datadb: DataDB):
@@ -216,7 +280,12 @@ class CharMgr:
         items = [ItemMgr.get_itemdata_from_dict(item) for item in itemraw]
         stat = StatData(*json.loads(chardict['stat'])['stat'].values())
         chartype = CharacterType.__getattr__(chardict['type'])
-        char = CharacterData(chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype, chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'])
+        setraw = json.loads(chardict['settings'])
+        settings = [SettingData(setting, setraw[setting]) for setting in setraw]
+        char = CharacterData(
+            chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype,
+            chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'], settings
+        )
         return char
 
     def get_raw_chars(self, userid: int=None) -> List[Dict]:
@@ -234,7 +303,7 @@ class CharMgr:
 
     def get_raw_character(self, name: str, userid: int=None) -> Dict:
         if userid:
-            self.cur.execute('select * from chardata where id=%s and name=%s', (name, userid))
+            self.cur.execute('select * from chardata where id=%s and name=%s', (userid, name))
         else:
             self.cur.execute('select * from chardata where name=%s', name)
         raw = self.cur.fetchone()
@@ -253,13 +322,14 @@ class CharMgr:
         chardata = self.get_char_from_dict(char)
         return chardata
 
-    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, stat, level: int=1):
+    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, stat, settings, level: int=1):
         datas = (
             userid, name, level, chartype,
             json.dumps(items, ensure_ascii=False),
-            json.dumps(stat, ensure_ascii=False)
+            json.dumps(stat, ensure_ascii=False),
+            json.dumps(settings, ensure_ascii=False)
         )
-        self.cur.execute('insert into chardata (id, name, level, type, items, stat) values (%s, %s, %s, %s, %s, %s)', datas)
+        self.cur.execute('insert into chardata (id, name, level, type, items, stat, settings) values (%s, %s, %s, %s, %s, %s, %s)', datas)
 
     def logout_all(self, userid: int):
         self.cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))

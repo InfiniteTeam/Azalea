@@ -41,7 +41,8 @@ class Checks:
         return commands.check(self.char_online)
 
     async def subcmd_vaild(self, ctx: commands.Context):
-        if ctx.subcommand_passed not in list(map(lambda cmd: cmd.name, ctx.command.commands)):
+        cnames = list(map(lambda cmd: cmd.name, ctx.command.commands)) + [None]
+        if ctx.subcommand_passed in cnames:
             return True
         raise commands.CommandNotFound
 

@@ -155,6 +155,7 @@ emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 datadb = datamgr.DataDB()
 datadb.load_enchantments('./db/enchantments.json')
 datadb.load_items('./db/items.json')
+datadb.load_settings('./db/charsettings.json')
 
 print(datadb.items)
 

@@ -31,7 +31,7 @@ ignore_files = [
     '.\\.gitignore',
     '.\\LICENSE',
     '.\\README.md',
-    '.\\wtf.py'
+    '.\\count.py'
 ]
 
 total_line_count = 0

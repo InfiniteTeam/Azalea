@@ -1,0 +1,10 @@
+{
+  "charsettings": [
+    {
+      "name": "private-item",
+      "title": "아이템 비공개",
+      "description": "다른 사람이 이 캐릭터의 아이템을 볼 수 없게 합니다.",
+      "default": true
+    }
+  ]
+}

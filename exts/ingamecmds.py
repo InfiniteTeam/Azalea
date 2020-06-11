@@ -11,7 +11,7 @@ from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, SettingData, Setting, SettingDBMgr, SettingMgr
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -20,9 +20,6 @@ class InGamecmds(BaseCog):
             cmd.add_check(self.check.registered)
             if cmd.name not in ['캐릭터', '로그아웃', '캐생', '캐삭']:
                 cmd.add_check(self.check.char_online)
-            if cmd.name in ['캐릭터']:
-                continue
-                cmd.add_check(self.check.subcmd_vaild)
 
     async def backpack_embed(self, ctx, pgr: pager.Pager, charname, mode='default'):
         items = pgr.get_thispage()
@@ -384,7 +381,6 @@ class InGamecmds(BaseCog):
 
     @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
     async def _char(self, ctx: commands.Context, *, user: typing.Optional[discord.Member]=None):
-        print(ctx.subcommand_passed)
         if not user:
             user = ctx.author
         perpage = 5
@@ -508,7 +504,7 @@ class InGamecmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
-            cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], self.templates['basestat'])
+            cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], self.templates['basestat'], self.datadb.get_base_settings())
             if charcount == 0:
                 cmgr.change_character(ctx.author.id, charname)
                 desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
@@ -517,7 +513,7 @@ class InGamecmds(BaseCog):
             await ctx.send(embed=discord.Embed(title='{} 캐릭터를 생성했습니다! - `{}`'.format(self.emj.get(ctx, 'check'), charname), description=desc, color=self.color['success']))
             self.msglog.log(ctx, '[캐릭터 생성: 완료]')
 
-    @_char.command(name='변경', aliases=['선택', '변'])
+    @_char.command(name='변경', aliases=['선택', '변', '선'])
     async def _char_change(self, ctx: commands.Context, *, name):
         cmgr = CharMgr(self.cur)
         char = list(filter(lambda x: x.name.lower() == name.lower(), cmgr.get_chars(ctx.author.id)))
@@ -537,7 +533,7 @@ class InGamecmds(BaseCog):
             await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, cname))
             self.msglog.log(ctx, '[캐릭터 변경: 존재하지 않는 캐릭터]')
 
-    @_char.command(name='삭제')
+    @_char.command(name='삭제', aliases=['삭'])
     async def _char_delete(self, ctx: commands.Context, *, name):
         cmgr = CharMgr(self.cur)
         char = list(filter(lambda x: x.name.lower() == name.lower(), cmgr.get_chars(ctx.author.id)))
@@ -604,12 +600,148 @@ class InGamecmds(BaseCog):
         self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제 취소 완료]')
         return
 
-    async def char_settings_embed(self, name, pgr: pager.Pager):
-        pass
+    async def char_settings_embed(self, char: CharacterData, mode='default'):
+        sdgr = SettingDBMgr(self.datadb)
+        smgr = SettingMgr(self.cur, sdgr, char)
+        settitles = []
+        setvalue = []
+        for idx in range(len(self.datadb.settings)):
+            st = self.datadb.settings[idx]
+            settitles.append(st.title)
+            valuestr = str(smgr.get_setting(st.name))
+            for x in [('True', '켜짐'), ('False', '꺼짐')]:
+                valuestr = valuestr.replace(x[0], x[1])
+            setvalue.append(valuestr)
+        embed = discord.Embed(title='⚙ `{}` 캐릭터 설정'.format(char.name), color=self.color['info'])
+        if mode == 'select':
+            embed.title += ' - 선택 모드'
+            embed.add_field(name='번호', value='\n'.join(map(str, range(1, len(self.datadb.settings)+1))))
+        embed.add_field(name='설정 이름', value='\n'.join(settitles))
+        embed.add_field(name='설정값', value='\n'.join(setvalue))
+        return embed
 
-    @_char.group(name='설정', invoke_without_command=True)
-    async def _char_settings(self, ctx: commands.Context):
-        pass
+    @commands.group(name='설정', aliases=['셋', '설'], invoke_without_command=True)
+    async def _char_settings(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
+        cmgr = CharMgr(self.cur)
+        if charname:
+            char = cmgr.get_character(charname, ctx.author.id)
+            if not char:
+                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                return
+        else:
+            char = cmgr.get_current_char(ctx.author.id)
+        
+        msg = await ctx.send(embed=await self.char_settings_embed(char))
+        emjs = ['✏']
+        async def addreaction(msg):
+            for em in emjs:
+                await msg.add_reaction(em)
+        await addreaction(msg)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
+            else:
+                async def wait_for_cancel(msg):
+                    def cancelcheck(reaction, user):
+                        return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in ['❌']
+                    try:
+                        reaction, user = await self.client.wait_for('reaction_add', check=cancelcheck, timeout=20)
+                    except asyncio.TimeoutError:
+                        pass
+                    else:
+                        embed = discord.Embed(title='❗ 취소되었습니다.', color=self.color['error'])
+                        embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                        await ctx.send(embed=embed, delete_after=7)
+                        self.msglog.log(ctx, '[설정: 번쨰 입력: 취소됨]')
+                        return True
+                    finally:
+                        try:
+                            await msg.delete()
+                        except:
+                            pass
+
+                def msgcheck(m):
+                    return m.author == ctx.author and m.channel == ctx.channel and m.content
+                
+                async def wait_for_setindex(askmsg):
+                    try:
+                        m = await self.client.wait_for('message', check=msgcheck, timeout=20)
+                    except asyncio.TimeoutError:
+                        return asyncio.TimeoutError
+                    else:
+                        if not m.content.isdecimal():
+                            embed = discord.Embed(title='❌ 숫자만을 입력해주세요!', color=self.color['error'])
+                            embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                            await ctx.send(embed=embed, delete_after=7)
+                            self.msglog.log(ctx, '[설정: 번쨰 입력: 숫자만 입력]')
+                        else:
+                            idx = int(m.content)
+                            if 1 <= idx <= len(self.datadb.settings):
+                                return int(m.content)
+                            else:
+                                embed = discord.Embed(
+                                    title='❓ 설정항목 번째수가 올바르지 않습니다!',
+                                    description='위의 메시지에 항목 앞마다 번호가 있습니다.',
+                                    color=self.color['error']
+                                )
+                                embed.set_footer(text='이 메시지는 7초후 삭제됩니다')
+                                await ctx.send(embed=embed, delete_after=7)
+                                self.msglog.log(ctx, '[설정: 번쨰 입력: 올바르지 않은 번째수]')
+                    finally:
+                        try:
+                            await askmsg.delete()
+                        except:
+                            pass
+
+                async def looper(canceltask, msgtask):
+                    while True:
+                        if canceltask.done():
+                            msgtask.cancel()
+                            return canceltask
+                        elif msgtask.done():
+                            canceltask.cancel()
+                            return msgtask
+                        await asyncio.sleep(0.1)
+
+                if ctx.channel.last_message_id == msg.id:
+                    await msg.edit(embed=await self.char_settings_embed(char, 'select'))
+                else:
+                    results = await asyncio.gather(
+                        msg.delete(),
+                        ctx.send(embed=await self.char_settings_embed(char, 'select'))
+                    )
+                    msg = results[1]
+                    await addreaction(msg)
+                    reaction.message = msg
+
+                emj = reaction.emoji
+                if emj == '✏':
+                    editmsg = await ctx.send(embed=discord.Embed(title='⚙ 설정 변경 - 항목 선택', description='변경할 항목의 번째 수를 입력해주세요.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
+                    await editmsg.add_reaction('❌')
+                    canceltask = asyncio.create_task(wait_for_cancel(editmsg))
+                    msgtask = asyncio.create_task(wait_for_setindex(editmsg))
+                    rst = await looper(canceltask, msgtask)
+
+                    if rst == msgtask and type(msgtask.result()) == int:
+                        msgtask.result()
+
+                    elif rst == msgtask and msgtask.result() == asyncio.TimeoutError:
+                        embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
+                        embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
+                        await ctx.send(embed=embed, delete_after=7)
+                        self.msglog.log(ctx, '[가방: 시간 초과]')
+
+                await asyncio.gather(
+                    reaction.remove(user),
+                    msg.edit(embed=await self.char_settings_embed(char))
+                )
 
     @commands.command(name='스탯', aliases=['능력치'])
     async def _stat(self, ctx: commands.Context, charname: typing.Optional[str] = None):
