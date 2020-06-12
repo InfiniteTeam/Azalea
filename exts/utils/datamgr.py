@@ -6,15 +6,25 @@ import json
 from exts.utils import errors
 import os
 
-class Setting(NamedTuple):
-    name: str
-    title: str
-    description: str
-    default: Any
+class AzaleaData:
+    def __repr__(self):
+        reprs = []
+        for key, value in zip(self.__dict__.keys(), self.__dict__.values()):
+            reprs.append(f'{key}={value}')
+        reprstr = f'<{self.__class__.__name__}: ' + ' '.join(reprs) + '>'
+        return reprstr
 
-class SettingData(NamedTuple):
-    name: str
-    value: Any
+class Setting(AzaleaData):
+    def __init__(self, name: str, title: str, description: str, default: Any):
+        self.name = name
+        self.title = title
+        self.description = description
+        self.default: default
+
+class SettingData(AzaleaData):
+    def __init__(self, name: str, value: Any):
+        self.name = name
+        self.value = value
 
 class EnchantType(Enum):
     """
@@ -23,51 +33,56 @@ class EnchantType(Enum):
     Active = 'Active'
     Passive = 'Passive'
 
-class Enchantment(NamedTuple):
+class Enchantment(AzaleaData):
     """
     전체 마법부여를 정의하는 클래스입니다.
     """
-    name: str
-    max_level: int
-    type: EnchantType
-    tags: List[str]
+    def __init__(self, name: str, max_level: int, type: EnchantType, tags: List[str]=[]):
+        self.name = name
+        self.max_level = max_level
+        self.type = type
+        self.tags = tags
 
-class EnchantmentData(NamedTuple):
+class EnchantmentData(AzaleaData):
     """
     어떤 아이템에 부여된 마법부여 하나를 나타냅니다.
     """
-    name: str
-    level: int
+    def __init__(self, name: str, level: int):
+        self.name = name
+        self.level = name
 
-class Item(NamedTuple):
+class Item(AzaleaData):
     """
-    전체 아이템을 정의하는 클래스입니다.
+    전체 아이템을 정의하는 클래스입니다. 예외적으로 아이템 데이터베이스 파일에서 사용되는 Item 객체에서는 self.enchantments 속성이 str입니다.
     """
-    id: int
-    name: str
-    description: str
-    max_count: int
-    icon: str
-    tags: List[str]
-    enchantments: List[Enchantment]
-    meta: Dict
+    def __init__(self, id: int, name: str, description: str, max_count: int, icon: Union[str, int], tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.max_count = max_count
+        self.icon = icon
+        self.tags = tags
+        self.enchantments = enchantments
+        self.meta = meta
 
-class ItemData(NamedTuple):
+class ItemData(AzaleaData):
     """
     한 캐릭터가 가진 아이템 하나를 나타냅니다.
     """
-    id: int
-    count: int
-    enchantments: List[EnchantmentData]
+    def __init__(self, id: int, count: int, enchantments: List[EnchantmentData]):
+        self.id = id
+        self.count = count
+        self.enchantments = enchantments
 
-class StatData(NamedTuple):
+class StatData(AzaleaData):
     """
     한 캐릭터의 능력치 정보를 나타냅니다.
     """
-    STR: int
-    INT: int
-    DEX: int
-    LUK: int
+    def __init__(self, STR: int, INT: int, DEX: int, LUK: int):
+        self.STR = STR
+        self.INT = INT
+        self.DEX = DEX
+        self.LUK = LUK
 
 class CharacterType(Enum):
     """
@@ -78,55 +93,70 @@ class CharacterType(Enum):
     Wizard = '마법사'
     WorldGod = '세계신'
 
-class CharacterData(NamedTuple):
+class CharacterData(AzaleaData):
     """
     캐릭터 하나의 정보를 나타냅니다.
     """
-    id: int
-    online: bool
-    name: str
-    level: int
-    type: CharacterType
-    money: int
-    items: List[Item]
-    stat: StatData
-    birth: datetime.datetime
-    last_nick_change: datetime.datetime
-    delete_request: Union[None, datetime.datetime]
-    settings: List[SettingData]
+    def __init__(
+        self, id: int, online: bool, name: str, level: int, type: CharacterType, money: int,
+        items: List[Item], stat: StatData, birth: datetime.datetime, last_nick_change: datetime.datetime,
+        delete_request: Union[None, datetime.datetime], settings: List[SettingData]
+        ):
+        self.id = id
+        self.online = online
+        self.name = name
+        self.level = level
+        self.type = type
+        self.money = money
+        self.items = items
+        self.stat = stat
+        self.birth = birth
+        self.last_nick_change = last_nick_change
+        self.delete_request = delete_request
+        self.settings = settings
+
+class MarketItem(AzaleaData):
+    def __init__(self, item: ItemData, price: int, selling: int, discount: int):
+        self.item = item
+        self.price = price
+        self.selling = selling
+        self.discount = discount
 
 class DataDB:
     def __init__(self, items: list = [], enchantments: list = [], **kwargs):
         self.enchantments = enchantments
         self.items = items
+        self.markets = {}
         for x in kwargs:
             self.__setattr__(x, kwargs[x])
 
-    def load_enchantments(self, path: str):
-        with open(path, 'r', encoding='utf-8') as dbfile:
-            self.enchantments = [Enchantment(x['name'], x['max_level'], x['type'], x['tags']) for x in json.load(dbfile)['enchantments']]
+    def load_enchantments(self, enchantments: List[Enchantment]):
+        self.enchantments = enchantments
 
-    def load_items(self, path: str):
-        with open(path, 'r', encoding='utf-8') as dbfile:
-            items = []
-            for item in json.load(dbfile)['items']:
-                enchants = list(filter(
-                    lambda x: set(x.tags) & set(item['tags']),
-                    self.enchantments
-                ))
-                items.append(Item(item['id'], item['name'], item['description'], item['max_count'], item['icon']['default'], item['tags'], enchants, item['meta']))
-            self.items = items
+    def load_items(self, items: List[Item]):
+        its = []
+        for item in items:
+            enchants = list(filter(
+                lambda x: x.name in item.enchantments,
+                self.enchantments
+            ))
+            item.enchantments = enchants
+            its.append(item)
+        self.items = its
     
-    def load_settings(self, path: str):
-        with open(path, 'r', encoding='utf-8') as dbfile:
-            settings = []
-            for setting in json.load(dbfile)['charsettings']:
-                settings.append(Setting(setting['name'], setting['title'], setting['description'], setting['default']))
-            self.settings = settings
+    def load_char_settings(self, settings: List[Setting]):
+        self.char_settings = settings
+
+    def load_market(self, name, market: List[MarketItem]):
+        self.markets[name] = market
+
+class MarketDBMgr:
+    def __init__(self, name, datadb: DataDB):
+        self.market = datadb.markets[name]
 
 class SettingDBMgr:
-    def __init__(self, datadb: DataDB):
-        self.settings = datadb.settings
+    def __init__(self, datadb: DataDB, mode='char'):
+        self.settings = datadb.char_settings
 
     def fetch_setting(self, name: str):
         sets = list(filter(lambda x: x.name == name, self.settings))

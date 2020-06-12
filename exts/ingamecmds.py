@@ -605,8 +605,8 @@ class InGamecmds(BaseCog):
         smgr = SettingMgr(self.cur, sdgr, char)
         settitles = []
         setvalue = []
-        for idx in range(len(self.datadb.settings)):
-            st = self.datadb.settings[idx]
+        for idx in range(len(self.datadb.char_settings)):
+            st = self.datadb.char_settings[idx]
             settitles.append(st.title)
             valuestr = str(smgr.get_setting(st.name))
             for x in [('True', '켜짐'), ('False', '꺼짐')]:
@@ -615,7 +615,7 @@ class InGamecmds(BaseCog):
         embed = discord.Embed(title='⚙ `{}` 캐릭터 설정'.format(char.name), color=self.color['info'])
         if mode == 'select':
             embed.title += ' - 선택 모드'
-            embed.add_field(name='번호', value='\n'.join(map(str, range(1, len(self.datadb.settings)+1))))
+            embed.add_field(name='번호', value='\n'.join(map(str, range(1, len(self.datadb.char_settings)+1))))
         embed.add_field(name='설정 이름', value='\n'.join(settitles))
         embed.add_field(name='설정값', value='\n'.join(setvalue))
         return embed
@@ -683,7 +683,7 @@ class InGamecmds(BaseCog):
                             self.msglog.log(ctx, '[설정: 번쨰 입력: 숫자만 입력]')
                         else:
                             idx = int(m.content)
-                            if 1 <= idx <= len(self.datadb.settings):
+                            if 1 <= idx <= len(self.datadb.char_settings):
                                 return int(m.content)
                             else:
                                 embed = discord.Embed(
@@ -829,15 +829,16 @@ class InGamecmds(BaseCog):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
         rcv_money = cmgr.get_raw_character(char.name)['received_money']
+        embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
-            pass
+            embed.description += '\n관리자여서 돈을 무제한을 받을 수 있습니다. 멋지네요!'
         elif rcv_money:
-            await ctx.send(embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
+            await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
             return
         imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
         imgr.money += 1000
         self.cur.execute('update chardata set received_money=%s where name=%s', (True, char.name))
-        await ctx.send(embed=discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info']))
+        await ctx.send(ctx.author.mention, embed=embed)
 
     @commands.command(name='상점')
     async def _market(self, ctx: commands.Context):

@@ -15,6 +15,7 @@ import paramiko
 from random import randint
 from exts.utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from exts.utils.azalea import Azalea
+from ingame.db import enchantments, items, charsettings, market
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -132,7 +133,7 @@ dbkey = 'default'
 if config['betamode']:
     dbkey = 'beta'
 
-db = pymysql.connect(
+sqldb = pymysql.connect(
     host=dbac[dbkey]['host'],
     user=dbac[dbkey]['dbUser'],
     password=dbac[dbkey]['dbPassword'],
@@ -140,7 +141,7 @@ db = pymysql.connect(
     charset='utf8',
     autocommit=True
 )
-cur = db.cursor(pymysql.cursors.DictCursor)
+cur = sqldb.cursor(pymysql.cursors.DictCursor)
 
 client = Azalea(command_prefix=prefixes, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
 client.remove_command('help')
@@ -152,10 +153,12 @@ for i in color.keys(): # convert HEX to DEC
 check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
+# 인게임 DB 로드
 datadb = datamgr.DataDB()
-datadb.load_enchantments('./db/enchantments.json')
-datadb.load_items('./db/items.json')
-datadb.load_settings('./db/charsettings.json')
+datadb.load_enchantments(enchantments.ENCHANTMENTS)
+datadb.load_items(items.ITEMS)
+datadb.load_char_settings(charsettings.CHAR_SETTINGS)
+datadb.load_market('main', market.MARKET)
 
 print(datadb.items)
 
@@ -163,6 +166,8 @@ def awaiter(coro):
     return asyncio.ensure_future(coro)
 
 client.add_check(check.notbot)
+
+# 데이터 적재
 
 client.add_data('config', config)
 client.add_data('color', color)

@@ -12,8 +12,7 @@
         "phone"
       ],
       "enchantments": [
-        0,
-        1
+        "long-battery"
       ],
       "meta": {}
     },
