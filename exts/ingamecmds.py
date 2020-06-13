@@ -11,7 +11,7 @@ from exts.utils import pager, emojibuttons, errors, timedelta
 from exts.utils.basecog import BaseCog
 from templates import errembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, SettingData, Setting, SettingDBMgr, SettingMgr
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -350,6 +350,32 @@ class InGamecmds(BaseCog):
                 await asyncio.gather(do,
                     msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
                 )
+
+    async def market_embed(self, pgr: pager.Pager, mode='default'):
+        items = pgr.get_thispage()
+        embed = discord.Embed(title='🛍 상점', description='')
+        idgr = ItemDBMgr(self.datadb)
+        for idx in range(len(items)):
+            one: MarketItem = items[idx]
+            itemdb = idgr.fetch_item(one.item.id)
+            enchants = ''
+            if one.discount:
+                pricestr = '~~`{}`~~ {} 골드'.format(one.price, one.discount)
+            else:
+                pricestr = str(one.price) + ' 골드'
+            embed.description += '🔹 **{}**\n{}{}\n\n'.format(itemdb.name, enchants, pricestr)
+        embed.description += '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+        embed.set_footer(text='💎: 구매 | 💰: 판매')
+        return embed
+
+    @commands.command(name='상점')
+    async def _market(self, ctx: commands.Context):
+        perpage = 8
+        mdgr = MarketDBMgr('main', self.datadb)
+        pgr = pager.Pager(mdgr.market, perpage)
+        embed = await self.market_embed(pgr)
+        msg = await ctx.send(embed=embed)
+
 
     async def char_embed(self, username, pgr: pager.Pager, mode='default'):
         chars = pgr.get_thispage()
@@ -839,10 +865,6 @@ class InGamecmds(BaseCog):
         imgr.money += 1000
         self.cur.execute('update chardata set received_money=%s where name=%s', (True, char.name))
         await ctx.send(ctx.author.mention, embed=embed)
-
-    @commands.command(name='상점')
-    async def _market(self, ctx: commands.Context):
-        pass
 
 def setup(client):
     cog = InGamecmds(client)
