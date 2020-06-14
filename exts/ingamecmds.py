@@ -9,9 +9,9 @@ import random
 import json
 from exts.utils import pager, emojibuttons, errors, timedelta, event_waiter
 from exts.utils.basecog import BaseCog
-from templates import errembeds
+from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -50,28 +50,7 @@ class InGamecmds(BaseCog):
             embed.description = itemstr + moneystr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
         else:
             embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
-        return embed
-
-    async def itemdata_embed(self, ctx: commands.Context, itemdata: ItemData, mode='default', *, delete_count: int=0):
-        idgr = ItemDBMgr(self.datadb)
-        item = idgr.fetch_item(itemdata.id)
-        color = self.color['info']
-        if mode == 'delete':
-            color = self.color['warn']
-        embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=color)
-        embed.set_author(name='📔 아이템 상세 정보')
-        enchantstr = ''
-        for enchant in itemdata.enchantments:
-            enchantstr += '{}: {}\n'.format(enchant.name, enchant.level)
-        if not enchantstr:
-            enchantstr = '없음'
-        embed.add_field(name='마법부여', value=enchantstr)
-        if mode == 'delete':
-            embed.description = '**정말 이 아이템을 버릴까요? 다시 회수할 수 없습니다.**' + embed.description
-            embed.set_author(name='⚠ 아이템 버리기 경고')
-            embed.add_field(name='버릴 개수', value='{}개'.format(delete_count))
-        else:
-            embed.add_field(name='개수', value='{}개'.format(itemdata.count))
+        embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
         return embed
 
     @commands.command(name='가방', aliases=['템', '아이템'])
@@ -156,7 +135,7 @@ class InGamecmds(BaseCog):
                             if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                                 itemidx = int(idxtaskrst.content) - 1
                                 infoitem = pgr.get_thispage()[itemidx]
-                                embed = await self.itemdata_embed(ctx, infoitem)
+                                embed = await ingameembeds.itemdata_embed(self.datadb, ctx, infoitem)
                                 embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다.')
                                 iteminfomsg = await ctx.send(embed=embed)
                                 self.msglog.log(ctx, '[가방: 아이템 정보]')
@@ -209,7 +188,7 @@ class InGamecmds(BaseCog):
                                     if countmsg.content.isdecimal():
                                         delcount = int(countmsg.content)
                                         if 1 <= delcount <= delitem.count:
-                                            embed = await self.itemdata_embed(ctx, delitem, 'delete', delete_count=delcount)
+                                            embed = await ingameembeds.itemdata_embed(self.datadb, ctx, delitem, 'delete', delete_count=delcount)
                                             deloxmsg = await ctx.send(embed=embed)
                                             self.msglog.log(ctx, '[가방: 아이템 버리기: 아이템 삭제 경고]')
                                             oxemjs = [self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross')]
@@ -253,30 +232,13 @@ class InGamecmds(BaseCog):
                     msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
                 )
 
-    async def market_embed(self, pgr: pager.Pager, mode='default'):
-        items = pgr.get_thispage()
-        embed = discord.Embed(title='🛍 상점', description='')
-        idgr = ItemDBMgr(self.datadb)
-        for idx in range(len(items)):
-            one: MarketItem = items[idx]
-            itemdb = idgr.fetch_item(one.item.id)
-            enchants = ''
-            if one.discount:
-                pricestr = '~~`{}`~~ {} 골드'.format(one.price, one.discount)
-            else:
-                pricestr = str(one.price) + ' 골드'
-            embed.description += '🔹 **{}**\n{}{}\n\n'.format(itemdb.name, enchants, pricestr)
-        embed.description += '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
-        embed.set_footer(text='💎: 구매 | 💰: 판매')
-        return embed
-
     @commands.command(name='상점')
     async def _market(self, ctx: commands.Context):
-        perpage = 8
+        perpage = 1
         mdgr = MarketDBMgr('main', self.datadb)
         pgr = pager.Pager(mdgr.market, perpage)
-        embed = await self.market_embed(pgr)
-        msg = await ctx.send(embed=embed)
+        msg = await ctx.send(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
+        self.msglog.log(ctx, '[상점]')
         extemjs = ['💎', '💰']
         if len(pgr.pages()) <= 1:
             emjs = extemjs
@@ -286,35 +248,20 @@ class InGamecmds(BaseCog):
             await msg.add_reaction(em)
         def check(reaction, user):
             return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emojibuttons.PageButton.emojis
-        
-
-    async def char_embed(self, username, pgr: pager.Pager, mode='default'):
-        chars = pgr.get_thispage()
-        charstr = ''
-        for idx in range(len(chars)):
-            one = chars[idx]
-            name = one.name
-            if mode == 'select':
-                name = f'{idx+1}. {name}'
-            level = one.level
-            chartype = one.type.value
-            online = one.online
-            onlinestr = ''
-            if online:
-                onlinestr = '(**현재 플레이중**)'
-            deleteleftstr = ''
-            if one.delete_request:
-                tdleft = timedelta.format_timedelta((one.delete_request + relativedelta(hours=24)) - datetime.datetime.now())
-                deleteleft = ' '.join(tdleft.values())
-                deleteleftstr = '\n**`{}` 후에 삭제됨**'.format(deleteleft)
-            charstr += '**{}** {}\n레벨: `{}` \\| 직업: `{}` {}\n\n'.format(name, onlinestr, level, chartype, deleteleftstr)
-        embed = discord.Embed(
-            title=f'🎲 `{username}`님의 캐릭터 목록',
-            description=charstr,
-            color=self.color['info']
-        )
-        embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
-        return embed
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
+            else:
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(do,
+                        msg.edit(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'])),
+                    )
 
     @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
     async def _char(self, ctx: commands.Context, *, user: typing.Optional[discord.Member]=None):
@@ -337,7 +284,7 @@ class InGamecmds(BaseCog):
                 ))
             return
         pgr = pager.Pager(chars, perpage)
-        msg = await ctx.send(embed=await self.char_embed(user.name, pgr))
+        msg = await ctx.send(embed=await ingameembeds.char_embed(user.name, pgr, color=self.color['info']))
         self.msglog.log(ctx, '[캐릭터 목록]')
         if len(pgr.pages()) <= 1:
             return
@@ -349,12 +296,15 @@ class InGamecmds(BaseCog):
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
             except asyncio.TimeoutError:
-                pass
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
             else:
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await self.char_embed(user.name, pgr)),
+                        msg.edit(embed=await ingameembeds.char_embed(user.name, pgr, color=self.color['info'])),
                     )
 
     @_char.command(name='생성')
