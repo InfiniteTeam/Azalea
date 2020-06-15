@@ -37,8 +37,9 @@ class Enchantment(AzaleaData):
     """
     전체 마법부여를 정의하는 클래스입니다.
     """
-    def __init__(self, name: str, max_level: int, type: EnchantType, tags: List[str]=[]):
+    def __init__(self, name: str, title: str, max_level: int, type: EnchantType, tags: List[str]=[]):
         self.name = name
+        self.title = title
         self.max_level = max_level
         self.type = type
         self.tags = tags
@@ -49,7 +50,7 @@ class EnchantmentData(AzaleaData):
     """
     def __init__(self, name: str, level: int):
         self.name = name
-        self.level = name
+        self.level = level
 
 class Item(AzaleaData):
     """
@@ -208,7 +209,7 @@ class ItemDBMgr:
         enchants = []
         found = list(filter(lambda x: set(x.tags) & set(tags), self.datadb.enchantments))
         for x in found:
-            enchants.append(Enchantment(x.id, x.name, x.max_level, x.type))
+            enchants.append(Enchantment(x.id, x.name, x.title, x.max_level, x.type))
         return enchants
 
     def fetch_item(self, itemid: int) -> Item:
@@ -223,6 +224,12 @@ class ItemDBMgr:
             if found:
                 return found
             return None
+        return None
+
+    def fetch_enchantment(self, name: str) -> Enchantment:
+        found = list(filter(lambda x: name == x.name, self.datadb.enchantments))
+        if found:
+            return found[0]
         return None
 
 class ItemMgr:

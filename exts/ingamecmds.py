@@ -21,38 +21,6 @@ class InGamecmds(BaseCog):
             if cmd.name not in ['캐릭터', '로그아웃', '캐생', '캐삭']:
                 cmd.add_check(self.check.char_online)
 
-    async def backpack_embed(self, ctx, pgr: pager.Pager, charname, mode='default'):
-        items = pgr.get_thispage()
-        itemstr = ''
-        moneystr = ''
-        cmgr = CharMgr(self.cur)
-        char = cmgr.get_character(charname)
-        idb = ItemDBMgr(self.datadb)
-        for idx in range(len(items)):
-            one = items[idx]
-            founditem = idb.fetch_item(one.id)
-            icon = founditem.icon
-            name = founditem.name
-            count = one.count
-            if mode == 'select':
-                itemstr += '{}. {} **{}** ({}개)\n'.format(idx+1, icon, name, count)
-            else:
-                itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
-        embed = discord.Embed(
-            title=f'💼 `{charname}`의 가방',
-            color=self.color['info']
-        )
-        moneystr = f'\n**💵 {char.money} 골드**'
-        if mode == 'select':
-            moneystr = ''
-            embed.title += ' - 선택 모드'
-        if items:
-            embed.description = itemstr + moneystr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
-        else:
-            embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
-        embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
-        return embed
-
     @commands.command(name='가방', aliases=['템', '아이템'])
     @commands.guild_only()
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
@@ -73,7 +41,7 @@ class InGamecmds(BaseCog):
         items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
-        msg = await ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'default'))
+        msg = await ctx.send(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
         extemjs = ['❔']
         owner = False
@@ -103,13 +71,12 @@ class InGamecmds(BaseCog):
                     break
             else:
                 if reaction.emoji in extemjs:
-                    print(ctx.channel.last_message_id, msg.id)
-                    if ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
+                    if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
+                        await msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await self.backpack_embed(ctx, pgr, charname, 'select'))
+                            ctx.send(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -229,25 +196,27 @@ class InGamecmds(BaseCog):
                 pgr.set_obj(imgr.get_items())
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
-                    msg.edit(embed=await self.backpack_embed(ctx, pgr, charname, 'default')),
+                    msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default')),
                 )
 
     @commands.command(name='상점')
     async def _market(self, ctx: commands.Context):
-        perpage = 1
+        perpage = 8
         mdgr = MarketDBMgr('main', self.datadb)
         pgr = pager.Pager(mdgr.market, perpage)
         msg = await ctx.send(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
         self.msglog.log(ctx, '[상점]')
-        extemjs = ['💎', '💰']
+        extemjs = ['💎', '💰', '❔']
         if len(pgr.pages()) <= 1:
             emjs = extemjs
         else:
             emjs = emojibuttons.PageButton.emojis + extemjs
-        for em in emjs:
-            await msg.add_reaction(em)
+        async def addreaction(msg):
+            for em in emjs:
+                await msg.add_reaction(em)
+        await addreaction(msg)
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emojibuttons.PageButton.emojis
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
         while True:
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
@@ -257,6 +226,59 @@ class InGamecmds(BaseCog):
                 except:
                     pass
             else:
+                if reaction.emoji in extemjs:
+                    if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
+                        await msg.edit(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
+                    else:
+                        results = await asyncio.gather(
+                            msg.delete(),
+                            ctx.send(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
+                        )
+                        msg = results[1]
+                        await addreaction(msg)
+                        reaction.message = msg
+                if reaction.emoji == '💎':
+                    pass
+                elif reaction.emoji == '💰':
+                    pass
+                elif reaction.emoji == '❔':
+                    # 상점아이템 정보 확인 섹션
+                    itemidxmsg = await ctx.send(embed=discord.Embed(
+                        title='🔍 아이템 정보 보기 - 아이템 선택',
+                        description='자세한 정보를 확인할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
+                        color=self.color['ask']
+                    ))
+                    self.msglog.log(ctx, '[상점: 아이템 정보: 번째수 입력]')
+                    await itemidxmsg.add_reaction('❌')
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                    
+                    task = await event_waiter.wait_for_first(canceltask, indextask)
+                    await itemidxmsg.delete()
+                    if task == indextask:
+                        idxtaskrst = indextask.result()
+                        if idxtaskrst.content.isdecimal():
+                            if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
+                                itemidx = int(idxtaskrst.content) - 1
+                                infoitem = pgr.get_thispage()[itemidx]
+                                embed = await ingameembeds.marketitem_embed(self.datadb, ctx, infoitem)
+                                embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다.')
+                                iteminfomsg = await ctx.send(embed=embed)
+                                self.msglog.log(ctx, '[상점: 아이템 정보]')
+                                await iteminfomsg.add_reaction('❌')
+                                await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=iteminfomsg, emojis=['❌'], timeout=60*5)
+                                await iteminfomsg.delete()
+                            else:
+                                embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위 메시지에 아이템 앞마다 번호가 붙어 있습니다.', color=self.color['error'])
+                                embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                await ctx.send(embed=embed, delete_after=7)
+                                self.msglog.log(ctx, '[상점: 아이템 정보: 올바르지 않은 번째수]')
+                        else:
+                            embed = discord.Embed(title='❓ 아이템 번째수는 숫자만을 입력해주세요!', color=self.color['error'])
+                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                            await ctx.send(embed=embed, delete_after=7)
+                            self.msglog.log(ctx, '[상점: 아이템 정보: 숫자만 입력]')
+
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
