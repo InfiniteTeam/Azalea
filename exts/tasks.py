@@ -17,14 +17,12 @@ class Tasks(BaseCog):
         self.presence_loop.start()
         self.pingloop.start()
         self.delete_char.start()
-        self.reset_money.start()
 
     def cog_unload(self):
         self.sync_guilds.cancel()
         self.presence_loop.cancel()
         self.pingloop.cancel()
         self.delete_char.cancel()
-        self.reset_money.cancel()
 
     @tasks.loop(seconds=5)
     async def pingloop(self):
@@ -136,21 +134,10 @@ class Tasks(BaseCog):
         except:
             self.errlogger.error(traceback.format_exc())
 
-    @tasks.loop(seconds=10)
-    async def reset_money(self):
-        try:
-            now = datetime.datetime.now()
-            if self.last_reset.day != now.day:
-                self.last_reset = now
-                self.cur.execute('update chardata set received_money=%s where received_money=%s', (False, True))
-        except:
-            self.errlogger.error(traceback.format_exc())
-
     @pingloop.before_loop
     @sync_guilds.before_loop
     @presence_loop.before_loop
     @delete_char.before_loop
-    @reset_money.before_loop
     async def before_loop(self):
         await self.client.wait_until_ready()
 

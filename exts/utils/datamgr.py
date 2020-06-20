@@ -10,7 +10,7 @@ class AzaleaData:
     def __repr__(self):
         reprs = []
         for key, value in zip(self.__dict__.keys(), self.__dict__.values()):
-            reprs.append(f'{key}={value}')
+            reprs.append(f'{key}={value.__repr__()}')
         reprstr = f'<{self.__class__.__name__}: ' + ' '.join(reprs) + '>'
         return reprstr
 
@@ -85,6 +85,21 @@ class StatData(AzaleaData):
         self.DEX = DEX
         self.LUK = LUK
 
+class RegionType(Enum):
+    Village = '마을'
+
+class Region(AzaleaData):
+    def __init__(self, name: str, icon: str, type: RegionType, *, market: str, warpable: bool=False):
+        self.name = name
+        self.icon = icon
+        self.type = type
+        self.market = market
+        self.warpable = warpable
+
+class RegionData(AzaleaData):
+    def __init__(self, name: str):
+        self.name = name
+
 class CharacterType(Enum):
     """
     전체 캐릭터의 종류를 정의합니다.
@@ -101,7 +116,7 @@ class CharacterData(AzaleaData):
     def __init__(
         self, id: int, online: bool, name: str, level: int, type: CharacterType, money: int,
         items: List[Item], stat: StatData, birth: datetime.datetime, last_nick_change: datetime.datetime,
-        delete_request: Union[None, datetime.datetime], settings: List[SettingData]
+        delete_request: Union[None, datetime.datetime], settings: List[SettingData], location: Region
         ):
         self.id = id
         self.online = online
@@ -115,6 +130,7 @@ class CharacterData(AzaleaData):
         self.last_nick_change = last_nick_change
         self.delete_request = delete_request
         self.settings = settings
+        self.location = location
 
 class MarketItem(AzaleaData):
     def __init__(self, item: ItemData, price: int, selling: int, discount: int = None):
@@ -124,12 +140,11 @@ class MarketItem(AzaleaData):
         self.discount = discount
 
 class DataDB:
-    def __init__(self, items: list = [], enchantments: list = [], **kwargs):
-        self.enchantments = enchantments
-        self.items = items
+    def __init__(self):
+        self.enchantments = []
+        self.items = []
         self.markets = {}
-        for x in kwargs:
-            self.__setattr__(x, kwargs[x])
+        self.regions = {}
 
     def load_enchantments(self, enchantments: List[Enchantment]):
         self.enchantments = enchantments
@@ -151,9 +166,35 @@ class DataDB:
     def load_market(self, name, market: List[MarketItem]):
         self.markets[name] = market
 
+    def load_region(self, name, region: List[Region]):
+        self.regions[name] = region
+
 class MarketDBMgr:
-    def __init__(self, name, datadb: DataDB):
-        self.market = datadb.markets[name]
+    def __init__(self, datadb: DataDB):
+        self.markets = datadb.markets
+
+    def get_market(self, name: str):
+        if name in self.markets:
+            return self.markets[name]
+
+class RegionDBMgr:
+    def __init__(self, datadb: DataDB):
+        self.regions = datadb.regions
+
+    def get_world(self, world: str) -> List[Region]:
+        if world in self.regions:
+            return self.regions[world]
+
+    def get_region(self, world: str, name: str) -> Region:
+        if name in self.regions:
+            regions = self.regions[world]
+            rgn = list(filter(lambda x: x.name == name, regions))
+            if rgn:
+                return rgn[0]
+
+    def get_warpables(self, world: str) -> List[Region]:
+        regions = self.get_world(world)
+        return list(filter(lambda x: x.warpable, regions))
 
 class SettingDBMgr:
     def __init__(self, datadb: DataDB, mode='char'):
@@ -319,9 +360,10 @@ class CharMgr:
         chartype = CharacterType.__getattr__(chardict['type'])
         setraw = json.loads(chardict['settings'])
         settings = [SettingData(setting, setraw[setting]) for setting in setraw]
+        region = RegionData(chardict['location'])
         char = CharacterData(
             chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype,
-            chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'], settings
+            chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'], settings, region
         )
         return char
 
@@ -382,7 +424,8 @@ class CharMgr:
             raise errors.CharacterNotFound
 
     def schedule_delete(self, userid: int, name: str):
-        self.logout_all(self.get_character(name).id)
+        if self.cur.execute('select * from chardata where name=%s and online=%s', (name, True)) != 0:
+            self.logout_all(userid)
         if self.cur.execute('update chardata set delete_request=%s where name=%s', (datetime.datetime.now(), name)) == 0:
             raise errors.CharacterNotFound
 

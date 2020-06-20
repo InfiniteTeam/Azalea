@@ -122,7 +122,7 @@ class Events(BaseCog):
                 msg = await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
             except discord.HTTPException as exc:
                 if exc.code == 50035:
-                    await ctx.author.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.', color=self.color['error']), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
+                    msg = await ctx.author.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.', color=self.color['error']), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
             finally:
                 self.msglog.log(ctx, '[커맨드 오류]')
 

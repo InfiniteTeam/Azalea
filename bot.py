@@ -15,7 +15,7 @@ import paramiko
 from random import randint
 from exts.utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from exts.utils.azalea import Azalea
-from ingame.db import enchantments, items, charsettings, market
+from ingame.db import enchantments, items, charsettings, market, regions
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -158,6 +158,7 @@ datadb = datamgr.DataDB()
 datadb.load_enchantments(enchantments.ENCHANTMENTS)
 datadb.load_items(items.ITEMS)
 datadb.load_char_settings(charsettings.CHAR_SETTINGS)
+datadb.load_region('azalea', regions.REGIONS)
 datadb.load_market('main', market.MARKET)
 
 print(datadb.items)
