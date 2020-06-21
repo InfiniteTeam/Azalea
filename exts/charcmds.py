@@ -272,10 +272,8 @@ class Charcmds(BaseCog):
         else:
             char = cmgr.get_current_char(ctx.author.id)
         td = datetime.datetime.now() - char.last_nick_change
-        print(td.__repr__())
         if td <= datetime.timedelta(days=1):
             cldstr = ' '.join(timedelta.format_timedelta(datetime.timedelta(days=1) - td).values())
-            print(cldstr)
             await ctx.send(embed=discord.Embed(title='⏱ 쿨타임 중입니다!', description=f'**`{cldstr}` 남았습니다!**\n닉네임은 24시간에 한 번 변경할 수 있습니다.', color=self.color['info']))
             self.msglog.log(ctx, '[이름변경: 쿨다운 중]')
             return

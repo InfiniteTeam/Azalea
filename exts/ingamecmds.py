@@ -497,7 +497,7 @@ class InGamecmds(BaseCog):
         now = datetime.datetime.now()
         embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
-            embed.description += '\n관리자여서 돈을 무제한을 받을 수 있습니다. 멋지네요!'
+            embed.description += '\n관리자여서 돈을 무제한으로 받을 수 있습니다. 멋지네요!'
         elif now.day <= rcv_money.day:
             await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
             return

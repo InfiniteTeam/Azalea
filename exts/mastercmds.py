@@ -223,6 +223,46 @@ class Mastercmds(BaseCog):
         self.cur.execute('update userdata set type=%s where id=%s', ('User', user.id))
         await ctx.send('함')
 
+    @commands.group(name='shutdown', aliases=['셧다운'])
+    async def _shutdown(self, ctx: commands.Context, seconds: typing.Optional[float]=60.0):
+        if math.trunc(seconds) != 0:
+            now = True
+            timeleftstr = f'`{seconds}초` 후에 '
+        else:
+            now = False
+            timeleftstr = '지금 바로 '
+        msg = await ctx.send(embed=discord.Embed(
+            title='🖥 Azalea 종료',
+            description=f'{timeleftstr}Azalea의 모든 명령어 처리 및 백그라운드 작업이 중단되고 데이터베이스 연결, SSH 연결을 닫습니다.\n**계속합니까?**',
+            color=self.color['warn']
+        ))
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=20)
+        except asyncio.TimeoutError:
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+        else:
+            if reaction.emoji == '⭕':
+                if now:
+                    await ctx.send(embed=discord.Embed(title='⏳ 종료 예약됨'))
+                    start = time.time()
+                    async def time_left():
+                        while time.time() - start < seconds:
+                            self.client.set_data('shutdown_left', seconds - (time.time() - start))
+                            await asyncio.sleep(0.1)
+                    await time_left()
+                self.db.close()
+                await self.client.logout()
+            elif reaction.emoji == '❌':
+                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+
 def setup(client):
     cog = Mastercmds(client)
     client.add_cog(cog)

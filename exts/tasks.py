@@ -4,6 +4,7 @@ from exts.utils.basecog import BaseCog
 from exts.utils import charmgr
 import traceback
 import datetime
+import math
 
 # pylint: disable=no-member
 
@@ -108,16 +109,24 @@ class Tasks(BaseCog):
     @tasks.loop(seconds=7)
     async def presence_loop(self):
         try:
-            games = [
-                f'〔{self.prefix} 도움〕 입력!',
-                f'{self.prefix} 도움 | {len(self.client.guilds)} 서버',
-                f'{self.prefix} 도움 | {len(self.client.users)} 사용자'
-            ]
-            await self.client.change_presence(status=discord.Status.online, activity=discord.Game(games[self.gamenum]))
-            if self.gamenum == len(games)-1:
-                self.gamenum = 0
+            if self.client.get_data('shutdown_left') is None:
+                games = [
+                    f'〔{self.prefix} 도움〕 입력!',
+                    f'{self.prefix} 도움 | {len(self.client.guilds)} 서버',
+                    f'{self.prefix} 도움 | {len(self.client.users)} 사용자'
+                ]
+                await self.client.change_presence(status=discord.Status.online, activity=discord.Game(games[self.gamenum]))
+                if self.gamenum == len(games)-1:
+                    self.gamenum = 0
+                else:
+                    self.gamenum += 1
             else:
-                self.gamenum += 1
+                await self.client.change_presence(
+                    status=discord.Status.online,
+                    activity=discord.Game(
+                        str(math.trunc(self.client.get_data('shutdown_left'))) + '초 후 종료'
+                    )
+                )
         except:
             self.errlogger.error(traceback.format_exc())
 
