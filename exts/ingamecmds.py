@@ -510,7 +510,7 @@ class InGamecmds(BaseCog):
     async def _warp(self, ctx: commands.Context):
         rmgr = RegionDBMgr(self.datadb)
         rgn = rmgr.get_warpables('azalea')
-        print(rgn)
+        print(rgn[0])
 
 def setup(client):
     cog = InGamecmds(client)

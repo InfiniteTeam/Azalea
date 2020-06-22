@@ -5,6 +5,8 @@ import datetime
 import time
 import typing
 import math
+import sys
+import os
 import io
 from exts.utils.basecog import BaseCog
 from exts.utils import errors, progressbar
@@ -13,6 +15,7 @@ import traceback
 class Mastercmds(BaseCog):
     def __init__(self, client):
         super().__init__(client)
+        self.will_shutdown = False
         for cmd in self.get_commands():
             cmd.add_check(self.check.master)
 
@@ -223,8 +226,15 @@ class Mastercmds(BaseCog):
         self.cur.execute('update userdata set type=%s where id=%s', ('User', user.id))
         await ctx.send('함')
 
-    @commands.group(name='shutdown', aliases=['셧다운'])
+    async def shutdown(self):
+        self.db.close()
+        await self.client.logout()
+
+    @commands.group(name='shutdown', aliases=['셧다운', '끄기', '종료'])
     async def _shutdown(self, ctx: commands.Context, seconds: typing.Optional[float]=60.0):
+        if self.will_shutdown:
+            await ctx.send(embed=discord.Embed(title='❌ 이미 종료(재시작)이 예약되어 있습니다.', color=self.color['error'])) 
+            return
         if math.trunc(seconds) != 0:
             now = True
             timeleftstr = f'`{seconds}초` 후에 '
@@ -250,18 +260,84 @@ class Mastercmds(BaseCog):
                 pass
         else:
             if reaction.emoji == '⭕':
+                self.will_shutdown = True
                 if now:
-                    await ctx.send(embed=discord.Embed(title='⏳ 종료 예약됨'))
+                    await ctx.send(embed=discord.Embed(title='⏳ 종료 예약됨', color=self.color['success']))
                     start = time.time()
                     async def time_left():
-                        while time.time() - start < seconds:
+                        while time.time() - start < seconds and self.will_shutdown:
                             self.client.set_data('shutdown_left', seconds - (time.time() - start))
                             await asyncio.sleep(0.1)
                     await time_left()
-                self.db.close()
-                await self.client.logout()
+                else:
+                    await ctx.send(embed=discord.Embed(title='지금 Azalea가 종료됩니다.', color=self.color['warn']))
+                if self.will_shutdown:
+                    await self.shutdown()
+                else:
+                    self.client.set_data('shutdown_left', None)
+                    await ctx.send(embed=discord.Embed(title='⏳ 종료 예약이 취소되었습니다.', color=self.color['info']))
             elif reaction.emoji == '❌':
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+
+    @commands.command(name='재시작', aliases=['리부트', '재부팅', '리붓', '다시시작', '리스타트'])
+    async def _restart(self, ctx: commands.Context, seconds: typing.Optional[float]=60.0):
+        if self.will_shutdown:
+            await ctx.send(embed=discord.Embed(title='❌ 이미 종료(재시작)이 예약되어 있습니다.', color=self.color['error'])) 
+            return
+        if math.trunc(seconds) != 0:
+            now = True
+            timeleftstr = f'`{seconds}초` 후에 '
+        else:
+            now = False
+            timeleftstr = '지금 바로 '
+        msg = await ctx.send(embed=discord.Embed(
+            title='🖥 Azalea 재시작',
+            description=f'{timeleftstr}Azalea가 완전히 종료된 후 다시 시작됩니다.\n**계속합니까?**',
+            color=self.color['warn']
+        ))
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=20)
+        except asyncio.TimeoutError:
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+        else:
+            if reaction.emoji == '⭕':
+                if now:
+                    self.will_shutdown = True
+                    await ctx.send(embed=discord.Embed(title='⏳ 재시작 예약됨', color=self.color['success']))
+                    start = time.time()
+                    async def time_left():
+                        while time.time() - start < seconds and self.will_shutdown:
+                            self.client.set_data('shutdown_left', seconds - (time.time() - start))
+                            await asyncio.sleep(0.1)
+                    await time_left()
+                else:
+                    await ctx.send(embed=discord.Embed(title='지금 Azalea가 재시작됩니다.', color=self.color['warn']))
+
+                if self.will_shutdown:
+                    await self.shutdown()
+                    executable = sys.executable
+                    args = sys.argv[:]
+                    args.insert(0, sys.executable)
+                    os.execvp(executable, args)
+                else:
+                    self.client.set_data('shutdown_left', None)
+                    await ctx.send(embed=discord.Embed(title='⏳ 재시작 예약이 취소되었습니다.', color=self.color['info']))
+            elif reaction.emoji == '❌':
+                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+
+    @commands.command(name='종료취소')
+    async def _cancel_shutdown(self, ctx: commands.Context):
+        if not self.will_shutdown:
+            await ctx.send(embed=discord.Embed(title='❓ 예약된 종료(재시작) 이 없습니다.', color=self.color['error']))
+        self.will_shutdown = False
 
 def setup(client):
     cog = Mastercmds(client)

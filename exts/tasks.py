@@ -106,7 +106,7 @@ class Tasks(BaseCog):
         except:
             self.client.get_data('errlogger').error(traceback.format_exc())
 
-    @tasks.loop(seconds=7)
+    @tasks.loop(seconds=5)
     async def presence_loop(self):
         try:
             if self.client.get_data('shutdown_left') is None:
