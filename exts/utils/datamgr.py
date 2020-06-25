@@ -89,8 +89,9 @@ class RegionType(Enum):
     Village = '마을'
 
 class Region(AzaleaData):
-    def __init__(self, name: str, icon: str, type: RegionType, *, market: str, warpable: bool=False):
+    def __init__(self, name: str, title: str, icon: str, type: RegionType, *, market: str, warpable: bool=False):
         self.name = name
+        self.title = title
         self.icon = icon
         self.type = type
         self.market = market
@@ -116,7 +117,7 @@ class CharacterData(AzaleaData):
     def __init__(
         self, id: int, online: bool, name: str, level: int, type: CharacterType, money: int,
         items: List[Item], stat: StatData, birth: datetime.datetime, last_nick_change: datetime.datetime,
-        delete_request: Union[None, datetime.datetime], settings: List[SettingData], location: Region
+        delete_request: Union[None, datetime.datetime], settings: List[SettingData], location: RegionData
         ):
         self.id = id
         self.online = online
@@ -186,7 +187,7 @@ class RegionDBMgr:
             return self.regions[world]
 
     def get_region(self, world: str, name: str) -> Region:
-        if name in self.regions:
+        if world in self.regions:
             regions = self.regions[world]
             rgn = list(filter(lambda x: x.name == name, regions))
             if rgn:
@@ -437,3 +438,6 @@ class CharMgr:
         if (self.cur.execute('select * from chardata where name=%s', name) != 0) and self.cur.execute('select * from chardata where name=%s and delete_request is not NULL', name) != 0:
             return True
         return False
+
+    def move_to(self, name: str, region: RegionData):
+        self.cur.execute('update chardata set location=%s where name=%s', (region.name, name))

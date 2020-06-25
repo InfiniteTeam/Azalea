@@ -1,5 +1,6 @@
 from exts.utils.datamgr import Region, RegionType
 
 REGIONS = (
-    Region('arpavillage', '🔰', RegionType.Village, market='main', warpable=True),
+    Region('azalea', 'Azalea', '🔰', RegionType.Village, market='main', warpable=True),
+    Region('desert', '사막마을', '☀', RegionType.Village, market='main', warpable=True),
 )

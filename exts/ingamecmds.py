@@ -506,11 +506,51 @@ class InGamecmds(BaseCog):
         self.cur.execute('update chardata set received_money=%s where name=%s', (now, char.name))
         await ctx.send(ctx.author.mention, embed=embed)
 
+    @commands.command(name='지도', aliases=['내위치', '위치', '현재위치', '맵'])
+    async def _map(self, ctx: commands.Context):
+        cmgr = CharMgr(self.cur)
+        char = cmgr.get_current_char(ctx.author.id)
+        rdgr = RegionDBMgr(self.datadb)
+        rgn = rdgr.get_warpables('azalea')
+        embed = discord.Embed(title='🗺 지도', description='', color=self.color['info'])
+        for one in rgn:
+            if char.location.name == one.name:
+                embed.description += '{} **{} (현재)** 🔸 \n'.format(one.icon, one.title)
+            else:
+                embed.description += '{} {}\n'.format(one.icon, one.title)
+        await ctx.send(embed=embed)
+
     @commands.command(name='이동', aliases=['워프'])
     async def _warp(self, ctx: commands.Context):
-        rmgr = RegionDBMgr(self.datadb)
-        rgn = rmgr.get_warpables('azalea')
-        print(rgn[0])
+        cmgr = CharMgr(self.cur)
+        char = cmgr.get_current_char(ctx.author.id)
+        rdgr = RegionDBMgr(self.datadb)
+        rgn = rdgr.get_warpables('azalea')
+        rgn = list(filter(lambda x: x.name != char.location.name, rgn))
+        now = rdgr.get_region('azalea', char.location.name)
+        print(now)
+        embed = discord.Embed(title='✈ 이동', description='이동할 위치를 선택하세요!\n**현재 위치: {}**\n\n'.format(now.icon + ' ' + now.title), color=self.color['ask'])
+        for one in rgn:
+            embed.description += f'{one.icon} {one.title}\n'
+        msg = await ctx.send(embed=embed)
+        emjs = []
+        for em in rgn:
+            emjs.append(em.icon)
+            await msg.add_reaction(em.icon)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=20)
+        except asyncio.TimeoutError:
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+        else:
+            idx = emjs.index(reaction.emoji)
+            region = rgn[idx]
+            cmgr.move_to(char.name, region)
+            await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
 
 def setup(client):
     cog = InGamecmds(client)
