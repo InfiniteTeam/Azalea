@@ -552,6 +552,10 @@ class InGamecmds(BaseCog):
             cmgr.move_to(char.name, region)
             await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
 
+    @commands.command(name='탐험')
+    async def _adventure(self, ctx: commands.Context):
+        pass
+
 def setup(client):
     cog = InGamecmds(client)
     client.add_cog(cog)
