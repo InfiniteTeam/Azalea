@@ -55,7 +55,7 @@ class Azaleacmds(BaseCog):
             if int(uptimenow[3]) > 0:
                 uptimestr += f'{int(uptimenow[3])}초 '
 
-        embed=discord.Embed(title='🏷 Azalea 정보', description=f'Azalea 버전: {self.client.get_data("version_str")}\n실행 시간: {uptimestr}\nDiscord.py 버전: {discord.__version__}', color=self.color['primary'])
+        embed=discord.Embed(title='🏷 Azalea 정보', description=f'Azalea 버전: {self.client.get_data("version_str")}\n실행 시간: {uptimestr}\nDiscord.py 버전: {discord.__version__}\n\n성별: ||[남자같은 여자](https://namu.wiki/w/이렇게%20귀여운%20아이가%20여자일%20리%20없잖아)||', color=self.color['primary'])
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[정보]')
 
