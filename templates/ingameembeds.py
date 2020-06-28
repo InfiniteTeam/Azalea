@@ -3,7 +3,7 @@ from discord.ext import commands
 import datetime
 from dateutil.relativedelta import relativedelta
 from exts.utils import pager, timedelta, basecog
-from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr
+from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr
 
 async def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     items = pgr.get_thispage()
@@ -128,4 +128,25 @@ async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, 
     else:
         embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
     embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
+    return embed
+
+async def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default'):
+    sdgr = SettingDBMgr(cog.datadb)
+    smgr = SettingMgr(cog.cur, sdgr, char)
+    settitles = []
+    setvalue = []
+    now = pgr.get_thispage()
+    for idx in range(len(now)):
+        st = now[idx]
+        settitles.append(st.title)
+        valuestr = str(smgr.get_setting(st.name))
+        for x in [('True', '켜짐'), ('False', '꺼짐')]:
+            valuestr = valuestr.replace(x[0], x[1])
+        setvalue.append(valuestr)
+    embed = discord.Embed(title='⚙ `{}` 캐릭터 설정'.format(char.name), color=cog.color['info'])
+    if mode == 'select':
+        embed.title += ' - 선택 모드'
+        embed.add_field(name='번호', value='\n'.join(map(str, range(1, len(now)+1))))
+    embed.add_field(name='설정 이름', value='\n'.join(settitles))
+    embed.add_field(name='설정값', value='\n'.join(setvalue))
     return embed

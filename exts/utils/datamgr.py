@@ -15,10 +15,11 @@ class AzaleaData:
         return reprstr
 
 class Setting(AzaleaData):
-    def __init__(self, name: str, title: str, description: str, default: Any):
+    def __init__(self, name: str, title: str, description: str, type: Any, default: Any):
         self.name = name
         self.title = title
         self.description = description
+        self.type = type
         self.default: default
 
 class SettingData(AzaleaData):
@@ -228,7 +229,7 @@ class SettingMgr:
     def _save_settings(self, settings: Dict):
         return self.cur.execute('update chardata set settings=%s where name=%s', (json.dumps(settings, ensure_ascii=False), self.char.name))
 
-    def get_setting(self, name) -> Any:
+    def get_setting(self, name: str) -> Any:
         sets = self.char.settings
         rawset = self.get_dict_from_settings(sets)
         setting = list(filter(lambda x: x.name == name, sets))
@@ -240,6 +241,17 @@ class SettingMgr:
             rawset[setadd.name] = setadd.default
             self._save_settings(rawset)
             return setadd.default
+        else:
+            raise errors.SettingNotFound
+
+    def edit_setting(self, name: str, value):
+        sets = self.char.settings
+        rawset = self.get_dict_from_settings(sets)
+        setting = list(filter(lambda x: x.name == name, self.sdgr.settings))
+        if setting:
+            setedit = self.sdgr.fetch_setting(name)
+            rawset[setedit.name] = value
+            self._save_settings(rawset)
         else:
             raise errors.SettingNotFound
 

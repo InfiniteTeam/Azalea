@@ -6,8 +6,8 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import asyncio
 import re
-from exts.utils import pager, emojibuttons, timedelta
-from exts.utils.datamgr import CharMgr, CharacterType
+from exts.utils import pager, emojibuttons, timedelta, event_waiter
+from exts.utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
 from templates import ingameembeds, errembeds
 
 class Charcmds(BaseCog):
@@ -364,6 +364,115 @@ class Charcmds(BaseCog):
             elif reaction.emoji == '❌':
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[로그아웃: 취소됨]')
+
+    @_char.group(name='설정', aliases=['셋', '설'], invoke_without_command=True)
+    async def _char_settings(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
+        perpage = 8
+        cmgr = CharMgr(self.cur)
+        if charname:
+            char = cmgr.get_character(charname, ctx.author.id)
+            if not char:
+                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                return
+        else:
+            char = cmgr.get_current_char(ctx.author.id)
+        pgr = pager.Pager(self.datadb.char_settings, perpage)
+        
+        msg = await ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char))
+        extemjs = ['✏']
+        if len(pgr.pages()) <= 1:
+            emjs = extemjs
+        else:
+            emjs = emojibuttons.PageButton.emojis + extemjs
+        async def addreaction(msg):
+            for em in emjs:
+                await msg.add_reaction(em)
+        await addreaction(msg)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
+            else:
+                if reaction.emoji in emjs:
+                    if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
+                        await msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                    else:
+                        results = await asyncio.gather(
+                            msg.delete(),
+                            ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                        )
+                        msg = results[1]
+                        await addreaction(msg)
+                        reaction.message = msg
+                if reaction.emoji == '✏':
+                    idxmsg = await ctx.send(embed=discord.Embed(title='⚙ 설정 변경 - 항목 선택', description='변경할 항목의 번째 수를 입력해주세요.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
+                    self.msglog.log(ctx, '[설정: 변경: 번째수 입력]')
+                    await idxmsg.add_reaction('❌')
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=idxmsg, emojis=['❌'], timeout=20))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                    
+                    task = await event_waiter.wait_for_first(canceltask, indextask)
+                    await idxmsg.delete()
+                    if task == indextask:
+                        idxtaskrst = indextask.result()
+                        if idxtaskrst.content.isdecimal():
+                            if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
+                                idx = int(idxtaskrst.content)-1
+                                setting: Setting = pgr.get_thispage()[idx]
+                                embed = discord.Embed(title='⚙ '+ setting.title, description=setting.description + '\n\n', color=self.color['ask'])
+                                if setting.type == bool:
+                                    embed.description += '{}: 켜짐\n{}: 꺼짐'.format(self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross'))
+                                    editmsg = await ctx.send(embed=embed)
+                                    editemjs = [self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross')]
+                                    for em in editemjs:
+                                        await editmsg.add_reaction(em)
+                                    def onoff_check(reaction, user):
+                                        return user == ctx.author and editmsg.id == reaction.message.id and reaction.emoji in editemjs
+                                    try:
+                                        rct, usr = await self.client.wait_for('reaction_add', check=onoff_check, timeout=60*2)
+                                    except asyncio.TimeoutError:
+                                        try:
+                                            await editmsg.clear_reactions()
+                                        except:
+                                            pass
+                                    else:
+                                        sdgr = SettingDBMgr(self.datadb)
+                                        smgr = SettingMgr(self.cur, sdgr, char)
+                                        if rct.emoji == editemjs[0]:
+                                            smgr.edit_setting(setting.name, True)
+                                        elif rct.emoji == editemjs[1]:
+                                            smgr.edit_setting(setting.name, False)
+                                await editmsg.delete()
+                            else:
+                                embed = discord.Embed(title='❓ 설정 번째수가 올바르지 않습니다!', description='위 메시지에 항목 앞마다 번호가 붙어 있습니다.', color=self.color['error'])
+                                embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                await ctx.send(embed=embed, delete_after=7)
+                                self.msglog.log(ctx, '[설정: 변경: 올바르지 않은 번째수]')
+                        else:
+                            embed = discord.Embed(title='❓ 설정 번째수는 숫자만을 입력해주세요!', color=self.color['error'])
+                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                            await ctx.send(embed=embed, delete_after=7)
+                            self.msglog.log(ctx, '[설정: 변경: 숫자만 입력]')
+
+                if charname:
+                    char = cmgr.get_character(charname, ctx.author.id)
+                    if not char:
+                        await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                        return
+                else:
+                    char = cmgr.get_current_char(ctx.author.id)
+                
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(do,
+                        msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char))
+                    )
 
 def setup(client):
     cog = Charcmds(client)
