@@ -133,4 +133,5 @@ dmypy.json
 .venv/
 
 # logging
-.logs/
+logs/
+
