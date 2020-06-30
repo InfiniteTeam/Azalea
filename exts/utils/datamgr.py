@@ -141,6 +141,13 @@ class MarketItem(AzaleaData):
         self.selling = selling
         self.discount = discount
 
+class NewsData(AzaleaData):
+    def __init__(self, title: str, content: str, company: str, datetime: datetime.datetime):
+        self.title = title
+        self.content = content
+        self.company = company
+        self.datetime = datetime
+
 class DataDB:
     def __init__(self):
         self.enchantments = []
@@ -215,7 +222,7 @@ class SettingDBMgr:
         return base
 
 class SettingMgr:
-    def __init__(self, cur: pymysql.cursors.Cursor, sdgr: SettingDBMgr, character: CharacterData):
+    def __init__(self, cur: pymysql.cursors.DictCursor, sdgr: SettingDBMgr, character: CharacterData):
         self.cur = cur
         self.sdgr = sdgr
         self.char = character
@@ -255,6 +262,18 @@ class SettingMgr:
         else:
             raise errors.SettingNotFound
 
+class NewsMgr:
+    def __init__(self, cur: pymysql.cursors.DictCursor):
+        self.cur = cur
+
+    def fetch(self, limit=10):
+        self.cur.execute('select * from news order by `datetime` desc limit %s', limit)
+        news = self.cur.fetchall()
+        newsdatas = []
+        for one in news:
+            newsdatas.append(NewsData(one['title'], one['content'], one['company'], one['datetime']))
+        return newsdatas
+
 class ItemDBMgr:
     def __init__(self, datadb: DataDB):
         self.datadb = datadb
@@ -287,7 +306,7 @@ class ItemDBMgr:
         return None
 
 class ItemMgr:
-    def __init__(self, cur: pymysql.cursors.Cursor, charname: str):
+    def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
         self.cur = cur
         self.charname = charname
 

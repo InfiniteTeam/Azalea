@@ -11,7 +11,10 @@ from exts.utils import pager, emojibuttons, errors, timedelta, event_waiter
 from exts.utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr
+from exts.utils.datamgr import (
+    CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, 
+    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, NewsMgr
+)
 
 class InGamecmds(BaseCog):
     def __init__(self, client):
@@ -409,9 +412,23 @@ class InGamecmds(BaseCog):
             cmgr.move_to(char.name, region)
             await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
 
-    @commands.command(name='농사')
-    async def _farming(self, ctx: commands.Context):
-        pass
+    @commands.command(name='뉴스')
+    async def _news(self, ctx: commands.Context):
+        nmgr = NewsMgr(self.cur)
+        news = nmgr.fetch()
+        embed = discord.Embed(title='📰 뉴스', description='', color=self.color['info'])
+        for one in news:
+            if one.content:
+                if one.content.__len__() > 80:
+                    content = '> ' + one.content[:80] + '...\n'
+                else:
+                    content = '> ' + one.content + '\n'
+            else:
+                content = ''
+            td = datetime.datetime.now() - one.datetime
+            pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
+            embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
+        await ctx.send(embed=embed)
 
 def setup(client):
     cog = InGamecmds(client)
