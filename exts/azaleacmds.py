@@ -6,6 +6,9 @@ import json
 import asyncio
 import typing
 from exts.utils.basecog import BaseCog
+from exts.utils.datamgr import NewsMgr, NewsData
+from exts.utils import timedelta
+from templates import errembeds
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):
@@ -13,6 +16,10 @@ class Azaleacmds(BaseCog):
         for cmd in self.get_commands():
             if cmd.name != '등록':
                 cmd.add_check(self.check.registered)
+            if cmd.name == '뉴스':
+                for sub in cmd.commands:
+                    if sub.name == '작성':
+                        sub.add_check(self.check.master)
 
     @commands.command(name='도움')
     async def _help(self, ctx: commands.Context):
@@ -115,14 +122,14 @@ class Azaleacmds(BaseCog):
             await msg.add_reaction(rct)
         self.msglog.log(ctx, '[공지채널: 공지채널 설정]')
         def notich_check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in notiemjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in notiemjs
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=notich_check)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[공지채널: 시간 초과]')
         else:
-            em = str(reaction.emoji)
+            em = reaction.emoji
             if em == '⭕':
                 self.cur.execute('update serverdata set noticechannel=%s where id=%s', (notich.id, ctx.guild.id))
                 await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 채널을 성공적으로 설정했습니다!', description=f'이제 {notich.mention} 채널에 공지를 보냅니다.', color=self.color['info']))
@@ -150,14 +157,14 @@ class Azaleacmds(BaseCog):
             await msg.add_reaction(em)
         self.msglog.log(ctx, '[등록: 등록하기]')
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[등록: 시간 초과]')
         else:
-            remj = str(reaction.emoji)
+            remj = reaction.emoji
             if remj == '⭕':
                 if self.cur.execute('select * from userdata where id=%s', ctx.author.id) == 0:
                     if self.cur.execute('insert into userdata(id, level, type) values (%s, %s, %s)', (ctx.author.id, 1, 'User')) == 1:
@@ -184,14 +191,14 @@ class Azaleacmds(BaseCog):
             await msg.add_reaction(em)
         self.msglog.log(ctx, '[탈퇴: 탈퇴하기]')
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[탈퇴: 시간 초과]')
         else:
-            remj = str(reaction.emoji)
+            remj = reaction.emoji
             if remj == '⭕':
                 if self.cur.execute('select * from userdata where id=%s', (ctx.author.id)):
                     if self.cur.execute('delete from userdata where id=%s', ctx.author.id):
@@ -203,6 +210,76 @@ class Azaleacmds(BaseCog):
             elif remj == '❌':
                 await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[탈퇴: 취소됨]')
+
+    @commands.group(name='뉴스', invoke_without_command=True)
+    async def _news(self, ctx: commands.Context):
+        nmgr = NewsMgr(self.cur)
+        news = nmgr.fetch(limit=5)
+        embed = discord.Embed(title='📰 뉴스', description='', color=self.color['info'])
+        for one in news:
+            if one.content:
+                if one.content.__len__() > 100:
+                    content = '> ' + one.content[:100] + '...\n'
+                else:
+                    content = '> ' + one.content + '\n'
+            else:
+                content = ''
+            td = datetime.datetime.now() - one.datetime
+            if td < datetime.timedelta(minutes=1):
+                pubtime = '방금'
+            else:
+                pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
+            embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
+        embed.set_footer(text='* 이 뉴스는 재미 및 게임 플레이를 위한 실제와 상관없는 픽션임을 알려 드립니다.')
+        await ctx.send(embed=embed)
+        self.msglog.log(ctx, '[뉴스]')
+
+    @_news.command(name='작성')
+    async def _news_write(self, ctx: commands.Context, company, title, content: typing.Optional[str]=None):
+        if content:
+            if content.__len__() > 100:
+                viewcontent = '> ' + content[:100] + '...\n'
+            else:
+                viewcontent = '> ' + content + '\n'
+        else:
+            viewcontent = ''
+        embed = discord.Embed(title='📰 뉴스', color=self.color['info'])
+        embed.description = f'🔹 **`{title}`**\n{viewcontent}**- {company}**, 방금'
+        embed.set_author(name='뉴스 발행 미리보기')
+        msg = await ctx.send('{} 다음과 같이 발행할까요?'.format(ctx.author.mention), embed=embed)
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        self.msglog.log(ctx, '[뉴스 작성: 발행하기]')
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+            self.msglog.log(ctx, '[뉴스 작성: 시간 초과]')
+        else:
+            if reaction.emoji == '⭕':
+                nmgr = NewsMgr(self.cur)
+                nmgr.publish(NewsData(None, title, content, company, datetime.datetime.now()))
+                await ctx.send(embed=discord.Embed(
+                    title='{} 발행되었습니다.'.format(self.emj.get(ctx, 'check')), color=self.color['success']
+                ))
+                self.msglog.log(ctx, '[뉴스 작성: 완료]')
+            elif reaction.emoji == '❌':
+                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[뉴스 작성: 취소됨]')
+
+    @_news_write.error
+    async def _e_news_write(self, ctx: commands.Context, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'title':
+                missing = '제목'
+            elif error.param.name == 'content':
+                missing = '내용'
+            elif error.param.name == 'company':
+                missing = '신문사'
+            await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
 def setup(client):
     cog = Azaleacmds(client)

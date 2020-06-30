@@ -13,7 +13,7 @@ from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
 from exts.utils.datamgr import (
     CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, 
-    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, NewsMgr
+    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr
 )
 
 class InGamecmds(BaseCog):
@@ -360,11 +360,13 @@ class InGamecmds(BaseCog):
             embed.description += '\n관리자여서 돈을 무제한으로 받을 수 있습니다. 멋지네요!'
         elif now.day <= rcv_money.day:
             await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
+            self.msglog.log(ctx, '[돈받기: 이미 받음]')
             return
         imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
         imgr.money += 1000
         self.cur.execute('update chardata set received_money=%s where name=%s', (now, char.name))
         await ctx.send(ctx.author.mention, embed=embed)
+        self.msglog.log(ctx, '[돈받기: 완료]')
 
     @commands.command(name='지도', aliases=['내위치', '위치', '현재위치', '맵'])
     async def _map(self, ctx: commands.Context):
@@ -379,6 +381,7 @@ class InGamecmds(BaseCog):
             else:
                 embed.description += '{} {}\n'.format(one.icon, one.title)
         await ctx.send(embed=embed)
+        self.msglog.log(ctx, '[지도]')
 
     @commands.command(name='이동', aliases=['워프'])
     async def _warp(self, ctx: commands.Context):
@@ -393,6 +396,7 @@ class InGamecmds(BaseCog):
         for one in rgn:
             embed.description += f'{one.icon} {one.title}\n'
         msg = await ctx.send(embed=embed)
+        self.msglog.log(ctx, '[이동]')
         emjs = []
         for em in rgn:
             emjs.append(em.icon)
@@ -411,24 +415,7 @@ class InGamecmds(BaseCog):
             region = rgn[idx]
             cmgr.move_to(char.name, region)
             await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
-
-    @commands.command(name='뉴스')
-    async def _news(self, ctx: commands.Context):
-        nmgr = NewsMgr(self.cur)
-        news = nmgr.fetch()
-        embed = discord.Embed(title='📰 뉴스', description='', color=self.color['info'])
-        for one in news:
-            if one.content:
-                if one.content.__len__() > 80:
-                    content = '> ' + one.content[:80] + '...\n'
-                else:
-                    content = '> ' + one.content + '\n'
-            else:
-                content = ''
-            td = datetime.datetime.now() - one.datetime
-            pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
-            embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
-        await ctx.send(embed=embed)
+            self.msglog.log(ctx, '[이동: 완료]')
 
 def setup(client):
     cog = InGamecmds(client)

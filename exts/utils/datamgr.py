@@ -5,6 +5,7 @@ from typing import List, Union, NamedTuple, Dict, Optional, Any
 import json
 from exts.utils import errors
 import os
+import uuid
 
 class AzaleaData:
     def __repr__(self):
@@ -142,7 +143,8 @@ class MarketItem(AzaleaData):
         self.discount = discount
 
 class NewsData(AzaleaData):
-    def __init__(self, title: str, content: str, company: str, datetime: datetime.datetime):
+    def __init__(self, uid: Union[uuid.UUID, None], title: str, content: str, company: str, datetime: datetime.datetime):
+        self.uid = uid
         self.title = title
         self.content = content
         self.company = company
@@ -271,8 +273,15 @@ class NewsMgr:
         news = self.cur.fetchall()
         newsdatas = []
         for one in news:
-            newsdatas.append(NewsData(one['title'], one['content'], one['company'], one['datetime']))
+            newsdatas.append(NewsData(uuid.UUID(hex=one['uuid']), one['title'], one['content'], one['company'], one['datetime']))
         return newsdatas
+
+    def publish(self, newsdata: NewsData):
+        if newsdata.uid:
+            uid = newsdata.uid.hex
+        else:
+            uid = uuid.uuid4().hex
+        self.cur.execute('insert into news (uuid, datetime, title, content, company) values (%s, %s, %s, %s, %s)', (uid, newsdata.datetime, newsdata.title, newsdata.content, newsdata.company))
 
 class ItemDBMgr:
     def __init__(self, datadb: DataDB):
