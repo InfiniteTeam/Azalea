@@ -29,7 +29,7 @@ class Charcmds(BaseCog):
             if ctx.author.id == user.id:
                 await ctx.send(embed=discord.Embed(
                     title='🎲 캐릭터가 하나도 없네요!',
-                    description='`{}생성` 명령으로 캐릭터를 생성해서 게임을 시작하세요!'.format(self.prefix),
+                    description='`{}캐릭터 생성` 명령으로 캐릭터를 생성해서 게임을 시작하세요!'.format(self.prefix),
                     color=self.color['warn']
                 ))
             else:

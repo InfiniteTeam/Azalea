@@ -7,6 +7,7 @@ import sys
 from exts.utils.basecog import BaseCog
 from exts.utils import errors, permutil, timedelta
 from dateutil.relativedelta import relativedelta
+import uuid
 
 class Events(BaseCog):
     def __init__(self, client):
@@ -28,6 +29,7 @@ class Events(BaseCog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
+        uid = uuid.uuid4()
         allerrs = (type(error), type(error.__cause__))
         tb = traceback.format_exception(type(error), error, error.__traceback__)
         origintb = traceback.format_exception(type(error), error, error.__traceback__)
@@ -123,12 +125,13 @@ class Events(BaseCog):
                 await ctx.send('오류 코드: ' + str(error.__cause__.code))
         
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) == 0:
-            self.errlogger.error('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
-            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다! 오류 메시지:\n```python\n{str(error)}```\n오류 정보가 기록되었습니다. 나중에 개발자가 처리하게 되며 빠른 처리를 위해서는 서포트 서버에 문의하십시오.', color=self.color['error'])
+            self.errlogger.error(f'\n========== CMDERROR ========== {uid}\n' + errstr + '\n========== CMDERREND ==========')
+            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다! 오류 코드:\n```{uid}```\n', color=self.color['error'])
+            embed.set_footer(text='오류 정보가 기록되었습니다. 나중에 개발자가 처리하게 되며 빠른 처리를 위해서는 서포트 서버에 문의하십시오.')
             await ctx.send(embed=embed)
         else:
-            print('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
-            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```', color=self.color['error'])
+            print(f'\n========== CMDERROR ========== {uid}\n' + errstr + '\n========== CMDERREND ==========')
+            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```{uid}```\n```python\n{errstr}```', color=self.color['error'])
             try:
                 msg = await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
             except discord.HTTPException as exc:

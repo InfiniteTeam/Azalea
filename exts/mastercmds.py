@@ -181,10 +181,6 @@ class Mastercmds(BaseCog):
             await msg.edit(embed=discord.Embed(description=progressbar.get(ctx, self.emj, x, 100, 20)))
             await asyncio.sleep(0.5)
 
-    @commands.command(name='thearpa', aliases=['알파찬양'])
-    async def _errortest(self, ctx: commands.Context):
-        raise errors.ArpaIsGenius('알파는 천재입니다.')
-
     @commands.command(name='daconbabo', aliases=['다쿤바보'])
     async def _daconbabo(self, ctx: commands.Context):
         await ctx.send(self.emj.get(ctx, 'daconbabo'))
@@ -338,6 +334,19 @@ class Mastercmds(BaseCog):
         if not self.will_shutdown:
             await ctx.send(embed=discord.Embed(title='❓ 예약된 종료(재시작) 이 없습니다.', color=self.color['error']))
         self.will_shutdown = False
+
+    @commands.command(name='코그')
+    async def _cog(self, ctx: commands.Context):
+        await ctx.send(embed=discord.Embed(title='코그들', description='```python\n{}```'.format(set(self.client.cogs.keys()))))
+
+    @commands.command(name='명령어')
+    async def _cmds(self, ctx: commands.Context, cog: typing.Optional[str]=None, *cmds):
+        if cog:
+            names = set(map(lambda x: x.name, self.client.get_cog(cog).get_commands()))
+            await ctx.send(embed=discord.Embed(title='명령어들 - {}'.format(cog), description='```python\n{}```'.format(names)))
+        else:
+            names = set(map(lambda x: x.name, self.client.commands))
+            await ctx.send(embed=discord.Embed(title='명령어들', description='```python\n{}```'.format(names)))
 
 def setup(client):
     cog = Mastercmds(client)

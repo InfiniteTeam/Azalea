@@ -172,7 +172,6 @@ class InGamecmds(BaseCog):
                                                     embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
                                                     await ctx.send(embed=embed, delete_after=7)
                                                     self.msglog.log(ctx, '[가방: 아이템 버리기: 완료]')
-
                                         else:
                                             embed = discord.Embed(title='❓ 버릴 아이템 개수가 올바르지 않습니다!', color=self.color['error'])
                                             embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
@@ -355,9 +354,12 @@ class InGamecmds(BaseCog):
         char = cmgr.get_current_char(ctx.author.id)
         rcv_money = cmgr.get_raw_character(char.name)['received_money']
         now = datetime.datetime.now()
+        print(type(rcv_money), type(now))
         embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
             embed.description += '\n관리자여서 돈을 무제한으로 받을 수 있습니다. 멋지네요!'
+        elif rcv_money is None:
+            pass
         elif now.day <= rcv_money.day:
             await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
             self.msglog.log(ctx, '[돈받기: 이미 받음]')
