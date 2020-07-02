@@ -56,6 +56,11 @@ class MissingRequiredArgument(AzaleaError):
         self.paramdesc = paramdesc
         super().__init__('명령어 파라미터 "{}"({})이 필요합니다'.format(param.name, paramdesc))
 
+class MissingAzaleaPermissions(commands.CheckFailure):
+    def __init__(self, missing_perms):
+        self.missing_perms = missing_perms
+        super().__init__('Azalea 권한 {} 이 부족합니다.'.format(', '.join(missing_perms)))
+
 class CannotLoginBeingDeleted(AzaleaError):
     pass
 

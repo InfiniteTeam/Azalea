@@ -89,11 +89,17 @@ class Events(BaseCog):
             await ctx.send(embed=embed)
             self.msglog.log(ctx, '[DM 전용 명령]')
             return
-        elif isinstance(error, (commands.CheckFailure, commands.MissingPermissions)):
+        elif isinstance(error, commands.MissingPermissions):
             perms = [permutil.format_perm_by_name(perm) for perm in error.missing_perms]
-            embed = discord.Embed(title='⛔ 멤버 권한 부족!', description=f'{ctx.author.mention}, 이 명령어를 사용하려면 다음과 같은 길드 권한이 필요합니다!\n` ' + '`, `'.join(perms) + '`', color=self.color['error'])
+            embed = discord.Embed(title='⛔ 멤버 권한 부족!', description=f'{ctx.author.mention}, 이 명령어를 사용하려면 다음과 같은 길드 권한이 필요합니다!\n> **`' + '`, `'.join(perms) + '`**', color=self.color['error'])
             await ctx.send(embed=embed)
             self.msglog.log(ctx, '[멤버 권한 부족]')
+            return
+        elif isinstance(error, errors.MissingAzaleaPermissions):
+            perms = error.missing_perms
+            embed = discord.Embed(title='⛔ Azalea 권한 부족!', description=f'{ctx.author.mention}, 이 명령어를 사용하려면 다음과 같은 Azalea 권한이 필요합니다!\n> **`' + '`, `'.join(perms) + '`**', color=self.color['error'])
+            await ctx.send(embed=embed)
+            self.msglog.log(ctx, '[Azalea 권한 부족]')
             return
         elif isinstance(error.__cause__, discord.HTTPException):
             if error.__cause__.code == 50013:
@@ -107,6 +113,11 @@ class Events(BaseCog):
                 embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어 전송에 실패했습니다.', color=self.color['error'])
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[너무 긴 메시지 전송 시도]')
+                return
+            elif error.__cause__.code == 50007:
+                embed = discord.Embed(title='❗ 메시지 전송 실패', description='DM(개인 메시지)으로 메시지를 전송하려 했으나 실패했습니다.\n혹시 DM이 비활성화 되어 있지 않은지 확인해주세요!', color=self.color['error'])
+                await ctx.send(ctx.author.mention, embed=embed)
+                self.msglog.log(ctx, '[DM 전송 실패]')
                 return
             else:
                 await ctx.send('오류 코드: ' + str(error.__cause__.code))

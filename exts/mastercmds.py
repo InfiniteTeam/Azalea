@@ -40,7 +40,7 @@ class Mastercmds(BaseCog):
             evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
             self.msglog.log(ctx, '[EXEC ERROR]')
         else:
-            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
+            evalout = f'📥INPUT: ```python\n{arg}```\n{self.emj.get(ctx, "check")} SUCCESS'
             self.msglog.log(ctx, '[EXEC]')
         embed=discord.Embed(title='**💬 EXEC**', color=self.color['primary'], description=evalout)
         await ctx.send(embed=embed)

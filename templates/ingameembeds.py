@@ -9,8 +9,7 @@ async def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default
     items = pgr.get_thispage()
     embed = discord.Embed(title='🛍 상점', description='', color=color)
     idgr = ItemDBMgr(datadb)
-    for idx in range(len(items)):
-        one: MarketItem = items[idx]
+    for idx, one in enumerate(items):
         itemdb = idgr.fetch_item(one.item.id)
         enchants = ['`{}` {}'.format(idgr.fetch_enchantment(enc.name).title, enc.level) for enc in one.item.enchantments]
         enchantstr = ''
@@ -33,8 +32,7 @@ async def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default
 async def char_embed(username, pgr: pager.Pager, *, color, mode='default'):
     chars = pgr.get_thispage()
     charstr = ''
-    for idx in range(len(chars)):
-        one = chars[idx]
+    for idx, one in enumerate(chars):
         name = one.name
         if mode == 'select':
             name = f'{idx+1}. {name}'
@@ -105,8 +103,7 @@ async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, 
     cmgr = CharMgr(cog.cur)
     char = cmgr.get_character(charname)
     idb = ItemDBMgr(cog.datadb)
-    for idx in range(len(items)):
-        one = items[idx]
+    for idx, one in enumerate(items):
         founditem = idb.fetch_item(one.id)
         icon = founditem.icon
         name = founditem.name
@@ -136,8 +133,7 @@ async def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: Char
     settitles = []
     setvalue = []
     now = pgr.get_thispage()
-    for idx in range(len(now)):
-        st = now[idx]
+    for idx, st in enumerate(now):
         settitles.append(st.title)
         valuestr = str(smgr.get_setting(st.name))
         for x in [('True', '켜짐'), ('False', '꺼짐')]:

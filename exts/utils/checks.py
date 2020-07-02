@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
 from exts.utils import errors
+from exts.utils import datamgr
 
 class Checks:
-    def __init__(self, cur):
+    def __init__(self, cur, datadb: datamgr.DataDB):
         self.cur = cur
+        self.datadb = datadb
 
     async def registered(self, ctx: commands.Context):
         if self.cur.execute('select * from userdata where id=%s', ctx.author.id) != 0:
@@ -23,6 +25,30 @@ class Checks:
 
     def is_master(self):
         return commands.check(self.master)
+
+    def has_azalea_permissions(self, **perms: bool):
+        async def predicate(ctx: commands.Context):
+            self.cur.execute('select * from userdata where id=%s', ctx.author.id)
+            value = self.cur.fetchone()['perms']
+            pdgr = datamgr.PermDBMgr(self.datadb)
+            master = pdgr.get_permission('master').value
+            if (value & master) == master:
+                return True
+            missings = []
+            for one in perms:
+                perm = pdgr.get_permission(one)
+                if perms[one]:
+                    if (value & perm.value) == perm.value:
+                        continue
+                else:
+                    if (value & perm.value) != perm.value:
+                        continue
+                missings.append(perm.name)
+                break
+            else:
+                return True
+            raise errors.MissingAzaleaPermissions(missings)
+        return predicate
 
     async def notbot(self, ctx: commands.Context):
         if not ctx.author.bot:

@@ -60,7 +60,7 @@ class InGamecmds(BaseCog):
                     await m.add_reaction(emj)
         await addreaction(msg)
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         while True:
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
@@ -217,7 +217,7 @@ class InGamecmds(BaseCog):
                 await msg.add_reaction(em)
         await addreaction(msg)
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         while True:
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
@@ -305,7 +305,7 @@ class InGamecmds(BaseCog):
         emjs = ['⁉']
         await msg.add_reaction('⁉')
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
 
         async def do():
             todo = []

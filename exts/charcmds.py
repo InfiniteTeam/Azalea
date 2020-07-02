@@ -46,7 +46,7 @@ class Charcmds(BaseCog):
         for emj in emojibuttons.PageButton.emojis:
             await msg.add_reaction(emj)
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emojibuttons.PageButton.emojis
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emojibuttons.PageButton.emojis
         while True:
             try:
                 reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
@@ -119,7 +119,7 @@ class Charcmds(BaseCog):
         for em in emjs:
             await typemsg.add_reaction(em)
         def rcheck(reaction, user):
-            return user == ctx.author and typemsg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and typemsg.id == reaction.message.id and reaction.emoji in emjs
         self.msglog.log(ctx, '[캐릭터 생성: 직업 선택]')
         try:
             reaction, user = await self.client.wait_for('reaction_add', check=rcheck, timeout=20)
@@ -129,7 +129,7 @@ class Charcmds(BaseCog):
             await ctx.send(embed=embed, delete_after=7)
             self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 시간 초과]')
         else:
-            e = str(reaction.emoji)
+            e = reaction.emoji
             if e == '❌':
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 취소됨]')
@@ -200,7 +200,7 @@ class Charcmds(BaseCog):
             await msg.add_reaction(em)
         self.msglog.log(ctx, '[캐릭터 삭제: 캐릭터 삭제 경고]')
         def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
         except asyncio.TimeoutError:
@@ -209,7 +209,7 @@ class Charcmds(BaseCog):
             await ctx.send(embed=embed, delete_after=7)
             self.msglog.log(ctx, '[캐릭터 삭제: 시간 초과]')
         else:
-            remj = str(reaction.emoji)
+            remj = reaction.emoji
             if remj == '⭕':
                 cmgr.schedule_delete(ctx.author.id, cname)
                 await ctx.send(embed=discord.Embed(

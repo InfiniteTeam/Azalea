@@ -150,6 +150,15 @@ class NewsData(AzaleaData):
         self.company = company
         self.datetime = datetime
 
+class Permission(AzaleaData):
+    def __init__(self, value: int, name: str):
+        self.value = value
+        self.name = name
+
+class PermissionsData(AzaleaData):
+    def __init__(self, value: int):
+        self.value = value
+
 class DataDB:
     def __init__(self):
         self.enchantments = []
@@ -179,6 +188,23 @@ class DataDB:
 
     def load_region(self, name, region: List[Region]):
         self.regions[name] = region
+
+    def load_permissions(self, perms: List[Permission]):
+        self.permissions = perms
+
+class PermDBMgr:
+    def __init__(self, datadb: DataDB):
+        self.permissions = datadb.permissions
+
+    def get_permission(self, name: str):
+        perm = list(filter(lambda x: x.name == name, self.permissions))
+        if perm:
+            return perm[0]
+
+    def get_permission_by_value(self, value: int):
+        perm = list(filter(lambda x: x.value == value, self.permissions))
+        if perm:
+            return perm[0]
 
 class MarketDBMgr:
     def __init__(self, datadb: DataDB):

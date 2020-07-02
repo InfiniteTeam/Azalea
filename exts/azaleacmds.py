@@ -3,12 +3,14 @@ from discord.ext import commands
 import datetime
 import re
 import json
+import time
+import math
 import asyncio
 import typing
 from exts.utils.basecog import BaseCog
 from exts.utils.datamgr import NewsMgr, NewsData
-from exts.utils import timedelta
-from templates import errembeds
+from exts.utils import timedelta, pager, emojibuttons
+from templates import errembeds, azaleaembeds
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):
@@ -19,7 +21,7 @@ class Azaleacmds(BaseCog):
             if cmd.name == '뉴스':
                 for sub in cmd.commands:
                     if sub.name == '작성':
-                        sub.add_check(self.check.master)
+                        sub.add_check(self.check.has_azalea_permissions(write_news=True))
 
     @commands.command(name='도움')
     async def _help(self, ctx: commands.Context):
@@ -29,11 +31,12 @@ class Azaleacmds(BaseCog):
             value=
             """\
             **`{p}도움`**: 도움말 메시지를 표시합니다.
+            **`{p}등록`**: Azalea에 등록해 사용을 시작합니다.
             **`{p}정보`**: 봇 정보를 확인합니다.
             **`{p}핑`**: 봇 정보를 확인합니다.
             **`{p}샤드`**: 현재 서버의 Azalea 샤드 번호를 확인합니다.
             **`{p}공지채널 [#채널멘션]`**: Azalea 공지를 받을 채널을 설정합니다.
-            **`{p}등록`**: Azalea에 등록해 사용을 시작합니다.
+            **`{p}뉴스`**: Azalea 가상뉴스를 확인합니다.
             """.format(p=self.prefix)
         )
         msg = await ctx.author.send(embed=embed)
@@ -68,11 +71,20 @@ class Azaleacmds(BaseCog):
 
     @commands.command(name='핑', aliases=['지연시간', '레이턴시'])
     async def _ping(self, ctx: commands.Context):
-        embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{self.client.get_data("ping")[0]}ms - {self.client.get_data("ping")[1]}\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=self.color['primary'])
-        await ctx.send(embed=embed)
+        embed = discord.Embed(title='🏓 퐁!', color=self.color['primary'])
+        embed.add_field(name='Discord 게이트웨이', value=f'{self.client.get_data("ping")[0]}ms')
+        embed.add_field(name='메시지 지연시간', value='측정하고 있어요...')
+        embed.set_footer(text=self.client.get_data("ping")[1])
+        start = time.time()
+        msg = await ctx.send(embed=embed)
+        end = time.time()
+        mlatency = math.trunc(1000 * (end - start))
+        embed.set_field_at(1, name='메시지 지연시간', value='{}ms'.format(mlatency))
+        await msg.edit(embed=embed)
         self.msglog.log(ctx, '[핑]')
 
     @commands.command(name='샤드')
+    @commands.guild_only()
     async def _shard_id(self, ctx: commands.Context):
         await ctx.send(embed=discord.Embed(description=f'**이 서버의 샤드 아이디는 `{ctx.guild.shard_id}`입니다.**\n현재 총 {self.client.get_data("guildshards").__len__()} 개의 샤드가 활성 상태입니다.', color=self.color['info']))
         self.msglog.log(ctx, '[샤드]')
@@ -211,30 +223,36 @@ class Azaleacmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[탈퇴: 취소됨]')
 
-    @commands.group(name='뉴스', invoke_without_command=True)
+    @commands.group(name='뉴스', aliases=['신문'], invoke_without_command=True)
     async def _news(self, ctx: commands.Context):
         nmgr = NewsMgr(self.cur)
-        news = nmgr.fetch(limit=5)
-        embed = discord.Embed(title='📰 뉴스', description='', color=self.color['info'])
-        for one in news:
-            if one.content:
-                if one.content.__len__() > 100:
-                    content = '> ' + one.content[:100] + '...\n'
-                else:
-                    content = '> ' + one.content + '\n'
-            else:
-                content = ''
-            td = datetime.datetime.now() - one.datetime
-            if td < datetime.timedelta(minutes=1):
-                pubtime = '방금'
-            else:
-                pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
-            embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
-        embed.set_footer(text='* 이 뉴스는 재미 및 게임 플레이를 위한 실제와 상관없는 픽션임을 알려 드립니다.')
-        await ctx.send(embed=embed)
+        news = nmgr.fetch(limit=40)
+        total = self.cur.execute('select count(0) from news')
+        pgr = pager.Pager(news, 4)
+        msg = await ctx.send(embed=await azaleaembeds.news_embed(self, pgr, total=total))
         self.msglog.log(ctx, '[뉴스]')
+        if len(pgr.pages()) <= 1:
+            return
+        for emj in emojibuttons.PageButton.emojis:
+            await msg.add_reaction(emj)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emojibuttons.PageButton.emojis
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
+            else:
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(do,
+                        msg.edit(embed=await azaleaembeds.news_embed(self, pgr, total=total)),
+                    )
 
-    @_news.command(name='작성')
+    @_news.command(name='작성', aliases=['발행', '쓰기', '업로드'])
     async def _news_write(self, ctx: commands.Context, company, title, content: typing.Optional[str]=None):
         if content:
             if content.__len__() > 100:

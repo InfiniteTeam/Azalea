@@ -15,7 +15,7 @@ import paramiko
 from random import randint
 from exts.utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from exts.utils.azalea import Azalea
-from ingame.db import enchantments, items, charsettings, market, regions
+from ingame.db import enchantments, items, charsettings, market, regions, permissions
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -150,7 +150,6 @@ msglog = msglogger.Msglog(logger)
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
 
-check = checks.Checks(cur)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
 # 인게임 DB 로드
@@ -160,6 +159,9 @@ datadb.load_items(items.ITEMS)
 datadb.load_char_settings(charsettings.CHAR_SETTINGS)
 datadb.load_region('azalea', regions.REGIONS)
 datadb.load_market('main', market.MARKET)
+datadb.load_permissions(permissions.PERMISSIONS)
+
+check = checks.Checks(cur, datadb)
 
 print(datadb.items)
 
