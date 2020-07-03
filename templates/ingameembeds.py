@@ -69,13 +69,14 @@ async def itemdata_embed(datadb: DataDB, ctx: commands.Context, itemdata: ItemDa
         enchantstr += '{}: {}\n'.format(enchant.name, enchant.level)
     if not enchantstr:
         enchantstr = '없음'
-    embed.add_field(name='마법부여', value=enchantstr)
     if mode == 'delete':
-        embed.description = '**정말 이 아이템을 버릴까요? 다시 회수할 수 없습니다.**' + embed.description
+        embed.description = '**정말 이 아이템을 버릴까요? 다시 회수할 수 없습니다.**'
+        embed.add_field(name='아이템 설명', value=item.description)
         embed.set_author(name='⚠ 아이템 버리기 경고')
         embed.add_field(name='버릴 개수', value='{}개'.format(delete_count))
     else:
         embed.add_field(name='개수', value='{}개'.format(itemdata.count))
+    embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
 async def marketitem_embed(datadb: DataDB, ctx: commands.Context, marketitem: MarketItem, mode='default', *, delete_count: int=0):

@@ -10,7 +10,7 @@ import typing
 from exts.utils.basecog import BaseCog
 from exts.utils.datamgr import NewsMgr, NewsData
 from exts.utils import timedelta, pager, emojibuttons
-from templates import errembeds, azaleaembeds
+from templates import errembeds, azaleaembeds, help
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):
@@ -26,22 +26,21 @@ class Azaleacmds(BaseCog):
     @commands.command(name='도움')
     async def _help(self, ctx: commands.Context):
         embed = discord.Embed(title='📃 Azalea 전체 명령어', description='(소괄호)는 필수 입력, [대괄호]는 선택 입력입니다.\n\n', color=self.color['primary'])
-        embed.add_field(
-            name='기본 명령어',
-            value=
-            """\
-            **`{p}도움`**: 도움말 메시지를 표시합니다.
-            **`{p}등록`**: Azalea에 등록해 사용을 시작합니다.
-            **`{p}정보`**: 봇 정보를 확인합니다.
-            **`{p}핑`**: 봇 정보를 확인합니다.
-            **`{p}샤드`**: 현재 서버의 Azalea 샤드 번호를 확인합니다.
-            **`{p}공지채널 [#채널멘션]`**: Azalea 공지를 받을 채널을 설정합니다.
-            **`{p}뉴스`**: Azalea 가상뉴스를 확인합니다.
-            """.format(p=self.prefix)
-        )
-        msg = await ctx.author.send(embed=embed)
+        for name, value in help.gethelps():
+            embed.add_field(
+                name='🔸' + name,
+                value=value.format(p=self.prefix),
+                inline=False
+            )
+        
         if ctx.channel.type != discord.ChannelType.private:
-            await ctx.send(embed=discord.Embed(title='{} 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description=f'**[DM 메시지]({msg.jump_url})**를 확인하세요!', color=self.color['success']))
+            msg, sending = await asyncio.gather(
+                ctx.author.send(embed=embed),
+                ctx.send(embed=discord.Embed(title='{} 도움말을 전송하고 있습니다...'.format(self.emj.get(ctx, 'loading')), color=self.color['info']))
+            )
+            await sending.edit(embed=discord.Embed(title='{} 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description=f'**[DM 메시지]({msg.jump_url})**를 확인하세요!', color=self.color['success']))
+        else:
+            msg = await ctx.author.send(embed=embed)
         self.msglog.log(ctx, '[도움]')
 
     @commands.command(name='정보')
@@ -154,7 +153,7 @@ class Azaleacmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title=f'❌ 공지 기능을 껐습니다!', color=self.color['error']))
                 self.msglog.log(ctx, '[공지채널: 비활성화]')
 
-    @commands.command(name='등록')
+    @commands.command(name='등록', aliases=['가입'])
     async def _register(self, ctx: commands.Context):
         if self.cur.execute('select * from userdata where id=%s', ctx.author.id) != 0:
             await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 이미 등록된 사용자입니다!', color=self.color['info']))
@@ -255,8 +254,8 @@ class Azaleacmds(BaseCog):
     @_news.command(name='작성', aliases=['발행', '쓰기', '업로드'])
     async def _news_write(self, ctx: commands.Context, company, title, content: typing.Optional[str]=None):
         if content:
-            if content.__len__() > 100:
-                viewcontent = '> ' + content[:100] + '...\n'
+            if content.__len__() > 110:
+                viewcontent = '> ' + content[:110] + '...\n'
             else:
                 viewcontent = '> ' + content + '\n'
         else:
@@ -298,6 +297,12 @@ class Azaleacmds(BaseCog):
             elif error.param.name == 'company':
                 missing = '신문사'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+
+    @commands.command(name='테스트')
+    async def _d(self, ctx):
+        embed = discord.Embed(title='테스트')
+        embed.set_footer(text=str(ctx.author), icon_url=ctx.author.avatar_url)
+        await ctx.send(embed=embed)
 
 def setup(client):
     cog = Azaleacmds(client)

@@ -8,6 +8,7 @@ from exts.utils.basecog import BaseCog
 from exts.utils import errors, permutil, timedelta
 from dateutil.relativedelta import relativedelta
 import uuid
+import sqlite3
 
 class Events(BaseCog):
     def __init__(self, client):
@@ -124,24 +125,27 @@ class Events(BaseCog):
             else:
                 await ctx.send('오류 코드: ' + str(error.__cause__.code))
         
+        self.msglog.log(ctx, '[커맨드 오류: {}]'.format(uid))
+        self.cur.execute('insert into error (uuid, content, datetime) values (%s, %s, %s)', (uid.hex, errstr, datetime.datetime.now()))
+
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) == 0:
-            self.errlogger.error(f'\n========== CMDERROR ========== {uid}\n' + errstr + '\n========== CMDERREND ==========')
-            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다! 오류 코드:\n```{uid}```\n', color=self.color['error'])
+            self.errlogger.error(f'\n========== CMDERROR ========== {uid.hex}\n' + errstr + '\n========== CMDERREND ==========')
+            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다! 오류 코드:\n```{uid.hex}```\n', color=self.color['error'])
             embed.set_footer(text='오류 정보가 기록되었습니다. 나중에 개발자가 처리하게 되며 빠른 처리를 위해서는 서포트 서버에 문의하십시오.')
             await ctx.send(embed=embed)
+            
         else:
-            print(f'\n========== CMDERROR ========== {uid}\n' + errstr + '\n========== CMDERREND ==========')
-            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```{uid}```\n```python\n{errstr}```', color=self.color['error'])
+            print(f'\n========== CMDERROR ========== {uid.hex}\n' + errstr + '\n========== CMDERREND ==========')
+            embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```{uid.hex}```\n```python\n{errstr}```', color=self.color['error'])
             try:
                 msg = await ctx.author.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
             except discord.HTTPException as exc:
                 if exc.code == 50035:
                     msg = await ctx.author.send(embed=discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.', color=self.color['error']), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
-            finally:
-                self.msglog.log(ctx, '[커맨드 오류]')
 
             if ctx.channel.type != discord.ChannelType.private:
                 await ctx.send(ctx.author.mention, embed=discord.Embed(title='❌ 오류!', description=f'개발자용 오류 메시지를 [DM]({msg.jump_url})으로 전송했습니다.', color=self.color['error']))
+            
 
 def setup(client):
     cog = Events(client)

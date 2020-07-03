@@ -275,7 +275,7 @@ class Mastercmds(BaseCog):
             elif reaction.emoji == '❌':
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
 
-    @commands.command(name='재시작', aliases=['리부트', '재부팅', '리붓', '다시시작', '리스타트'])
+    @commands.command(name='재시작', aliases=['리부트', '재부팅', '리붓', '다시시작', '리스타트', '꺼져', '죽어'])
     async def _restart(self, ctx: commands.Context, seconds: typing.Optional[float]=60.0):
         if self.will_shutdown:
             await ctx.send(embed=discord.Embed(title='❌ 이미 종료(재시작)이 예약되어 있습니다.', color=self.color['error'])) 
@@ -347,6 +347,15 @@ class Mastercmds(BaseCog):
         else:
             names = set(map(lambda x: x.name, self.client.commands))
             await ctx.send(embed=discord.Embed(title='명령어들', description='```python\n{}```'.format(names)))
+
+    @commands.command(name='오류', aliases=['에러'])
+    async def _error(self, ctx: commands.Context, uid: str):
+        self.cur.execute('select * from error where uuid=%s', uid)
+        err = self.cur.fetchone()
+        if err:
+            await ctx.send(embed=discord.Embed(title=f'💥 오류 뷰어 - `{uid}`', description=f'```py\n{err["content"]}```', color=self.color['info']))
+        else:
+            await ctx.send(embed=discord.Embed(title='❌ 해당 ID의 오류를 찾을 수 없습니다', color=self.color['error']))
 
 def setup(client):
     cog = Mastercmds(client)

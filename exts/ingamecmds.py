@@ -138,7 +138,7 @@ class InGamecmds(BaseCog):
                     if task == indextask:
                         idxtaskrst = indextask.result()
                         if idxtaskrst.content.isdecimal():
-                            if int(idxtaskrst.content) <= len(pgr.pages()):
+                            if int(idxtaskrst.content) <= len(pgr.get_thispage()):
                                 itemidx = int(idxtaskrst.content) - 1
                                 delitem = pgr.get_thispage()[itemidx]
                                 delcountmsg = await ctx.send(embed=discord.Embed(
@@ -292,8 +292,10 @@ class InGamecmds(BaseCog):
             char = cmgr.get_current_char(ctx.author.id)
         else:
             char = cmgr.get_character(charname)
-        print(char.stat)
-        await ctx.send(embed=discord.Embed(title=f'📊 `{char.name}` 의 능력치', description=str(char.stat), color=self.color['info']))
+        embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
+        embed.add_field(name='기본 정보', value=f'**레벨:** `{char.level}`')
+        embed.add_field(name='능력치', value=f'{char.stat}')
+        await ctx.send(embed=embed)
 
     @commands.command(name='낚시')
     async def _fishing(self, ctx: commands.Context):
@@ -348,7 +350,7 @@ class InGamecmds(BaseCog):
                 embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
                 await do()
 
-    @commands.command(name='돈받기', aliases=['돈줘', '돈내놔'])
+    @commands.command(name='돈받기', aliases=['돈줘', '돈내놔', '출첵', '출석'])
     async def _getmoney(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)

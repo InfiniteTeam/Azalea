@@ -21,7 +21,7 @@ class Setting(AzaleaData):
         self.title = title
         self.description = description
         self.type = type
-        self.default: default
+        self.default = default
 
 class SettingData(AzaleaData):
     def __init__(self, name: str, value: Any):
@@ -76,6 +76,11 @@ class ItemData(AzaleaData):
         self.id = id
         self.count = count
         self.enchantments = enchantments
+
+class Stat(AzaleaData):
+    def __init__(self, name: str, title: str):
+        self.name = name
+        self.title = title
 
 class StatData(AzaleaData):
     """
@@ -475,7 +480,7 @@ class CharMgr:
             json.dumps(stat, ensure_ascii=False),
             json.dumps(settings, ensure_ascii=False)
         )
-        self.cur.execute('insert into chardata (id, name, level, type, items, stat, settings) values (%s, %s, %s, %s, %s, %s, %s)', datas)
+        self.cur.execute('insert into chardata (id, name, level, type, items, stat, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, %s, NULL)', datas)
 
     def logout_all(self, userid: int):
         self.cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))

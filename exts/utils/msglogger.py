@@ -13,7 +13,7 @@ class Msglog:
             guildidstr = '[GuildID:] ' + str(ctx.guild.id)
         channelidstr = '[ChID:] ' + str(ctx.channel.id)
         authoridstr = '[UserID:] ' + str(ctx.author.id)
-        msg = '[Msg:] ' + str(ctx.message.content)
+        msg = '[Msg:] ' + str(ctx.message.content).__repr__()
         sent = '[Sent:] ' + sent
         logstr = ', '.join([chtypestr, guildidstr, channelidstr, authoridstr, msg, sent])
         self.logger.info(logstr)

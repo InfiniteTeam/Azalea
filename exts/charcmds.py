@@ -86,13 +86,13 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 취소됨]')
                 return
-            elif not (2 <= len(m.content) <= 10):
-                await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2글자 이상이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
-                self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 너무 짧은 이름]')
-                return
-            elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content):
+            elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content)  or '|' in m.content:
                 await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 올바르지 않은 이름]')
+                return
+            elif not (2 <= len(m.content) <= 10):
+                await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2~10글자이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
+                self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 너무 짧거나 긴 이름]')
                 return
             elif self.cur.execute('select * from chardata where name=%s', m.content) != 0:
                 await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
@@ -172,7 +172,7 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{cname}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
         else:
-            await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, cname))
+            await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, name))
             self.msglog.log(ctx, '[캐릭터 변경: 존재하지 않는 캐릭터]')
 
     @_char.command(name='삭제', aliases=['삭'])
@@ -242,6 +242,11 @@ class Charcmds(BaseCog):
         self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제 취소 완료]')
         return
 
+    @_char.command(name='정보', aliases=['스탯', '능력치'])
+    async def _w_stat(self, ctx: commands.Context, charname: typing.Optional[str] = None):
+        cmd = self.client.get_command('스탯')
+        await cmd(ctx, charname)
+
     @commands.command(name='캐생', aliases=['새캐'])
     async def _w_char_create(self, ctx: commands.Context):
         await self._char_create(ctx)
@@ -260,7 +265,7 @@ class Charcmds(BaseCog):
                 missing = '캐릭터의 이름'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
-    @commands.command(name='이름변경', aliases=['닉변'])
+    @_char.command(name='이름변경', aliases=['닉변'])
     async def _char_changename(self, ctx: commands.Context, *, charname: typing.Optional[str]):
         cmgr = CharMgr(self.cur)
         if charname:
@@ -271,12 +276,17 @@ class Charcmds(BaseCog):
                 return
         else:
             char = cmgr.get_current_char(ctx.author.id)
-        td = datetime.datetime.now() - char.last_nick_change
-        if td <= datetime.timedelta(days=1):
-            cldstr = ' '.join(timedelta.format_timedelta(datetime.timedelta(days=1) - td).values())
-            await ctx.send(embed=discord.Embed(title='⏱ 쿨타임 중입니다!', description=f'**`{cldstr}` 남았습니다!**\n닉네임은 24시간에 한 번 변경할 수 있습니다.', color=self.color['info']))
-            self.msglog.log(ctx, '[이름변경: 쿨다운 중]')
-            return
+
+        print(type(char.last_nick_change))
+        if char.last_nick_change is None:
+            print('d')
+        else:
+            td = datetime.datetime.now() - char.last_nick_change
+            if td <= datetime.timedelta(days=1):
+                cldstr = ' '.join(timedelta.format_timedelta(datetime.timedelta(days=1) - td).values())
+                await ctx.send(embed=discord.Embed(title='⏱ 쿨타임 중입니다!', description=f'**`{cldstr}` 남았습니다!**\n닉네임은 24시간에 한 번 변경할 수 있습니다.', color=self.color['info']))
+                self.msglog.log(ctx, '[이름변경: 쿨다운 중]')
+                return
         await ctx.send(embed=discord.Embed(title='🏷 캐릭터 이름 변경', description=f'`{char.name}` 캐릭터의 이름을 변경합니다. 새 이름을 입력해주세요!\n취소하려면 `취소`를 입력하세요.', color=self.color['ask']))
         self.msglog.log(ctx, '[이름변경]')
         def check(m):
@@ -293,13 +303,13 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[이름변경: 취소됨]')
                 return
-            elif not (2 <= len(m.content) <= 10):
-                await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2글자 이상이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
-                self.msglog.log(ctx, '[이름변경: 너무 짧은 이름]')
-                return
-            elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content):
+            elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content) or '|' in m.content:
                 await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
                 self.msglog.log(ctx, '[이름변경: 올바르지 않은 이름]')
+                return
+            elif not (2 <= len(m.content) <= 10):
+                await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2~10글자이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
+                self.msglog.log(ctx, '[이름변경: 너무 짧거나 긴 이름]')
                 return
             elif self.cur.execute('select * from chardata where name=%s', m.content) != 0:
                 await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
@@ -333,6 +343,10 @@ class Charcmds(BaseCog):
                 elif reaction.emoji == '❌':
                     await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                     self.msglog.log(ctx, '[이름변경: 취소됨]')
+
+    @commands.command(name='닉변')
+    async def _w_char_changename(self, ctx: commands.Context, *, charname: typing.Optional[str]):
+        await self._char_changename(ctx, charname=charname)
 
     @commands.command(name='로그아웃')
     async def _logout(self, ctx: commands.Context):
@@ -399,7 +413,7 @@ class Charcmds(BaseCog):
                 except:
                     pass
             else:
-                if reaction.emoji in emjs:
+                if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
                         await msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
                     else:

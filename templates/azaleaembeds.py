@@ -7,8 +7,8 @@ async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
     embed = discord.Embed(title='📰 뉴스', description='', color=cog.color['info'])
     for one in pgr.get_thispage():
         if one.content:
-            if one.content.__len__() > 100:
-                content = '> ' + one.content[:100] + '...\n'
+            if one.content.__len__() > 110:
+                content = '> ' + one.content[:110] + '...\n'
             else:
                 content = '> ' + one.content + '\n'
         else:
