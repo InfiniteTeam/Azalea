@@ -63,7 +63,6 @@ async def itemdata_embed(datadb: DataDB, ctx: commands.Context, itemdata: ItemDa
     if mode == 'delete':
         color = ctx.bot.get_data('color')['warn']
     embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=color)
-    embed.set_author(name='📔 아이템 상세 정보')
     enchantstr = ''
     for enchant in itemdata.enchantments:
         enchantstr += '{}: {}\n'.format(enchant.name, enchant.level)
@@ -75,26 +74,38 @@ async def itemdata_embed(datadb: DataDB, ctx: commands.Context, itemdata: ItemDa
         embed.set_author(name='⚠ 아이템 버리기 경고')
         embed.add_field(name='버릴 개수', value='{}개'.format(delete_count))
     else:
+        embed.set_author(name='📔 아이템 상세 정보')
         embed.add_field(name='개수', value='{}개'.format(itemdata.count))
     embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
-async def marketitem_embed(datadb: DataDB, ctx: commands.Context, marketitem: MarketItem, mode='default', *, delete_count: int=0):
+async def marketitem_embed(datadb: DataDB, ctx: commands.Context, marketitem: MarketItem, mode='default', *, count: int=0, chardata: CharacterData=None):
     idgr = ItemDBMgr(datadb)
     item = idgr.fetch_item(marketitem.item.id)
     color = ctx.bot.get_data('color')['info']
     embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=color)
-    embed.set_author(name='📔 아이템 상세 정보')
     enchantstr = ''
     for enchant in marketitem.item.enchantments:
         enchantstr += '`{}` {}\n'.format(idgr.fetch_enchantment(enchant.name).title, enchant.level)
     if not enchantstr:
         enchantstr = '없음'
-    embed.add_field(name='마법부여', value=enchantstr)
-    if marketitem.discount is not None:
-        embed.add_field(name='가격', value='~~`{}`~~ {} 골드'.format(marketitem.price, marketitem.discount))
+    if mode == 'buy':
+        embed.set_author(name='💎 아이템 구매하기')
+        embed.description = '정말 이 아이템을 구매할까요? 환불은 할 수 없어요.'
+        embed.add_field(name='아이템 설명', value=item.description)
+        if marketitem.discount is not None:
+            embed.add_field(name='최종 가격', value='~~`{}`~~ {} 골드 × {} 개\n= **{} 골드**'.format(marketitem.price, marketitem.discount, count, marketitem.discount*count))
+            embed.add_field(name='구매 후 잔고', value='{} 골드\n↓\n{} 골드'.format(chardata.money, chardata.money - marketitem.discount*count))
+        else:
+            embed.add_field(name='최종 가격', value='{} 골드 × {} 개 = {} 골드'.format(marketitem.price, count, marketitem.price*count))
+            embed.add_field(name='구매 후 잔고', value='{} 골드\n↓\n{} 골드'.format(chardata.money, chardata.money - marketitem.price*count))
     else:
-        embed.add_field(name='가격', value='{} 골드'.format(marketitem.price))
+        embed.set_author(name='📔 아이템 상세 정보')
+        if marketitem.discount is not None:
+            embed.add_field(name='가격', value='~~`{}`~~ {} 골드'.format(marketitem.price, marketitem.discount))
+        else:
+            embed.add_field(name='가격', value='{} 골드'.format(marketitem.price))
+    embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
 async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='default'):

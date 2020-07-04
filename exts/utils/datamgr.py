@@ -141,7 +141,7 @@ class CharacterData(AzaleaData):
         self.location = location
 
 class MarketItem(AzaleaData):
-    def __init__(self, item: ItemData, price: int, selling: int, discount: int = None):
+    def __init__(self, item: ItemData, *, price: int, selling: int, discount: int = None):
         self.item = item
         self.price = price
         self.selling = selling

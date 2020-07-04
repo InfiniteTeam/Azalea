@@ -277,10 +277,7 @@ class Charcmds(BaseCog):
         else:
             char = cmgr.get_current_char(ctx.author.id)
 
-        print(type(char.last_nick_change))
-        if char.last_nick_change is None:
-            print('d')
-        else:
+        if char.last_nick_change is not None:
             td = datetime.datetime.now() - char.last_nick_change
             if td <= datetime.timedelta(days=1):
                 cldstr = ' '.join(timedelta.format_timedelta(datetime.timedelta(days=1) - td).values())

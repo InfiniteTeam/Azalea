@@ -203,6 +203,7 @@ class InGamecmds(BaseCog):
     async def _market(self, ctx: commands.Context):
         perpage = 8
         mdgr = MarketDBMgr(self.datadb)
+        cmgr = CharMgr(self.cur)
         pgr = pager.Pager(mdgr.get_market('main'), perpage)
         msg = await ctx.send(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
         self.msglog.log(ctx, '[상점]')
@@ -237,10 +238,108 @@ class InGamecmds(BaseCog):
                         msg = results[1]
                         await addreaction(msg)
                         reaction.message = msg
+
                 if reaction.emoji == '💎':
-                    pass
-                elif reaction.emoji == '💰':
-                    pass
+                    # 상점아이템 구매 섹션
+                    itemidxmsg = await ctx.send(embed=discord.Embed(
+                        title='💎 아이템 구매 - 아이템 선택',
+                        description='구매할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
+                        color=self.color['ask']
+                    ))
+                    self.msglog.log(ctx, '[상점: 아이템 구매: 번째수 입력]')
+                    await itemidxmsg.add_reaction('❌')
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+
+                    task = await event_waiter.wait_for_first(canceltask, indextask)
+                    await itemidxmsg.delete()
+                    if task == indextask:
+                        idxtaskrst = indextask.result()
+                        if idxtaskrst.content.isdecimal():
+                            if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
+                                itemidx = int(idxtaskrst.content) - 1
+                                item: MarketItem = pgr.get_thispage()[itemidx]
+                                itemcountmsg = await ctx.send(embed=discord.Embed(
+                                    title='💎 아이템 구매 - 구매 아이템 개수',
+                                    description='몇 개를 구매하시겠어요?\n❌를 클릭해 취소합니다.',
+                                    color=self.color['ask']
+                                ))
+                                await itemcountmsg.add_reaction('❌')
+                                canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=20))
+                                counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                                task2 = await event_waiter.wait_for_first(canceltask2, counttask)
+                                await itemcountmsg.delete()
+                                if task2 == counttask:
+                                    counttaskrst = counttask.result()
+                                    if counttaskrst.content.isdecimal():
+                                        count = int(counttaskrst.content)
+                                        if item.discount:
+                                            final_price = count * item.discount
+                                        else:
+                                            final_price = count * item.price
+
+                                        char = cmgr.get_current_char(ctx.author.id)
+                                        if count >= 1:
+                                            if final_price <= char.money:
+                                                # 최종적 구매 확인
+                                                embed = await ingameembeds.marketitem_embed(self.datadb, ctx, item, mode='buy', chardata=char, count=count)
+                                                finalmsg = await ctx.send(embed=embed)
+                                                await finalmsg.add_reaction('⭕')
+                                                await finalmsg.add_reaction('❌')
+                                                rst = await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=finalmsg, emojis=['⭕', '❌'], timeout=20)
+                                                if rst:
+                                                    rct = rst[0]
+                                                    if rct.emoji == '⭕':
+                                                        # 캐릭터 갱신 후 다시 한번 잔고 충분한지 확인
+                                                        char = cmgr.get_current_char(ctx.author.id)
+                                                        if final_price <= char.money:
+                                                            imgr = ItemMgr(self.cur, char.name)
+                                                            imgr.money -= final_price
+                                                            item.item.count = count
+                                                            imgr.give_item(item.item)
+                                                            idgr = ItemDBMgr(self.datadb)
+
+                                                            embed = discord.Embed(title='{} 성공적으로 구매했습니다!'.format(self.emj.get(ctx, 'check')), description='`{}` 을(를) {}개 구입했어요.'.format(idgr.fetch_item(item.item.id).name, count), color=self.color['success'])
+                                                            await ctx.send(embed=embed)
+                                                            self.msglog.log(ctx, '[상점: 아이템 구매: 완료]')
+                                                        else:
+                                                            embed = discord.Embed(title='❓ 구매에 필요한 돈이 부족합니다!', description='`{}`골드가 부족합니다!'.format(final_price - char.money), color=self.color['error'])
+                                                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                                            await ctx.send(embed=embed, delete_after=7)
+                                                            self.msglog.log(ctx, '[상점: 아이템 구매: 돈 부족]')
+                                                    elif rct.emoji == '❌':
+                                                        embed = discord.Embed(title='❌ 취소되었습니다.', color=self.color['error'])
+                                                        embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                                        await ctx.send(embed=embed, delete_after=7)
+                                                        self.msglog.log(ctx, '[상점: 아이템 구매: 취소]')
+                                                await finalmsg.delete()
+                                            else:
+                                                #돈 부족
+                                                embed = discord.Embed(title='❓ 구매에 필요한 돈이 부족합니다!', description='`{}`골드가 부족합니다!'.format(final_price - char.money), color=self.color['error'])
+                                                embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                                await ctx.send(embed=embed, delete_after=7)
+                                                self.msglog.log(ctx, '[상점: 아이템 구매: 돈 부족]')
+                                        else:
+                                            embed = discord.Embed(title='❓ 아이템 개수는 적어도 1개 이상입니다!', color=self.color['error'])
+                                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                            await ctx.send(embed=embed, delete_after=7)
+                                            self.msglog.log(ctx, '[상점: 아이템 구매: 1 이상이여야 함]')
+                                    else:
+                                        embed = discord.Embed(title='❓ 아이템 개수는 숫자만을 입력해주세요!', color=self.color['error'])
+                                        embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                        await ctx.send(embed=embed, delete_after=7)
+                                        self.msglog.log(ctx, '[상점: 아이템 구매: 숫자만 입력]')
+                            else:
+                                embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위 메시지에 아이템 앞마다 번호가 붙어 있습니다.', color=self.color['error'])
+                                embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                await ctx.send(embed=embed, delete_after=7)
+                                self.msglog.log(ctx, '[상점: 아이템 구매: 올바르지 않은 번째수]')
+                        else:
+                            embed = discord.Embed(title='❓ 아이템 번째수는 숫자만을 입력해주세요!', color=self.color['error'])
+                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                            await ctx.send(embed=embed, delete_after=7)
+                            self.msglog.log(ctx, '[상점: 아이템 구매: 숫자만 입력]')
+
                 elif reaction.emoji == '❔':
                     # 상점아이템 정보 확인 섹션
                     itemidxmsg = await ctx.send(embed=discord.Embed(
@@ -310,7 +409,7 @@ class InGamecmds(BaseCog):
 
         async def do():
             todo = []
-            if msg.id == ctx.channel.last_message_id:
+            if ctx.channel.type == discord.ChannelType.text and msg.id == ctx.channel.last_message_id:
                 todo += [
                     msg.edit(embed=embed),
                     msg.clear_reactions()
@@ -320,6 +419,7 @@ class InGamecmds(BaseCog):
                     msg.delete(),
                     ctx.send(embed=embed)
                 ]
+
             await asyncio.gather(*todo, return_exceptions=True)
 
         try:
@@ -356,7 +456,6 @@ class InGamecmds(BaseCog):
         char = cmgr.get_current_char(ctx.author.id)
         rcv_money = cmgr.get_raw_character(char.name)['received_money']
         now = datetime.datetime.now()
-        print(type(rcv_money), type(now))
         embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
             embed.description += '\n관리자여서 돈을 무제한으로 받을 수 있습니다. 멋지네요!'
