@@ -68,3 +68,11 @@ class Gamecmds(BaseCog):
                 embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
                 self.msglog.log(ctx, '[낚시: 잡음]')
                 await do()
+
+    @commands.command(name='타자', aliases=['타자게임', '타자겜', '속기', '타자연습'])
+    async def _typing(self, ctx: commands.Context):
+        msg = await ctx.send(embed=discord.Embed(title='⌚ 타자연습 - 준비하세요!', description='3초 후에 표시되는 문장을 타자하세요!', color=self.color['info']))
+
+def setup(client):
+    cog = Gamecmds(client)
+    client.add_cog(cog)
