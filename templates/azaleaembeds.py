@@ -20,7 +20,7 @@ async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
             pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
         embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
     if total > 40:
-        embed.description += '```{}/{} 페이지, 전체 {}건 중 최신 {}건```'.format(total, pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+        embed.description += '```{}/{} 페이지, 전체 {}건 중 최신 {}건```'.format(pgr.now_pagenum()+1, len(pgr.pages()), total, pgr.objlen())
     else:
         embed.description += '```{}/{} 페이지, 전체 {}건```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
     embed.set_footer(text='* 이 뉴스는 재미 및 게임 플레이를 위한 실제와 상관없는 픽션임을 알려 드립니다.')

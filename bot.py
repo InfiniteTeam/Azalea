@@ -163,8 +163,6 @@ datadb.load_permissions(permissions.PERMISSIONS)
 
 check = checks.Checks(cur, datadb)
 
-print(datadb.items)
-
 def awaiter(coro):
     return asyncio.ensure_future(coro)
 

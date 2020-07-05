@@ -226,7 +226,7 @@ class Azaleacmds(BaseCog):
     async def _news(self, ctx: commands.Context):
         nmgr = NewsMgr(self.cur)
         news = nmgr.fetch(limit=40)
-        total = self.cur.execute('select count(0) from news')
+        total = self.cur.execute('select uuid from news')
         pgr = pager.Pager(news, 4)
         msg = await ctx.send(embed=await azaleaembeds.news_embed(self, pgr, total=total))
         self.msglog.log(ctx, '[뉴스]')

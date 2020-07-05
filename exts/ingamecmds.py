@@ -95,8 +95,8 @@ class InGamecmds(BaseCog):
                     ))
                     self.msglog.log(ctx, '[가방: 아이템 정보: 번째수 입력]')
                     await itemidxmsg.add_reaction('❌')
-                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
-                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
                     
                     task = await event_waiter.wait_for_first(canceltask, indextask)
                     await itemidxmsg.delete()
@@ -132,8 +132,8 @@ class InGamecmds(BaseCog):
                     ))
                     self.msglog.log(ctx, '[가방: 아이템 버리기: 번째수 입력]')
                     await itemidxmsg.add_reaction('❌')
-                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
-                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
 
                     task = await event_waiter.wait_for_first(canceltask, indextask)
                     await itemidxmsg.delete()
@@ -150,8 +150,8 @@ class InGamecmds(BaseCog):
                                 ))
                                 self.msglog.log(ctx, '[가방: 아이템 버리기: 개수 입력]')
                                 await delcountmsg.add_reaction('❌')
-                                canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=delcountmsg, emojis=['❌'], timeout=20))
-                                counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                                canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=delcountmsg, emojis=['❌'], timeout=60))
+                                counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
                                 task = await event_waiter.wait_for_first(canceltask, counttask)
                                 await delcountmsg.delete()
                                 if task == counttask:
@@ -272,8 +272,8 @@ class InGamecmds(BaseCog):
                         ))
                         self.msglog.log(ctx, '[상점: 아이템 판매: 번째수 입력]')
                         await itemidxmsg.add_reaction('❌')
-                        canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
-                        indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                        canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
+                        indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
                         task = await event_waiter.wait_for_first(canceltask, indextask)
                         await itemidxmsg.delete()
 
@@ -290,8 +290,8 @@ class InGamecmds(BaseCog):
                                     ))
                                     self.msglog.log(ctx, '[상점: 아이템 판매: 개수 입력]')
                                     await itemcountmsg.add_reaction('❌')
-                                    canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=20))
-                                    counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                                    canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=60))
+                                    counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
                                     task2 = await event_waiter.wait_for_first(canceltask2, counttask)
                                     await itemcountmsg.delete()
                                     if task2 == counttask:
@@ -304,12 +304,11 @@ class InGamecmds(BaseCog):
                                                     finalmsg = await ctx.send(embed=embed)
                                                     await finalmsg.add_reaction('⭕')
                                                     await finalmsg.add_reaction('❌')
-                                                    rst = await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=finalmsg, emojis=['⭕', '❌'], timeout=20)
+                                                    rst = await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=finalmsg, emojis=['⭕', '❌'], timeout=60)
                                                     if rst:
                                                         rct = rst[0]
                                                         if rct.emoji == '⭕':
                                                             #판매 전 최종 확인
-                                                            print(item.enchantments)
                                                             if item in imgr.get_items():
                                                                 imgr.delete_item(item, count)
                                                                 final_price = idgr.get_final_price(item, count)
@@ -366,8 +365,8 @@ class InGamecmds(BaseCog):
                     ))
                     self.msglog.log(ctx, '[상점: 아이템 구매: 번째수 입력]')
                     await itemidxmsg.add_reaction('❌')
-                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
-                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
 
                     task = await event_waiter.wait_for_first(canceltask, indextask)
                     await itemidxmsg.delete()
@@ -384,8 +383,8 @@ class InGamecmds(BaseCog):
                                 ))
                                 self.msglog.log(ctx, '[상점: 아이템 구매: 개수 입력]')
                                 await itemcountmsg.add_reaction('❌')
-                                canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=20))
-                                counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                                canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=60))
+                                counttask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
                                 task2 = await event_waiter.wait_for_first(canceltask2, counttask)
                                 await itemcountmsg.delete()
                                 if task2 == counttask:
@@ -405,7 +404,7 @@ class InGamecmds(BaseCog):
                                                 finalmsg = await ctx.send(embed=embed)
                                                 await finalmsg.add_reaction('⭕')
                                                 await finalmsg.add_reaction('❌')
-                                                rst = await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=finalmsg, emojis=['⭕', '❌'], timeout=20)
+                                                rst = await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=finalmsg, emojis=['⭕', '❌'], timeout=60)
                                                 if rst:
                                                     rct = rst[0]
                                                     if rct.emoji == '⭕':
@@ -467,8 +466,8 @@ class InGamecmds(BaseCog):
                     ))
                     self.msglog.log(ctx, '[상점: 아이템 정보: 번째수 입력]')
                     await itemidxmsg.add_reaction('❌')
-                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=20))
-                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=20))
+                    canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
+                    indextask = asyncio.create_task(event_waiter.wait_for_message(self.client, ctx=ctx, timeout=60))
                     
                     task = await event_waiter.wait_for_first(canceltask, indextask)
                     await itemidxmsg.delete()
@@ -513,60 +512,7 @@ class InGamecmds(BaseCog):
         embed.add_field(name='기본 정보', value=f'**레벨:** `{char.level}`')
         embed.add_field(name='능력치', value=f'{char.stat}')
         await ctx.send(embed=embed)
-
-    @commands.command(name='낚시')
-    async def _fishing(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
-        msg = await ctx.send(embed=embed)
-        await msg.edit()
-        emjs = ['⁉']
-        await msg.add_reaction('⁉')
-        def check(reaction, user):
-            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
-
-        async def do():
-            todo = []
-            if ctx.channel.type == discord.ChannelType.text and msg.id == ctx.channel.last_message_id:
-                todo += [
-                    msg.edit(embed=embed),
-                    msg.clear_reactions()
-                ]
-            else:
-                todo += [
-                    msg.delete(),
-                    ctx.send(embed=embed)
-                ]
-
-            await asyncio.gather(*todo, return_exceptions=True)
-
-        try:
-            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(1, 5))
-        except asyncio.TimeoutError:
-            pass
-        else:
-            if reaction.emoji == '⁉':
-                embed.description = '아무것도 잡히지 않았어요! 너무 빨리 당긴것 같아요.'
-                await do()
-                return
-        embed.description = '뭔가가 걸렸습니다! 지금이에요!'
-        await msg.edit(embed=embed)
-
-        try:
-            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(0.8, 1.7))
-        except asyncio.TimeoutError:
-            embed.description = '놓쳐 버렸네요... 너무 천천히 당긴것 같아요.'
-            await do()
-        else:
-            if reaction.emoji == '⁉':
-                idgr = ItemDBMgr(self.datadb)
-                fishes = idgr.fetch_items_with(tags=['fishing'])
-                fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
-                imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
-                imgr.give_item(ItemData(fish.id, 1, []))
-                embed.title += ' - 잡았습니다!'
-                embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
-                await do()
+        self.msglog.log(ctx, '[스탯]')
 
     @commands.command(name='돈받기', aliases=['돈줘', '돈내놔', '출첵', '출석'])
     async def _getmoney(self, ctx: commands.Context):

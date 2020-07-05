@@ -1,7 +1,7 @@
 {
     "botName": "Azalea",
     "betaprefix": "*",
-    "inspection": true,
+    "inspection": false,
     "is_android": true,
     "securedir": {
         "Windows": "C:/azalea",
