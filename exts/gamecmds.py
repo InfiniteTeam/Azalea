@@ -72,6 +72,9 @@ class Gamecmds(BaseCog):
     @commands.command(name='타자', aliases=['타자게임', '타자겜', '속기', '타자연습'])
     async def _typing(self, ctx: commands.Context):
         msg = await ctx.send(embed=discord.Embed(title='⌚ 타자연습 - 준비하세요!', description='3초 후에 표시되는 문장을 타자하세요!', color=self.color['info']))
+        await asyncio.sleep(3)
+        await ctx.send("응 니얼굴 다쿤")
+        
 
 def setup(client):
     cog = Gamecmds(client)
