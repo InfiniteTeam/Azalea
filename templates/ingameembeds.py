@@ -3,7 +3,7 @@ from discord.ext import commands
 import datetime
 from dateutil.relativedelta import relativedelta
 from exts.utils import pager, timedelta, basecog
-from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr
+from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr
 
 async def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     items = pgr.get_thispage()
@@ -56,34 +56,40 @@ async def char_embed(username, pgr: pager.Pager, *, color, mode='default'):
     embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
     return embed
 
-async def itemdata_embed(datadb: DataDB, ctx: commands.Context, itemdata: ItemData, mode='default', *, delete_count: int=0):
-    idgr = ItemDBMgr(datadb)
+async def itemdata_embed(cog: basecog.BaseCog, itemdata: ItemData, mode='default', *, count: int=0, chardata: CharacterData=None):
+    idgr = ItemDBMgr(cog.datadb)
     item = idgr.fetch_item(itemdata.id)
-    color = ctx.bot.get_data('color')['info']
+    color = cog.color['info']
     if mode == 'delete':
-        color = ctx.bot.get_data('color')['warn']
+        color = cog.color['warn']
     embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=color)
     enchantstr = ''
     for enchant in itemdata.enchantments:
-        enchantstr += '{}: {}\n'.format(enchant.name, enchant.level)
+        enchantstr += '`{}` {}\n'.format(idgr.fetch_enchantment(enchant.name).title, enchant.level)
     if not enchantstr:
         enchantstr = '없음'
     if mode == 'delete':
-        embed.description = '**정말 이 아이템을 버릴까요? 다시 회수할 수 없습니다.**'
+        embed.description = '**정말 이 아이템을 버릴까요? 다시 회수할 수 없어요.**'
         embed.add_field(name='아이템 설명', value=item.description)
         embed.set_author(name='⚠ 아이템 버리기 경고')
-        embed.add_field(name='버릴 개수', value='{}개'.format(delete_count))
+        embed.add_field(name='버릴 개수', value='{}개'.format(count))
+    elif mode == 'sell':
+        embed.description = '**다음과 같이 판매할까요? 다시 취소할 수 없어요.**'
+        embed.add_field(name='아이템 설명', value=item.description)
+        embed.set_author(name='💰 아이템 판매하기')
     else:
         embed.set_author(name='📔 아이템 상세 정보')
         embed.add_field(name='개수', value='{}개'.format(itemdata.count))
     embed.add_field(name='마법부여', value=enchantstr)
+    if mode == 'sell':
+        embed.add_field(name='최종 판매', value='{} 골드 × {} 개\n= **{} 골드**'.format(idgr.get_final_price(itemdata), count, idgr.get_final_price(itemdata, count)))
+        embed.add_field(name='판매 후 잔고', value='{} 골드\n↓\n{} 골드'.format(chardata.money, chardata.money + idgr.get_final_price(itemdata, count)))
     return embed
 
-async def marketitem_embed(datadb: DataDB, ctx: commands.Context, marketitem: MarketItem, mode='default', *, count: int=0, chardata: CharacterData=None):
-    idgr = ItemDBMgr(datadb)
+async def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default', *, count: int=0, chardata: CharacterData=None):
+    idgr = ItemDBMgr(cog.datadb)
     item = idgr.fetch_item(marketitem.item.id)
-    color = ctx.bot.get_data('color')['info']
-    embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=color)
+    embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=cog.color['info'])
     enchantstr = ''
     for enchant in marketitem.item.enchantments:
         enchantstr += '`{}` {}\n'.format(idgr.fetch_enchantment(enchant.name).title, enchant.level)
@@ -114,16 +120,23 @@ async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, 
     moneystr = ''
     cmgr = CharMgr(cog.cur)
     char = cmgr.get_character(charname)
-    idb = ItemDBMgr(cog.datadb)
+    imgr = ItemDBMgr(cog.datadb)
+    idgr = ItemDBMgr(cog.datadb)
     for idx, one in enumerate(items):
-        founditem = idb.fetch_item(one.id)
+        founditem = idgr.fetch_item(one.id)
         icon = founditem.icon
         name = founditem.name
         count = one.count
+        enchants = []
+        for enc in one.enchantments:
+            enchants.append('`{}` {}'.format(imgr.fetch_enchantment(enc.name).title, enc.level))
+        enchantstr = ''
+        if enchants:
+            enchantstr = '> ' + ", ".join(enchants) + '\n'
         if mode == 'select':
-            itemstr += '{}. {} **{}** ({}개)\n'.format(idx+1, icon, name, count)
+            itemstr += '{}. {} **{}** ({}개)\n{}'.format(idx+1, icon, name, count, enchantstr)
         else:
-            itemstr += '{} **{}** ({}개)\n'.format(icon, name, count)
+            itemstr += '{} **{}** ({}개)\n{}'.format(icon, name, count, enchantstr)
     embed = discord.Embed(
         title=f'💼 `{charname}`의 가방',
         color=cog.color['info']
@@ -134,9 +147,39 @@ async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, 
         embed.title += ' - 선택 모드'
     if items:
         embed.description = itemstr + moneystr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+        embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
     else:
         embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
-    embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
+    return embed
+
+async def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='select'):
+    items = pgr.get_thispage()
+    itemstr = ''
+    mdgr = MarketDBMgr(cog.datadb)
+    imgr = ItemDBMgr(cog.datadb)
+    idgr = ItemDBMgr(cog.datadb)
+    for idx, one in enumerate(items):
+        founditem = idgr.fetch_item(one.id)
+        icon = founditem.icon
+        name = founditem.name
+        count = one.count
+        enchants = []
+        for enc in one.enchantments:
+            enchants.append('`{}` {}'.format(imgr.fetch_enchantment(enc.name).title, enc.level))
+        enchantstr = ''
+        if enchants:
+            enchantstr = '> ' + ", ".join(enchants) + '\n'
+        itemstr += '{}. {} **{}** ({}개): `{}` 골드\n{}'.format(idx+1, icon, name, count, idgr.get_final_price(one), enchantstr)
+    embed = discord.Embed(
+        title=f'💼 `{charname}`의 가방 - 선택 모드',
+        color=cog.color['info']
+    )
+    embed.set_author(name='💰 아이템 판매 - 아이템 선택')
+    embed.set_footer(text='⚠ 판매 가능한 아이템만 표시됩니다')
+    if items:
+        embed.description = itemstr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+    else:
+        embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
     return embed
 
 async def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default'):

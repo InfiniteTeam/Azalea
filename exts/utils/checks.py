@@ -74,3 +74,11 @@ class Checks:
 
     def if_subcmd_vaild(self):
         return commands.check(self.subcmd_vaild)
+
+    async def on_inspection(self, ctx: commands.Context):
+        try:
+            result = await self.master(ctx)
+        except errors.NotMaster:
+            raise errors.onInspection('점검 중에는 마스터 유저만 사용이 가능합니다')
+        else:
+            return result

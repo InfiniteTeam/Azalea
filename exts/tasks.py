@@ -109,7 +109,20 @@ class Tasks(BaseCog):
     @tasks.loop(seconds=5)
     async def presence_loop(self):
         try:
-            if self.client.get_data('shutdown_left') is None:
+            if self.client.get_data('shutdown_left') is not None:
+                await self.client.change_presence(
+                    activity=discord.Game(
+                        str(math.trunc(self.client.get_data('shutdown_left'))) + '초 후 종료'
+                    )
+                )
+            elif self.client.get_data('on_inspection') == True:
+                await self.client.change_presence(
+                    status=discord.Status.idle,
+                    activity=discord.Game(
+                        'Azalea 점검 중'
+                    )
+                )
+            else:
                 games = [
                     f'〔{self.prefix} 도움〕 입력!',
                     f'{self.prefix} 도움 | {len(self.client.guilds)} 서버',
@@ -120,13 +133,6 @@ class Tasks(BaseCog):
                     self.gamenum = 0
                 else:
                     self.gamenum += 1
-            else:
-                await self.client.change_presence(
-                    status=discord.Status.online,
-                    activity=discord.Game(
-                        str(math.trunc(self.client.get_data('shutdown_left'))) + '초 후 종료'
-                    )
-                )
         except:
             self.errlogger.error(traceback.format_exc())
 

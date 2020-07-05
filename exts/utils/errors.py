@@ -72,3 +72,6 @@ class ItemTagNotFound(AzaleaError):
 
 class SettingNotFound(AzaleaError):
     pass
+
+class onInspection(commands.CheckFailure):
+    pass

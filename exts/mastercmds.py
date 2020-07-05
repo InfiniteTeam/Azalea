@@ -357,6 +357,28 @@ class Mastercmds(BaseCog):
         else:
             await ctx.send(embed=discord.Embed(title='❌ 해당 ID의 오류를 찾을 수 없습니다', color=self.color['error']))
 
+    @commands.group(name='점검')
+    async def _inspection(self, ctx: commands.Context):
+        pass
+
+    @_inspection.command(name='활성화', aliases=['켜기', '켜짐', '활성'])
+    async def _inspection_on(self, ctx: commands.Context):
+        if self.client.get_data('on_inspection'):
+            await ctx.send(embed=discord.Embed(title='🔐 점검 모드 활성됨', description='이미 점검 모드가 활성되어 있습니다.', color=self.color['warn']))
+        else:
+            self.client.add_check(self.check.on_inspection)
+            self.client.set_data('on_inspection', True)
+            await ctx.send(embed=discord.Embed(title='🔐 점검 모드 활성됨', description='이제 운영진만 Azalea를 사용할 수 있습니다.', color=self.color['warn']))
+
+    @_inspection.command(name='비활성화', aliases=['끄기', '꺼짐', '해제', '비활성'])
+    async def _inspection_off(self, ctx: commands.Context):
+        if self.client.get_data('on_inspection'):
+            self.client.remove_check(self.check.on_inspection)
+            self.client.set_data('on_inspection', False)
+            await ctx.send(embed=discord.Embed(title='🔓 점검 모드 해제됨', description='이제 누구든지 Azalea를 사용할 수 있습니다.', color=self.color['warn']))
+        else:
+            await ctx.send(embed=discord.Embed(title='🔓 점검 모드 해제됨', description='이미 점검 모드가 해제되어 있습니다.', color=self.color['warn']))
+
 def setup(client):
     cog = Mastercmds(client)
     client.add_cog(cog)

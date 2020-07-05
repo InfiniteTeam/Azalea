@@ -193,6 +193,11 @@ client.add_data('datadb', datadb)
 client.add_data('awaiter', awaiter)
 client.add_data('eventcogname', 'Events')
 client.add_data('start', datetime.datetime.now())
+if config['inspection']:
+    client.add_data('on_inspection', True)
+    client.add_check(check.on_inspection)
+else:
+    client.add_data('on_inspection', False)
 
 client.datas['allexts'] = []
 for ext in list(filter(lambda x: x.endswith('.py'), os.listdir('./exts'))):

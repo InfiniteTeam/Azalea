@@ -38,10 +38,6 @@ class Events(BaseCog):
         errstr = '\n'.join(err)
         originerr = err = [line.rstrip() for line in origintb]
         originerrstr = '\n'.join(originerr)
-        """
-        if hasattr(ctx.command, 'on_error'):
-            return
-        """
         if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send(embed=discord.Embed(title='❗ 명령어에 빠진 부분이 있습니다!', description=f'**`{error.paramdesc}`이(가) 필요합니다!**\n자세한 명령어 사용법은 `{self.prefix}도움` 을 통해 확인하세요!', color=self.color['error']))
             self.msglog.log(ctx, f'[필요한 명령 인자 없음: "{error.param.name}"({error.paramdesc})]')
@@ -65,6 +61,10 @@ class Events(BaseCog):
             self.msglog.log(ctx, '[미등록 사용자]')
             return
         elif isinstance(error, errors.NotMaster):
+            return
+        elif isinstance(error, errors.onInspection):
+            await ctx.send(embed=discord.Embed(title='❗ 현재 Azalea는 점검 중입니다.', description=f'점검 중에는 운영자만 사용할 수 있습니다.', color=self.color['error']))
+            self.msglog.log(ctx, '[점검중]')
             return
         elif isinstance(error, errors.NoCharOnline):
             await ctx.send(embed=discord.Embed(title='❗ 캐릭터가 선택되지 않았습니다!', description=f'`{self.prefix}캐릭터 변경` 명령으로 플레이할 캐릭터를 선택해주세요!', color=self.color['error']))
@@ -109,8 +109,12 @@ class Events(BaseCog):
                 missings = permutil.find_missing_perms_by_tbstr(originerrstr)
                 fmtperms = [permutil.format_perm_by_name(perm) for perm in missings]
                 embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n`' + '`, `'.join(fmtperms) + '`', color=self.color['error'])
-                await ctx.send(embed=embed)
-                self.msglog.log(ctx, '[봇 권한 부족]')
+                try:
+                    await ctx.send(embed=embed)
+                except discord.Forbidden:
+                    self.msglog.log(ctx, '[봇 메시지 전송 권한 없음]')
+                else:
+                    self.msglog.log(ctx, '[봇 권한 부족]')
                 return
             elif error.__cause__.code == 50035:
                 embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어 전송에 실패했습니다.', color=self.color['error'])

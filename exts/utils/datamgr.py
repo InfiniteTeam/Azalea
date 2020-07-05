@@ -1,6 +1,7 @@
 import pymysql
 import datetime
 from enum import Enum
+from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any
 import json
 from exts.utils import errors
@@ -39,12 +40,13 @@ class Enchantment(AzaleaData):
     """
     전체 마법부여를 정의하는 클래스입니다.
     """
-    def __init__(self, name: str, title: str, max_level: int, type: EnchantType, tags: List[str]=[]):
+    def __init__(self, name: str, title: str, max_level: int, type: EnchantType, tags: List[str]=[], *, price_percent: float=1.0):
         self.name = name
         self.title = title
         self.max_level = max_level
         self.type = type
         self.tags = tags
+        self.price_percent = float(price_percent)
 
 class EnchantmentData(AzaleaData):
     """
@@ -54,11 +56,14 @@ class EnchantmentData(AzaleaData):
         self.name = name
         self.level = level
 
+    def __eq__(self, enchantment):
+        return self.name == enchantment.name and self.level == enchantment.level
+
 class Item(AzaleaData):
     """
     전체 아이템을 정의하는 클래스입니다. 예외적으로 아이템 데이터베이스 파일에서 사용되는 Item 객체에서는 self.enchantments 속성이 str입니다.
     """
-    def __init__(self, id: int, name: str, description: str, max_count: int, icon: Union[str, int], tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}):
+    def __init__(self, id: int, name: str, description: str, max_count: int, icon: Union[str, int], tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}, *, selling=None):
         self.id = id
         self.name = name
         self.description = description
@@ -67,6 +72,7 @@ class Item(AzaleaData):
         self.tags = tags
         self.enchantments = enchantments
         self.meta = meta
+        self.selling = selling
 
 class ItemData(AzaleaData):
     """
@@ -76,6 +82,9 @@ class ItemData(AzaleaData):
         self.id = id
         self.count = count
         self.enchantments = enchantments
+
+    def __eq__(self, item):
+        return self.id == item.id and self.enchantments == item.enchantments
 
 class Stat(AzaleaData):
     def __init__(self, name: str, title: str):
@@ -141,10 +150,9 @@ class CharacterData(AzaleaData):
         self.location = location
 
 class MarketItem(AzaleaData):
-    def __init__(self, item: ItemData, *, price: int, selling: int, discount: int = None):
+    def __init__(self, item: ItemData, *, price: int, discount: int = None):
         self.item = item
         self.price = price
-        self.selling = selling
         self.discount = discount
 
 class NewsData(AzaleaData):
@@ -215,7 +223,7 @@ class MarketDBMgr:
     def __init__(self, datadb: DataDB):
         self.markets = datadb.markets
 
-    def get_market(self, name: str):
+    def get_market(self, name: str) -> List[MarketItem]:
         if name in self.markets:
             return self.markets[name]
 
@@ -322,7 +330,7 @@ class ItemDBMgr:
         enchants = []
         found = list(filter(lambda x: set(x.tags) & set(tags), self.datadb.enchantments))
         for x in found:
-            enchants.append(Enchantment(x.id, x.name, x.title, x.max_level, x.type))
+            enchants.append(Enchantment(x.id, x.name, x.title, x.max_level, x.type, price_percent=x.price_percent))
         return enchants
 
     def fetch_item(self, itemid: int) -> Item:
@@ -344,6 +352,15 @@ class ItemDBMgr:
         if found:
             return found[0]
         return None
+
+    def get_enchantment_percent(self, item: ItemData) -> float:
+        percent = reduce(lambda x, y: x*self.fetch_enchantment(y.name).price_percent, item.enchantments, 1)
+        return percent
+
+    def get_final_price(self, item: ItemData, count: int=1) -> int:
+        percent = self.get_enchantment_percent(item)
+        final = round(percent*self.fetch_item(item.id).selling)*count
+        return final
 
 class ItemMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
