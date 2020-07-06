@@ -507,7 +507,11 @@ class InGamecmds(BaseCog):
         if not charname:
             char = cmgr.get_current_char(ctx.author.id)
         else:
-            char = cmgr.get_character(charname)
+            char = cmgr.get_character(charname, ctx.author.id)
+            if not char:
+                embed = errembeds.CharNotFound.getembed(ctx, charname)
+                await ctx.send(embed=embed)
+                return
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
         embed.add_field(name='기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
         print(char.stat.__dict__.items())
@@ -587,12 +591,12 @@ class InGamecmds(BaseCog):
             self.msglog.log(ctx, '[이동: 완료]')
 
     @commands.guild_only()
-    @commands.group(name='순위', aliases=['랭킹'])
+    @commands.group(name='순위', aliases=['랭킹'], invoke_without_command=True)
     async def _rank(self, ctx: commands.Context):
-        pass
+        cmd = discord.utils.get(self.client.get_command('순위').commands, name='서버')
+        await cmd(ctx)
     
     @_rank.command(name='서버', aliases=['길드', '섭'])
-    @_rank.after_invoke
     async def _rank_server(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
         rank = cmgr.get_ranking(ctx.guild)
@@ -618,6 +622,34 @@ class InGamecmds(BaseCog):
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
                         msg.edit(embed=ingameembeds.rank_embed(self, pgr, guild=ctx.guild)),
+                    )
+
+    @_rank.command(name='전체', aliases=['올', '전부', '모두', '글로벌'])
+    async def _rank_global(self, ctx: commands.Context):
+        cmgr = CharMgr(self.cur)
+        rank = cmgr.get_ranking()
+        pgr = pager.Pager(rank, 5)
+        msg = await ctx.send(embed=ingameembeds.rank_embed(self, pgr, where='global'))
+        self.msglog.log(ctx, '[순위: 전체]')
+        if len(pgr.pages()) <= 1:
+            return
+        for emj in emojibuttons.PageButton.emojis:
+            await msg.add_reaction(emj)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emojibuttons.PageButton.emojis
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
+            else:
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr, double=7)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(do,
+                        msg.edit(embed=ingameembeds.rank_embed(self, pgr, where='global')),
                     )
 
 def setup(client):

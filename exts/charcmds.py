@@ -245,7 +245,7 @@ class Charcmds(BaseCog):
 
     @_char.command(name='정보', aliases=['스탯', '능력치'])
     async def _w_stat(self, ctx: commands.Context, charname: typing.Optional[str] = None):
-        cmd = self.client.get_command('스탯')
+        cmd = self.client.get_command('내정보')
         await cmd(ctx, charname)
 
     @commands.command(name='캐생', aliases=['새캐'])

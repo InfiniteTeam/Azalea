@@ -202,12 +202,15 @@ def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterD
     embed.add_field(name='설정값', value='\n'.join(setvalue))
     return embed
 
-def rank_embed(cog: basecog.BaseCog, pgr: pager.Pager, *, orderby='money', where='server', guild=discord.Guild):
+def rank_embed(cog: basecog.BaseCog, pgr: pager.Pager, *, orderby='money', where='server', guild: discord.Guild=None):
     if orderby == 'money':
         orderby_str = '재산'
     if where == 'server':
         where_str = '서버'
-    embed = discord.Embed(title='🏆 Azalea {} {} 랭킹'.format(orderby_str, where_str), description='', color=cog.color['info'])
+        embed = discord.Embed(title='🏆 Azalea {} {} 랭킹'.format(orderby_str, where_str), description='', color=cog.color['info'])
+    elif where == 'global':
+        where_str = '전체'
+        embed = discord.Embed(title='🌏 Azalea {} {} 랭킹'.format(orderby_str, where_str), description='', color=cog.color['info'])
     now = pgr.get_thispage()
     for idx, char in enumerate(now, pgr.start_number_now()+1):
         if idx == 1:
@@ -218,6 +221,9 @@ def rank_embed(cog: basecog.BaseCog, pgr: pager.Pager, *, orderby='money', where
             idxstr = '🥉'
         else:
             idxstr = f'{idx}.'
-        embed.description +='{} **{}**\n> 💵 `{}`, {}\n\n'.format(idxstr, char.name, char.money, guild.get_member(char.id).mention)
+        if where == 'server':
+            embed.description +='{} **{}**\n> 💵 `{}`, {}\n\n'.format(idxstr, char.name, char.money, guild.get_member(char.id).mention)
+        elif where == 'global':
+            embed.description +='{} **{}**\n> 💵 `{}`, {}\n\n'.format(idxstr, char.name, char.money, cog.client.get_user(char.id).name)
     embed.description += '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
     return embed
