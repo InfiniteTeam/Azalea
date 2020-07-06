@@ -60,7 +60,7 @@ class Gamecmds(BaseCog):
         else:
             if reaction.emoji == '⁉':
                 idgr = ItemDBMgr(self.datadb)
-                fishes = idgr.fetch_items_with(tags=['fishing'])
+                fishes = idgr.fetch_items_with(tags=['fish'], meta={'catchable': True})
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
                 imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
                 imgr.give_item(ItemData(fish.id, 1, []))
@@ -68,10 +68,6 @@ class Gamecmds(BaseCog):
                 embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
                 self.msglog.log(ctx, '[낚시: 잡음]')
                 await do()
-
-    @commands.command(name='타자', aliases=['타자게임', '타자겜', '속기', '타자연습'])
-    async def _typing(self, ctx: commands.Context):
-        msg = await ctx.send(embed=discord.Embed(title='⌚ 타자연습 - 준비하세요!', description='3초 후에 표시되는 문장을 타자하세요!', color=self.color['info']))
 
 def setup(client):
     cog = Gamecmds(client)

@@ -1,3 +1,4 @@
+import discord
 import pymysql
 import datetime
 from enum import Enum
@@ -63,7 +64,7 @@ class Item(AzaleaData):
     """
     전체 아이템을 정의하는 클래스입니다. 예외적으로 아이템 데이터베이스 파일에서 사용되는 Item 객체에서는 self.enchantments 속성이 str입니다.
     """
-    def __init__(self, id: int, name: str, description: str, max_count: int, icon: Union[str, int], tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}, *, selling=None):
+    def __init__(self, id: str, name: str, description: str, max_count: int, icon: Union[str, int], tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}, *, selling=None):
         self.id = id
         self.name = name
         self.description = description
@@ -78,13 +79,19 @@ class ItemData(AzaleaData):
     """
     한 캐릭터가 가진 아이템 하나를 나타냅니다.
     """
-    def __init__(self, id: int, count: int, enchantments: List[EnchantmentData]):
+    def __init__(self, id: str, count: int, enchantments: List[EnchantmentData]):
         self.id = id
         self.count = count
         self.enchantments = enchantments
 
     def __eq__(self, item):
         return self.id == item.id and self.enchantments == item.enchantments
+
+class StatType(Enum):
+    STR = '힘'
+    INT = '지력'
+    DEX = '민첩'
+    LUK = '운'
 
 class Stat(AzaleaData):
     def __init__(self, name: str, title: str):
@@ -95,6 +102,7 @@ class StatData(AzaleaData):
     """
     한 캐릭터의 능력치 정보를 나타냅니다.
     """
+
     def __init__(self, STR: int, INT: int, DEX: int, LUK: int):
         self.STR = STR
         self.INT = INT
@@ -333,19 +341,23 @@ class ItemDBMgr:
             enchants.append(Enchantment(x.id, x.name, x.title, x.max_level, x.type, price_percent=x.price_percent))
         return enchants
 
-    def fetch_item(self, itemid: int) -> Item:
+    def fetch_item(self, itemid: str) -> Item:
         found = list(filter(lambda x: x.id == itemid, self.datadb.items))
         if found:
             return found[0]
         return None
 
-    def fetch_items_with(self, tags: Optional[list]=None) -> List[Item]:
+    def fetch_items_with(self, *, tags: Optional[list]=None, meta: Optional[dict]=None) -> List[Item]:
         if tags:
-            found = list(filter(lambda x: set(x.tags) & set(tags), self.datadb.items))
-            if found:
-                return found
-            return None
-        return None
+            foundtags = set(filter(lambda x: set(x.tags) & set(tags), self.datadb.items))
+            if not foundtags:
+                return
+        if meta:
+            foundmeta = set(filter(lambda x: set(meta.items()) & set(x.meta.items()), self.datadb.items))
+            if not foundmeta:
+                return
+        rst = list(foundtags & foundmeta)
+        return rst
 
     def fetch_enchantment(self, name: str) -> Enchantment:
         found = list(filter(lambda x: name == x.name, self.datadb.enchantments))
@@ -529,3 +541,13 @@ class CharMgr:
 
     def move_to(self, name: str, region: RegionData):
         self.cur.execute('update chardata set location=%s where name=%s', (region.name, name))
+
+    def get_ranking(self, guild: discord.Guild=None, *, orderby='money'):
+        chars = self.get_chars()
+        if guild is not None:
+            guildchars = list(filter(lambda one: guild.get_member(one.id) is not None, chars))
+            rank = sorted(guildchars, key=lambda one: one.__getattribute__(orderby), reverse=True)
+            return rank
+        else:
+            rank = sorted(chars, key=lambda one: one.__getattribute__(orderby), reverse=True)
+            return rank

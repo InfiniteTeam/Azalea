@@ -77,3 +77,6 @@ class Pager:
 
     def set_obj(self, obj):
         self.__obj = obj
+
+    def start_number_now(self):
+        return self.pages()[self.__page]

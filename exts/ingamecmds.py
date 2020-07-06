@@ -12,7 +12,7 @@ from exts.utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
 from exts.utils.datamgr import (
-    CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, 
+    CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType,
     SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr
 )
 
@@ -43,7 +43,7 @@ class InGamecmds(BaseCog):
         items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
-        msg = await ctx.send(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default'))
+        msg = await ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default'))
         self.msglog.log(ctx, '[가방]')
         extemjs = ['❔']
         owner = False
@@ -76,11 +76,11 @@ class InGamecmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
+                        await msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
+                            ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -106,7 +106,7 @@ class InGamecmds(BaseCog):
                             if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                                 itemidx = int(idxtaskrst.content) - 1
                                 infoitem = pgr.get_thispage()[itemidx]
-                                embed = await ingameembeds.itemdata_embed(self, infoitem)
+                                embed = ingameembeds.itemdata_embed(self, infoitem)
                                 embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다.')
                                 iteminfomsg = await ctx.send(embed=embed)
                                 self.msglog.log(ctx, '[가방: 아이템 정보]')
@@ -159,7 +159,7 @@ class InGamecmds(BaseCog):
                                     if countmsg.content.isdecimal():
                                         delcount = int(countmsg.content)
                                         if 1 <= delcount <= delitem.count:
-                                            embed = await ingameembeds.itemdata_embed(self, delitem, 'delete', count=delcount)
+                                            embed = ingameembeds.itemdata_embed(self, delitem, 'delete', count=delcount)
                                             deloxmsg = await ctx.send(embed=embed)
                                             self.msglog.log(ctx, '[가방: 아이템 버리기: 아이템 삭제 경고]')
                                             oxemjs = [self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross')]
@@ -198,7 +198,7 @@ class InGamecmds(BaseCog):
                 pgr.set_obj(imgr.get_items())
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
-                    msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default')),
+                    msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default')),
                 )
 
     @commands.command(name='상점')
@@ -211,7 +211,7 @@ class InGamecmds(BaseCog):
         imgr = ItemMgr(self.cur, char.name)
         mkt = mdgr.get_market('main')
         pgr = pager.Pager(mkt, perpage)
-        msg = await ctx.send(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
+        msg = await ctx.send(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
         self.msglog.log(ctx, '[상점]')
         extemjs = ['💎', '💰', '❔']
         if len(pgr.pages()) == 0:
@@ -237,11 +237,11 @@ class InGamecmds(BaseCog):
             else:
                 if reaction.emoji in ['💎']:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
+                        await msg.edit(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
+                            ctx.send(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -250,11 +250,11 @@ class InGamecmds(BaseCog):
                     can_sell = list(filter(lambda x: idgr.fetch_item(x.id).selling is not None, imgr.get_items()))
                     pgr2 = pager.Pager(can_sell, perpage=8)
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await ingameembeds.backpack_sell_embed(self, ctx, pgr2, char.name))
+                        await msg.edit(embed=ingameembeds.backpack_sell_embed(self, ctx, pgr2, char.name))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await ingameembeds.backpack_sell_embed(self, ctx, pgr2, char.name))
+                            ctx.send(embed=ingameembeds.backpack_sell_embed(self, ctx, pgr2, char.name))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -300,7 +300,7 @@ class InGamecmds(BaseCog):
                                             count = int(counttaskrst.content)
                                             if count >= 1:
                                                 if count <= item.count:
-                                                    embed = await ingameembeds.itemdata_embed(self, item, 'sell', count=count, chardata=char)
+                                                    embed = ingameembeds.itemdata_embed(self, item, 'sell', count=count, chardata=char)
                                                     finalmsg = await ctx.send(embed=embed)
                                                     await finalmsg.add_reaction('⭕')
                                                     await finalmsg.add_reaction('❌')
@@ -400,7 +400,7 @@ class InGamecmds(BaseCog):
                                         if count >= 1:
                                             if final_price <= char.money:
                                                 # 최종적 구매 확인
-                                                embed = await ingameembeds.marketitem_embed(self, item, mode='buy', chardata=char, count=count)
+                                                embed = ingameembeds.marketitem_embed(self, item, mode='buy', chardata=char, count=count)
                                                 finalmsg = await ctx.send(embed=embed)
                                                 await finalmsg.add_reaction('⭕')
                                                 await finalmsg.add_reaction('❌')
@@ -477,7 +477,7 @@ class InGamecmds(BaseCog):
                             if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                                 itemidx = int(idxtaskrst.content) - 1
                                 infoitem = pgr.get_thispage()[itemidx]
-                                embed = await ingameembeds.marketitem_embed(self, infoitem)
+                                embed = ingameembeds.marketitem_embed(self, infoitem)
                                 embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다.')
                                 iteminfomsg = await ctx.send(embed=embed)
                                 self.msglog.log(ctx, '[상점: 아이템 정보]')
@@ -498,10 +498,10 @@ class InGamecmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'])),
+                        msg.edit(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'])),
                     )
 
-    @commands.command(name='스탯', aliases=['능력치'])
+    @commands.command(name='내정보', aliases=['능력치', '스탯', '나'])
     async def _stat(self, ctx: commands.Context, charname: typing.Optional[str] = None):
         cmgr = CharMgr(self.cur)
         if not charname:
@@ -509,10 +509,12 @@ class InGamecmds(BaseCog):
         else:
             char = cmgr.get_character(charname)
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
-        embed.add_field(name='기본 정보', value=f'**레벨:** `{char.level}`')
-        embed.add_field(name='능력치', value=f'{char.stat}')
+        embed.add_field(name='기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
+        print(char.stat.__dict__.items())
+        stats = ['**{}**({}): `{}`'.format(StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items()]
+        embed.add_field(name='능력치', value='\n'.join(stats))
         await ctx.send(embed=embed)
-        self.msglog.log(ctx, '[스탯]')
+        self.msglog.log(ctx, '[내정보]')
 
     @commands.command(name='돈받기', aliases=['돈줘', '돈내놔', '출첵', '출석'])
     async def _getmoney(self, ctx: commands.Context):
@@ -583,6 +585,40 @@ class InGamecmds(BaseCog):
             cmgr.move_to(char.name, region)
             await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
             self.msglog.log(ctx, '[이동: 완료]')
+
+    @commands.guild_only()
+    @commands.group(name='순위', aliases=['랭킹'])
+    async def _rank(self, ctx: commands.Context):
+        pass
+    
+    @_rank.command(name='서버', aliases=['길드', '섭'])
+    @_rank.after_invoke
+    async def _rank_server(self, ctx: commands.Context):
+        cmgr = CharMgr(self.cur)
+        rank = cmgr.get_ranking(ctx.guild)
+        pgr = pager.Pager(rank, 5)
+        msg = await ctx.send(embed=ingameembeds.rank_embed(self, pgr, guild=ctx.guild))
+        self.msglog.log(ctx, '[순위: 서버]')
+        if len(pgr.pages()) <= 1:
+            return
+        for emj in emojibuttons.PageButton.emojis:
+            await msg.add_reaction(emj)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emojibuttons.PageButton.emojis
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+            except asyncio.TimeoutError:
+                try:
+                    await msg.clear_reactions()
+                except:
+                    pass
+            else:
+                do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr, double=7)
+                if asyncio.iscoroutine(do):
+                    await asyncio.gather(do,
+                        msg.edit(embed=ingameembeds.rank_embed(self, pgr, guild=ctx.guild)),
+                    )
 
 def setup(client):
     cog = InGamecmds(client)

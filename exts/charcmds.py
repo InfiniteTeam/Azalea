@@ -39,7 +39,7 @@ class Charcmds(BaseCog):
                 ))
             return
         pgr = pager.Pager(chars, perpage)
-        msg = await ctx.send(embed=await ingameembeds.char_embed(user.name, pgr, color=self.color['info']))
+        msg = await ctx.send(embed=ingameembeds.char_embed(user.name, pgr, color=self.color['info']))
         self.msglog.log(ctx, '[캐릭터 목록]')
         if len(pgr.pages()) <= 1:
             return
@@ -59,7 +59,7 @@ class Charcmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await ingameembeds.char_embed(user.name, pgr, color=self.color['info'])),
+                        msg.edit(embed=ingameembeds.char_embed(user.name, pgr, color=self.color['info'])),
                     )
 
     @_char.command(name='생성')
@@ -165,9 +165,10 @@ class Charcmds(BaseCog):
                 if not cmgr.is_being_forgotten(cname):
                     cmgr.change_character(ctx.author.id, cname)
                     await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
+                    self.msglog.log(ctx, '[캐릭터 변경: 완료]')
                 else:
                     await ctx.send(embed=discord.Embed(title=f'❓ 삭제 중인 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중이여서 로그인할 수 없습니다. `{}캐릭터 삭제취소` 명령으로 취소할 수 있습니다.'.format(self.prefix), color=self.color['error']))
-                self.msglog.log(ctx, '[캐릭터 변경: 삭제 중인 캐릭터]')
+                    self.msglog.log(ctx, '[캐릭터 변경: 삭제 중인 캐릭터]')
             else:
                 await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{cname}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
@@ -389,7 +390,7 @@ class Charcmds(BaseCog):
             char = cmgr.get_current_char(ctx.author.id)
         pgr = pager.Pager(self.datadb.char_settings, perpage)
         
-        msg = await ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char))
+        msg = await ctx.send(embed=ingameembeds.char_settings_embed(self, pgr, char))
         extemjs = ['✏']
         if len(pgr.pages()) <= 1:
             emjs = extemjs
@@ -412,11 +413,11 @@ class Charcmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                        await msg.edit(embed=ingameembeds.char_settings_embed(self, pgr, char, 'select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                            ctx.send(embed=ingameembeds.char_settings_embed(self, pgr, char, 'select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -482,7 +483,7 @@ class Charcmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char))
+                        msg.edit(embed=ingameembeds.char_settings_embed(self, pgr, char))
                     )
 
 def setup(client):
