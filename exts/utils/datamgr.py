@@ -88,6 +88,7 @@ class ItemData(AzaleaData):
         return self.id == item.id and self.enchantments == item.enchantments
 
 class StatType(Enum):
+    EXP = '경험치'
     STR = '힘'
     INT = '지력'
     DEX = '민첩'
@@ -103,7 +104,8 @@ class StatData(AzaleaData):
     한 캐릭터의 능력치 정보를 나타냅니다.
     """
 
-    def __init__(self, STR: int, INT: int, DEX: int, LUK: int):
+    def __init__(self, *, EXP: int, STR: int, INT: int, DEX: int, LUK: int):
+        self.EXP = EXP
         self.STR = STR
         self.INT = INT
         self.DEX = DEX
@@ -139,10 +141,11 @@ class CharacterData(AzaleaData):
     캐릭터 하나의 정보를 나타냅니다.
     """
     def __init__(
-        self, id: int, online: bool, name: str, level: int, type: CharacterType, money: int,
+        self, uid: str, id: int, online: bool, name: str, level: int, type: CharacterType, money: int,
         items: List[Item], stat: StatData, birth: datetime.datetime, last_nick_change: datetime.datetime,
         delete_request: Union[None, datetime.datetime], settings: List[SettingData], location: RegionData
         ):
+        self.uid = uid
         self.id = id
         self.online = online
         self.name = name
@@ -449,21 +452,40 @@ class ItemMgr:
     def money(self, value):
         self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
 
+class StatMgr:
+    def __init__(self, cur: pymysql.cursors.DictCursor):
+        self.cur = cur
+
+    def get_raw_stat(self, name: str):
+        self.cur.execute('select * from statdata where name=%s', name)
+        statraw = self.cur.fetchone()
+        return statraw
+    
+    def get_stat(self, name: str):
+        raw = self.get_raw_stat(name)
+        stat = StatData(
+            EXP=raw['exp'],
+            STR=raw['Strength'],
+            INT=raw['Intelligence'],
+            DEX=raw['Dexterity'],
+            LUK=raw['Luck']
+        )
+        return stat
+
 class CharMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor):
         self.cur = cur
 
     @classmethod
-    def get_char_from_dict(cls, chardict: Dict) -> CharacterData:
+    def get_char_from_dict(cls, chardict: Dict, stat: StatData) -> CharacterData:
         itemraw = json.loads(chardict['items'])['items']
         items = [ItemMgr.get_itemdata_from_dict(item) for item in itemraw]
-        stat = StatData(*json.loads(chardict['stat'])['stat'].values())
         chartype = CharacterType.__getattr__(chardict['type'])
         setraw = json.loads(chardict['settings'])
         settings = [SettingData(setting, setraw[setting]) for setting in setraw]
         region = RegionData(chardict['location'])
         char = CharacterData(
-            chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype,
+            chardict['name'], chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype,
             chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'], settings, region
         )
         return char
@@ -477,8 +499,9 @@ class CharMgr:
         return rst
 
     def get_chars(self, userid: int=None) -> List[CharacterData]:
+        samgr = StatMgr(self.cur)
         raw = self.get_raw_chars(userid)
-        chars = [self.get_char_from_dict(one) for one in raw]
+        chars = [self.get_char_from_dict(one, samgr.get_stat(one['name'])) for one in raw]
         return chars
 
     def get_raw_character(self, name: str, userid: int=None) -> Dict:
@@ -490,16 +513,18 @@ class CharMgr:
         return raw
 
     def get_character(self, name: str, userid: int=None) -> CharacterData:
+        samgr = StatMgr(self.cur)
         char = self.get_raw_character(name, userid)
         if char:
-            chardata = self.get_char_from_dict(char)
+            chardata = self.get_char_from_dict(char, samgr.get_stat(char['name']))
             return chardata
         return None
 
     def get_current_char(self, userid: int):
+        samgr = StatMgr(self.cur)
         self.cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
         char = self.cur.fetchone()
-        chardata = self.get_char_from_dict(char)
+        chardata = self.get_char_from_dict(char, samgr.get_stat(char['name']))
         return chardata
 
     def add_character_with_raw(self, userid: int, name: str, chartype: str, items, stat, settings, level: int=1):

@@ -513,10 +513,12 @@ class InGamecmds(BaseCog):
                 await ctx.send(embed=embed)
                 return
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
-        embed.add_field(name='기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
         print(char.stat.__dict__.items())
-        stats = ['**{}**({}): `{}`'.format(StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items()]
-        embed.add_field(name='능력치', value='\n'.join(stats))
+        stats = ['**{}**_`({})`_ **:** **`{}`**'.format(StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
+        embed.add_field(name='• 능력치', value='\n'.join(stats))
+        embed.add_field(name='• 기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
+        embed.add_field(name='• 생일', value=str(char.birth))
+        embed.add_field(name='• 경험치', value='> {}'.format(char.stat.EXP))
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[내정보]')
 
