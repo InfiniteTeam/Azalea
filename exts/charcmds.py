@@ -146,7 +146,7 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
-            cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], self.templates['basestat'], {})
+            cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], {})
             if charcount == 0:
                 cmgr.change_character(ctx.author.id, charname)
                 desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'

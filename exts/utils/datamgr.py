@@ -452,17 +452,22 @@ class ItemMgr:
     def money(self, value):
         self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
 
-class StatMgr:
-    def __init__(self, cur: pymysql.cursors.DictCursor):
-        self.cur = cur
+def get_required_exp(level: int):
+    return round(0.0054 * (level**3) + 0.7188 * (level**2) + 2.2708 * level + 20)
 
-    def get_raw_stat(self, name: str):
-        self.cur.execute('select * from statdata where name=%s', name)
+class StatMgr:
+    def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
+        self.cur = cur
+        self.charname = charname
+        self.cmgr = CharMgr(self.cur)
+
+    def get_raw_stat(self):
+        self.cur.execute('select * from statdata where name=%s', self.charname)
         statraw = self.cur.fetchone()
         return statraw
     
-    def get_stat(self, name: str):
-        raw = self.get_raw_stat(name)
+    def get_stat(self):
+        raw = self.get_raw_stat()
         stat = StatData(
             EXP=raw['exp'],
             STR=raw['Strength'],
@@ -471,6 +476,78 @@ class StatMgr:
             LUK=raw['Luck']
         )
         return stat
+
+    @property
+    def level(self):
+        self.cur.execute('select level from chardata where name=%s', self.charname)
+        level = self.cur.fetchone()['level']
+        return level
+
+    @level.setter
+    def level(self, value):
+        self.cur.execute('update chardata set level=%s where name=%s', (value, self.charname))
+
+    @property
+    def EXP(self):
+        stat = self.get_stat()
+        return stat.EXP
+
+    def can_levelup_count(self):
+        level = self.cmgr.get_character(self.charname).level
+        req = get_required_exp(level)
+        now = self.EXP
+        count = 0
+        while req <= now:
+            count += 1
+            level += 1
+            req = get_required_exp(level)
+        return count
+
+    def try_to_levelup(self):
+        level_plus = self.can_levelup_count()
+        if level_plus > 0:
+            self.level += level_plus
+
+    @EXP.setter
+    def EXP(self, value):
+        self.cur.execute('update statdata set exp=%s where name=%s', (value, self.charname))
+        self.try_to_levelup()
+
+    @property
+    def STR(self):
+        stat = self.get_stat()
+        return stat.STR
+
+    @STR.setter
+    def STR(self, value):
+        self.cur.execute('update statdata set Strength=%s where name=%s', (value, self.charname))
+
+    @property
+    def INT(self):
+        stat = self.get_stat()
+        return stat.INT
+
+    @INT.setter
+    def INT(self, value):
+        self.cur.execute('update statdata set Intelligence=%s where name=%s', (value, self.charname))
+
+    @property
+    def DEX(self):
+        stat = self.get_stat()
+        return stat.DEX
+
+    @DEX.setter
+    def DEX(self, value):
+        self.cur.execute('update statdata set Dexterity=%s where name=%s', (value, self.charname))
+
+    @property
+    def LUK(self):
+        stat = self.get_stat()
+        return stat.LUK
+
+    @LUK.setter
+    def LUK(self, value):
+        self.cur.execute('update statdata set Luck=%s where name=%s', (value, self.charname))
 
 class CharMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor):
@@ -499,9 +576,8 @@ class CharMgr:
         return rst
 
     def get_chars(self, userid: int=None) -> List[CharacterData]:
-        samgr = StatMgr(self.cur)
         raw = self.get_raw_chars(userid)
-        chars = [self.get_char_from_dict(one, samgr.get_stat(one['name'])) for one in raw]
+        chars = [self.get_char_from_dict(one, StatMgr(self.cur, one['name']).get_stat()) for one in raw]
         return chars
 
     def get_raw_character(self, name: str, userid: int=None) -> Dict:
@@ -513,28 +589,28 @@ class CharMgr:
         return raw
 
     def get_character(self, name: str, userid: int=None) -> CharacterData:
-        samgr = StatMgr(self.cur)
         char = self.get_raw_character(name, userid)
         if char:
-            chardata = self.get_char_from_dict(char, samgr.get_stat(char['name']))
+            samgr = StatMgr(self.cur, char['name'])
+            chardata = self.get_char_from_dict(char, samgr.get_stat())
             return chardata
         return None
 
     def get_current_char(self, userid: int):
-        samgr = StatMgr(self.cur)
         self.cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
         char = self.cur.fetchone()
-        chardata = self.get_char_from_dict(char, samgr.get_stat(char['name']))
+        samgr = StatMgr(self.cur, char['name'])
+        chardata = self.get_char_from_dict(char, samgr.get_stat())
         return chardata
 
-    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, stat, settings, level: int=1):
+    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings, level: int=1):
         datas = (
             userid, name, level, chartype,
             json.dumps(items, ensure_ascii=False),
-            json.dumps(stat, ensure_ascii=False),
             json.dumps(settings, ensure_ascii=False)
         )
-        self.cur.execute('insert into chardata (id, name, level, type, items, stat, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, %s, NULL)', datas)
+        self.cur.execute('insert into chardata (id, name, level, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
+        self.cur.execute('insert into statdata (name) values (%s)', name)
 
     def logout_all(self, userid: int):
         self.cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))

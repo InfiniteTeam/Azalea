@@ -12,7 +12,7 @@ from exts.utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
 from exts.utils.datamgr import (
-    CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType,
+    CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
     SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr
 )
 
@@ -513,7 +513,6 @@ class InGamecmds(BaseCog):
                 await ctx.send(embed=embed)
                 return
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
-        print(char.stat.__dict__.items())
         stats = ['**{}**_`({})`_ **:** **`{}`**'.format(StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
         embed.add_field(name='• 능력치', value='\n'.join(stats))
         embed.add_field(name='• 기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
