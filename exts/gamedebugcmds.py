@@ -9,7 +9,7 @@ import inspect
 from exts.utils import pager, datamgr, converters
 from templates import errembeds
 from exts.utils.basecog import BaseCog
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr
 
 class GameDebugcmds(BaseCog):
     def __init__(self, client):
@@ -76,6 +76,22 @@ class GameDebugcmds(BaseCog):
             if error.param.name == 'itemid':
                 missing = '아이템 아이디'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+
+    @commands.command(name='경험치지급')
+    async def _give_exp(self, ctx: commands.Context, exp: int, charname: typing.Optional[str]=None):
+        cmgr = CharMgr(self.cur)
+        if charname:
+            char = cmgr.get_character(charname)
+            if not char :
+                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
+                return
+            charname = char.name
+        else:
+            charname = cmgr.get_current_char(ctx.author.id).name
+        samgr = StatMgr(self.cur, charname)
+        samgr.EXP += exp
+        await ctx.send('경험치 {}을 지급했습니다'.format(exp))
 
 def setup(client):
     cog = GameDebugcmds(client)

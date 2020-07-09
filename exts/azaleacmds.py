@@ -298,12 +298,6 @@ class Azaleacmds(BaseCog):
                 missing = '신문사'
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
-    @commands.command(name='테스트')
-    async def _d(self, ctx):
-        embed = discord.Embed(title='테스트')
-        embed.set_footer(text=str(ctx.author), icon_url=ctx.author.avatar_url)
-        await ctx.send(embed=embed)
-
 def setup(client):
     cog = Azaleacmds(client)
     client.add_cog(cog)

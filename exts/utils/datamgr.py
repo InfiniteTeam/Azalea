@@ -452,8 +452,11 @@ class ItemMgr:
     def money(self, value):
         self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
 
-def get_required_exp(level: int):
-    return round(0.0054 * (level**3) + 0.7188 * (level**2) + 2.2708 * level + 20)
+def get_required_exp(level: int, default: int=100):
+    now = default
+    for x in range(1, level+1):
+        now += (0.0001*(x**2)-0.06*x+10)*now/100
+    return round(now)
 
 class StatMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
