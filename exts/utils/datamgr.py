@@ -452,10 +452,10 @@ class ItemMgr:
     def money(self, value):
         self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
 
-def get_required_exp(level: int, default: int=100):
-    now = default
-    for x in range(1, level+1):
-        now += (0.0001*(x**2)-0.06*x+10)*now/100
+def get_required_exp(level: int) -> int:
+    now = 1000
+    for x in range(level):
+        now += (-0.038*x+10)*now/100
     return round(now)
 
 class StatMgr:
@@ -495,21 +495,31 @@ class StatMgr:
         stat = self.get_stat()
         return stat.EXP
 
-    def can_levelup_count(self):
-        level = self.cmgr.get_character(self.charname).level
+    @classmethod
+    def can_levelup_count(cls, level: int, exp: int, default: int=1000):
         req = get_required_exp(level)
-        now = self.EXP
         count = 0
-        while req <= now:
-            count += 1
-            level += 1
-            req = get_required_exp(level)
+        if req <= exp:
+            while req <= exp:
+                count += 1
+                level += 1
+                req = get_required_exp(level)
+        else:
+            print('s')
+            if exp >= 0:
+                print('d')
+                while req-default > exp:
+                    
+                    count -= 1
+                    level -= 1
+                    req = get_required_exp(level)
+            else:
+                count = -level
         return count
 
     def try_to_levelup(self):
-        level_plus = self.can_levelup_count()
-        if level_plus > 0:
-            self.level += level_plus
+        level_plus = self.can_levelup_count(self.cmgr.get_character(self.charname).level, self.EXP)
+        self.level += level_plus
 
     @EXP.setter
     def EXP(self, value):

@@ -55,10 +55,12 @@ class GameDebugcmds(BaseCog):
         def check(reaction, user):
             return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
         try:
-            reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
+            reaction, user = await self.client.wait_for('reaction_add', timeout=60, check=check)
         except asyncio.TimeoutError:
-            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
-            self.msglog.log(ctx, '[아이템 받기: 시간 초과]')
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
         else:
             remj = str(reaction.emoji)
             if remj == '⭕':
@@ -84,14 +86,43 @@ class GameDebugcmds(BaseCog):
             char = cmgr.get_character(charname)
             if not char :
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
-                self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
+                self.msglog.log(ctx, '[경험치지급: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
         else:
             charname = cmgr.get_current_char(ctx.author.id).name
+        
         samgr = StatMgr(self.cur, charname)
-        samgr.EXP += exp
-        await ctx.send('경험치 {}을 지급했습니다'.format(exp))
+        nowexp = samgr.EXP
+        lv = samgr.level
+        embed = discord.Embed(title='🏷 경험치 지급하기', description='다음과 같이 계속할까요?', color=self.color['warn'])
+        embed.add_field(name='경험치 변동', value=f'{nowexp} → {nowexp+exp}')
+        embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, samgr.level+samgr.can_levelup_count(lv, nowexp+exp)))
+        embed.add_field(name='대상 캐릭터', value=charname)
+        msg = await ctx.send(embed=embed)
+
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        self.msglog.log(ctx, '[경험치지급: 경험치지급]')
+
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
+        except asyncio.TimeoutError:
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+        else:
+            if reaction.emoji == '⭕':
+                samgr.EXP += exp
+                await ctx.send(embed=discord.Embed(title='{} 경험치 {} 만큼 성공적으로 주었습니다!'.format(self.emj.get(ctx, 'check'), exp), color=self.color['success']))
+                self.msglog.log(ctx, '[경험치지급: 완료]')
+            elif reaction.emoji == '❌':
+                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+                self.msglog.log(ctx, '[경험치지급: 취소됨]')
 
 def setup(client):
     cog = GameDebugcmds(client)

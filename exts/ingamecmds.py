@@ -7,13 +7,14 @@ import typing
 import re
 import random
 import json
-from exts.utils import pager, emojibuttons, errors, timedelta, event_waiter
+import math
+from exts.utils import pager, emojibuttons, errors, timedelta, event_waiter, progressbar
 from exts.utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
 from exts.utils.datamgr import (
     CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
-    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr
+    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, get_required_exp
 )
 
 class InGamecmds(BaseCog):
@@ -512,12 +513,18 @@ class InGamecmds(BaseCog):
                 embed = errembeds.CharNotFound.getembed(ctx, charname)
                 await ctx.send(embed=embed)
                 return
+        nowexp = char.stat.EXP
+        req = get_required_exp(char.level)
+        prev_req = get_required_exp(char.level-1)
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
         stats = ['**{}**_`({})`_ **:** **`{}`**'.format(StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
         embed.add_field(name='• 능력치', value='\n'.join(stats))
         embed.add_field(name='• 기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
         embed.add_field(name='• 생일', value=str(char.birth))
-        embed.add_field(name='• 경험치', value='> {}'.format(char.stat.EXP))
+        embed.add_field(name='• 경험치', value='> {}ㅤ **{}/{}** ({}%)'.format(
+            progressbar.get(ctx, self.emj, nowexp-prev_req, req-prev_req, 10),
+            format(nowexp, ','), format(req, ','), math.trunc((nowexp-prev_req)/(req-prev_req)*1000)/10
+        ))
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[내정보]')
 
@@ -525,19 +532,22 @@ class InGamecmds(BaseCog):
     async def _getmoney(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
+        samgr = StatMgr(self.cur, char.name)
         rcv_money = cmgr.get_raw_character(char.name)['received_money']
         now = datetime.datetime.now()
-        embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description='1000골드를 받았습니다.', color=self.color['info'])
+        xp = round(get_required_exp(char.level)/100*2+200)
+        embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
             embed.description += '\n관리자여서 돈을 무제한으로 받을 수 있습니다. 멋지네요!'
         elif rcv_money is None:
             pass
         elif now.day <= rcv_money.day:
-            await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘의 일일 기본금을 이미 받았습니다!', description='내일이 오면 다시 받을 수 있습니다.', color=self.color['info']))
+            await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
             self.msglog.log(ctx, '[돈받기: 이미 받음]')
             return
         imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
-        imgr.money += 1000
+        imgr.money += 5000
+        samgr.EXP += xp
         self.cur.execute('update chardata set received_money=%s where name=%s', (now, char.name))
         await ctx.send(ctx.author.mention, embed=embed)
         self.msglog.log(ctx, '[돈받기: 완료]')
