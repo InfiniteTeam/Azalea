@@ -39,7 +39,7 @@ class Charcmds(BaseCog):
                 ))
             return
         pgr = pager.Pager(chars, perpage)
-        msg = await ctx.send(embed=ingameembeds.char_embed(user.name, pgr, color=self.color['info']))
+        msg = await ctx.send(embed=ingameembeds.char_embed(self, user.name, pgr))
         self.msglog.log(ctx, '[캐릭터 목록]')
         if len(pgr.pages()) <= 1:
             return
@@ -59,7 +59,7 @@ class Charcmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=ingameembeds.char_embed(user.name, pgr, color=self.color['info'])),
+                        msg.edit(embed=ingameembeds.char_embed(self, user.name, pgr)),
                     )
 
     @_char.command(name='생성')
@@ -335,7 +335,7 @@ class Charcmds(BaseCog):
                     pass
             else:
                 if reaction.emoji == '⭕':
-                    self.cur.execute('update chardata set name=%s, last_nick_change=%s where name=%s', (newname, datetime.datetime.now(), char.name))
+                    cmgr.change_nick(char.name, newname)
                     await ctx.send(embed=discord.Embed(title='{} `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), newname), color=self.color['success']))
                     self.msglog.log(ctx, '[이름변경: 완료]')
                 elif reaction.emoji == '❌':

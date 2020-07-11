@@ -97,7 +97,7 @@ class GameDebugcmds(BaseCog):
         lv = samgr.level
         embed = discord.Embed(title='🏷 경험치 지급하기', description='다음과 같이 계속할까요?', color=self.color['warn'])
         embed.add_field(name='경험치 변동', value=f'{nowexp} → {nowexp+exp}')
-        embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, samgr.level+samgr.can_levelup_count(lv, nowexp+exp)))
+        embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, lv+samgr.can_levelup_count(lv, nowexp+exp)))
         embed.add_field(name='대상 캐릭터', value=charname)
         msg = await ctx.send(embed=embed)
 

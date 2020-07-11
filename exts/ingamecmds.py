@@ -24,6 +24,20 @@ class InGamecmds(BaseCog):
             cmd.add_check(self.check.registered)
             cmd.add_check(self.check.char_online)
 
+    @commands.command(name='돈', aliases=['내돈', '지갑'])
+    async def _money(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
+        cmgr = CharMgr(self.cur)
+        if charname:
+            char = cmgr.get_character(charname)
+            if not char:
+                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                self.msglog.log(ctx, '[가방: 존재하지 않는 캐릭터]')
+                return
+        else:
+            char = cmgr.get_current_char(ctx.author.id)
+
+        await ctx.send(embed=discord.Embed(title=f'💰 `{char.name}` 의 지갑', description=f'> 💵 **{char.money}** 골드', color=self.color['info']))
+
     @commands.command(name='가방', aliases=['템', '아이템'])
     @commands.guild_only()
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
@@ -513,32 +527,40 @@ class InGamecmds(BaseCog):
                 embed = errembeds.CharNotFound.getembed(ctx, charname)
                 await ctx.send(embed=embed)
                 return
+        samgr = StatMgr(self.cur, char.name)
+        icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
+        level = samgr.level
         nowexp = char.stat.EXP
-        req = get_required_exp(char.level)
-        prev_req = get_required_exp(char.level-1)
+        req = get_required_exp(level)
+        print(level ,nowexp, req)
+        prev_req = get_required_exp(level-1)
+        if req-prev_req <= 0:
+            percent = 0
+        else:
+            percent = math.trunc((nowexp-prev_req)/(req-prev_req)*1000)/10
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
-        stats = ['**{}**_`({})`_ **:** **`{}`**'.format(StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
+        stats = ['{} **{}**_`({})`_ **:** **`{}`**'.format(icons[key], StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
         embed.add_field(name='• 능력치', value='\n'.join(stats))
-        embed.add_field(name='• 기본 정보', value=f'**레벨:** `{char.level}`\n**직업:** `{char.type.value}`')
+        embed.add_field(name='• 기본 정보', value=f'**레벨:** `{level}`\n**직업:** `{char.type.value}`')
         embed.add_field(name='• 생일', value=str(char.birth))
-        embed.add_field(name='• 경험치', value='> {}ㅤ **{}/{}** ({}%)'.format(
+        embed.add_field(name='• 경험치', value='>>> {}ㅤ **{}/{}**\n레벨업 필요 경험치: **`{}`/`{}`** ({}%)'.format(
             progressbar.get(ctx, self.emj, nowexp-prev_req, req-prev_req, 10),
-            format(nowexp, ','), format(req, ','), math.trunc((nowexp-prev_req)/(req-prev_req)*1000)/10
+            format(nowexp, ','), format(req, ','), nowexp-prev_req, req-prev_req, percent
         ))
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[내정보]')
 
-    @commands.command(name='돈받기', aliases=['돈줘', '돈내놔', '출첵', '출석'])
+    @commands.command(name='출석체크', aliases=['돈받기', '돈줘', '돈내놔', '출첵', '출석'])
     async def _getmoney(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
         samgr = StatMgr(self.cur, char.name)
         rcv_money = cmgr.get_raw_character(char.name)['received_money']
         now = datetime.datetime.now()
-        xp = round(get_required_exp(char.level)/100*2+200)
+        xp = round(get_required_exp(samgr.level)/100*2+50)
         embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
-            embed.description += '\n관리자여서 돈을 무제한으로 받을 수 있습니다. 멋지네요!'
+            embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'
         elif rcv_money is None:
             pass
         elif now.day <= rcv_money.day:

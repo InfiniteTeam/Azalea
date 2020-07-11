@@ -94,11 +94,6 @@ class StatType(Enum):
     DEX = '민첩'
     LUK = '운'
 
-class Stat(AzaleaData):
-    def __init__(self, name: str, title: str):
-        self.name = name
-        self.title = title
-
 class StatData(AzaleaData):
     """
     한 캐릭터의 능력치 정보를 나타냅니다.
@@ -141,7 +136,7 @@ class CharacterData(AzaleaData):
     캐릭터 하나의 정보를 나타냅니다.
     """
     def __init__(
-        self, uid: str, id: int, online: bool, name: str, level: int, type: CharacterType, money: int,
+        self, uid: str, id: int, online: bool, name: str, type: CharacterType, money: int,
         items: List[Item], stat: StatData, birth: datetime.datetime, last_nick_change: datetime.datetime,
         delete_request: Union[None, datetime.datetime], settings: List[SettingData], location: RegionData
         ):
@@ -149,7 +144,6 @@ class CharacterData(AzaleaData):
         self.id = id
         self.online = online
         self.name = name
-        self.level = level
         self.type = type
         self.money = money
         self.items = items
@@ -482,13 +476,9 @@ class StatMgr:
 
     @property
     def level(self):
-        self.cur.execute('select level from chardata where name=%s', self.charname)
-        level = self.cur.fetchone()['level']
+        exp = self.EXP
+        level = self.can_levelup_count(0, exp)
         return level
-
-    @level.setter
-    def level(self, value):
-        self.cur.execute('update chardata set level=%s where name=%s', (value, self.charname))
 
     @property
     def EXP(self):
@@ -499,32 +489,28 @@ class StatMgr:
     def can_levelup_count(cls, level: int, exp: int, default: int=1000):
         req = get_required_exp(level)
         count = 0
+        import time
+        start = time.time()
         if req <= exp:
-            while req <= exp:
+            while req <= exp and get_required_exp(level-1) <= req:
                 count += 1
                 level += 1
                 req = get_required_exp(level)
         else:
-            print('s')
             if exp >= 0:
-                print('d')
                 while req-default > exp:
-                    
                     count -= 1
                     level -= 1
                     req = get_required_exp(level)
             else:
                 count = -level
+        end = time.time()
+        print(end-start)
         return count
-
-    def try_to_levelup(self):
-        level_plus = self.can_levelup_count(self.cmgr.get_character(self.charname).level, self.EXP)
-        self.level += level_plus
 
     @EXP.setter
     def EXP(self, value):
         self.cur.execute('update statdata set exp=%s where name=%s', (value, self.charname))
-        self.try_to_levelup()
 
     @property
     def STR(self):
@@ -575,7 +561,7 @@ class CharMgr:
         settings = [SettingData(setting, setraw[setting]) for setting in setraw]
         region = RegionData(chardict['location'])
         char = CharacterData(
-            chardict['name'], chardict['id'], chardict['online'], chardict['name'], chardict['level'], chartype,
+            chardict['name'], chardict['id'], chardict['online'], chardict['name'], chartype,
             chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'], settings, region
         )
         return char
@@ -616,13 +602,13 @@ class CharMgr:
         chardata = self.get_char_from_dict(char, samgr.get_stat())
         return chardata
 
-    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings, level: int=1):
+    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings):
         datas = (
-            userid, name, level, chartype,
+            userid, name, chartype,
             json.dumps(items, ensure_ascii=False),
             json.dumps(settings, ensure_ascii=False)
         )
-        self.cur.execute('insert into chardata (id, name, level, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
+        self.cur.execute('insert into chardata (id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, NULL)', datas)
         self.cur.execute('insert into statdata (name) values (%s)', name)
 
     def logout_all(self, userid: int):
@@ -635,8 +621,13 @@ class CharMgr:
         self.cur.execute('update chardata set online=%s where name=%s', (True, name))
 
     def delete_character(self, name: str):
+        self.cur.execute('delete from statdata where name=%s', name)
         if self.cur.execute('delete from chardata where name=%s', name) == 0:
             raise errors.CharacterNotFound
+
+    def change_nick(self, name: str, new: str):
+        self.cur.execute('update chardata set name=%s, last_nick_change=%s where name=%s', (new, datetime.datetime.now(), name))
+        self.cur.execute('update statdata set name=%s where name=%s', (new, name))
 
     def schedule_delete(self, userid: int, name: str):
         if self.cur.execute('select * from chardata where name=%s and online=%s', (name, True)) != 0:

@@ -3,7 +3,7 @@ from discord.ext import commands
 import datetime
 from dateutil.relativedelta import relativedelta
 from exts.utils import pager, timedelta, basecog
-from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr
+from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr
 
 def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     items = pgr.get_thispage()
@@ -29,14 +29,15 @@ def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     embed.set_footer(text='💎: 구매 | 💰: 판매 | ❔ 자세히')
     return embed
 
-def char_embed(username, pgr: pager.Pager, *, color, mode='default'):
+def char_embed(cog, username, pgr: pager.Pager, *, mode='default'):
     chars = pgr.get_thispage()
     charstr = ''
     for idx, one in enumerate(chars):
         name = one.name
+        samgr = StatMgr(cog.cur, name)
         if mode == 'select':
             name = f'{idx+1}. {name}'
-        level = one.level
+        level = samgr.level
         chartype = one.type.value
         online = one.online
         onlinestr = ''
@@ -51,7 +52,7 @@ def char_embed(username, pgr: pager.Pager, *, color, mode='default'):
     embed = discord.Embed(
         title=f'🎲 `{username}`님의 캐릭터 목록',
         description=charstr,
-        color=color
+        color=cog.color['info']
     )
     embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
     return embed
