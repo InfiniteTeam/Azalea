@@ -532,23 +532,23 @@ class InGamecmds(BaseCog):
         icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
         level = samgr.get_level(edgr)
         nowexp = char.stat.EXP
-        req = edgr.get_required_exp(level)
-        accu = edgr.get_accumulate_exp(level)
+        req = edgr.get_required_exp(level+1)
+        accu = edgr.get_accumulate_exp(level+1)
         # print(level ,nowexp, req)
-        prev_req = edgr.get_required_exp(level-1)
-        prev_accu = edgr.get_accumulate_exp(level-1)
+        prev_req = edgr.get_required_exp(level)
+        prev_accu = edgr.get_accumulate_exp(level)
         if req-prev_req <= 0:
             percent = 0
         else:
-            percent = math.trunc((nowexp-prev_req)/(req-prev_req)*1000)/10
+            percent = math.trunc((req-accu+nowexp)/req*1000)/10
         embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
         stats = ['{} **{}**_`({})`_ **:** **`{}`**'.format(icons[key], StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
         embed.add_field(name='• 능력치', value='\n'.join(stats))
         embed.add_field(name='• 기본 정보', value=f'**레벨:** `{level}`\n**직업:** `{char.type.value}`')
         embed.add_field(name='• 생일', value=str(char.birth))
-        embed.add_field(name='• 경험치', value='>>> {}ㅤ **{}/{}**\n레벨업 필요 경험치: **`{}`/`{}`** ({}%)'.format(
-            progressbar.get(ctx, self.emj, nowexp-prev_req, accu-prev_accu, 10),
-            format(nowexp, ','), format(req, ','), nowexp-prev_req, accu-prev_accu, percent
+        embed.add_field(name='• 경험치', value='>>> {}ㅤ **{}/{}** ({}%)\n레벨업 필요 경험치: **`{}`/`{}`**'.format(
+            progressbar.get(ctx, self.emj, req-accu+nowexp, req, 10),
+            format(req-accu+nowexp, ','), format(req, ','), percent, nowexp, accu
         ))
         print(embed.to_dict())
         await ctx.send(embed=embed)
