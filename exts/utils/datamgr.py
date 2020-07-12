@@ -210,6 +210,9 @@ class DataDB:
     def load_permissions(self, perms: List[Permission]):
         self.permissions = perms
 
+    def load_exp_table(self, table: Dict[int, int]):
+        self.exp_table = table
+
 class PermDBMgr:
     def __init__(self, datadb: DataDB):
         self.permissions = datadb.permissions
@@ -446,11 +449,31 @@ class ItemMgr:
     def money(self, value):
         self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
 
-def get_required_exp(level: int) -> int:
-    now = 1000
-    for x in range(level):
-        now += (-0.038*x+10)*now/100
-    return round(now)
+class ExpTableDBMgr:
+    def __init__(self, datadb: DataDB):
+        self.datadb = datadb
+
+    def get_required_exp(self, level: int) -> int:
+        try:
+            return self.datadb.exp_table[str(level)]
+        except KeyError:
+            return 0
+
+    def get_accumulate_exp(self, until_level: int) -> int:
+        accumulate = [self.get_required_exp(x) for x in range(1, until_level+1)]
+        print(sum(accumulate))
+        return sum(accumulate)
+
+    def clac_level(self, exp: int) -> int:
+        accumulate = 0
+        count = 0
+        for x in range(1, len(self.datadb.exp_table)+1):
+            accumulate += self.get_required_exp(x)
+            if exp >= accumulate:
+                count += 1
+            else:
+                break
+        return count
 
 class StatMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
@@ -474,39 +497,15 @@ class StatMgr:
         )
         return stat
 
-    @property
-    def level(self):
+    def get_level(self, edgr: ExpTableDBMgr):
         exp = self.EXP
-        level = self.can_levelup_count(0, exp)
+        level = edgr.clac_level(exp)
         return level
 
     @property
     def EXP(self):
         stat = self.get_stat()
         return stat.EXP
-
-    @classmethod
-    def can_levelup_count(cls, level: int, exp: int, default: int=1000):
-        req = get_required_exp(level)
-        count = 0
-        import time
-        start = time.time()
-        if req <= exp:
-            while req <= exp and get_required_exp(level-1) <= req:
-                count += 1
-                level += 1
-                req = get_required_exp(level)
-        else:
-            if exp >= 0:
-                while req-default > exp:
-                    count -= 1
-                    level -= 1
-                    req = get_required_exp(level)
-            else:
-                count = -level
-        end = time.time()
-        print(end-start)
-        return count
 
     @EXP.setter
     def EXP(self, value):

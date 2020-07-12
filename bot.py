@@ -6,8 +6,6 @@ import asyncio
 import platform
 import pymysql
 import os
-import io
-import sys
 import logging
 import logging.handlers
 import traceback
@@ -160,6 +158,9 @@ datadb.load_char_settings(charsettings.CHAR_SETTINGS)
 datadb.load_region('azalea', regions.REGIONS)
 datadb.load_market('main', market.MARKET)
 datadb.load_permissions(permissions.PERMISSIONS)
+
+with open('./ingame/db/exptable.json', encoding='utf-8') as exptable_file:
+    datadb.load_exp_table(json.load(exptable_file))
 
 check = checks.Checks(cur, datadb)
 

@@ -9,7 +9,7 @@ import inspect
 from exts.utils import pager, datamgr, converters
 from templates import errembeds
 from exts.utils.basecog import BaseCog
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr
+from exts.utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
 class GameDebugcmds(BaseCog):
     def __init__(self, client):
@@ -93,11 +93,12 @@ class GameDebugcmds(BaseCog):
             charname = cmgr.get_current_char(ctx.author.id).name
         
         samgr = StatMgr(self.cur, charname)
+        edgr = ExpTableDBMgr(self.datadb)
         nowexp = samgr.EXP
-        lv = samgr.level
+        lv = samgr.get_level(edgr)
         embed = discord.Embed(title='🏷 경험치 지급하기', description='다음과 같이 계속할까요?', color=self.color['warn'])
         embed.add_field(name='경험치 변동', value=f'{nowexp} → {nowexp+exp}')
-        embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, lv+samgr.can_levelup_count(lv, nowexp+exp)))
+        embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, edgr.clac_level(nowexp+exp)))
         embed.add_field(name='대상 캐릭터', value=charname)
         msg = await ctx.send(embed=embed)
 
@@ -123,6 +124,15 @@ class GameDebugcmds(BaseCog):
             elif reaction.emoji == '❌':
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[경험치지급: 취소됨]')
+
+    @commands.command(name='계산')
+    async def _clac(self, ctx: commands.Context, exp: int):
+        import time
+        s = time.time()
+        edgr = ExpTableDBMgr(self.datadb)
+        level = edgr.clac_level(exp)
+        e = time.time()
+        await ctx.send(f'{level}- {e-s}')
 
 def setup(client):
     cog = GameDebugcmds(client)

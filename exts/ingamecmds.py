@@ -14,7 +14,7 @@ from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
 from exts.utils.datamgr import (
     CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
-    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, get_required_exp
+    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, ExpTableDBMgr
 )
 
 class InGamecmds(BaseCog):
@@ -528,12 +528,15 @@ class InGamecmds(BaseCog):
                 await ctx.send(embed=embed)
                 return
         samgr = StatMgr(self.cur, char.name)
+        edgr = ExpTableDBMgr(self.datadb)
         icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
-        level = samgr.level
+        level = samgr.get_level(edgr)
         nowexp = char.stat.EXP
-        req = get_required_exp(level)
-        print(level ,nowexp, req)
-        prev_req = get_required_exp(level-1)
+        req = edgr.get_required_exp(level)
+        accu = edgr.get_accumulate_exp(level)
+        # print(level ,nowexp, req)
+        prev_req = edgr.get_required_exp(level-1)
+        prev_accu = edgr.get_accumulate_exp(level-1)
         if req-prev_req <= 0:
             percent = 0
         else:
@@ -544,9 +547,10 @@ class InGamecmds(BaseCog):
         embed.add_field(name='• 기본 정보', value=f'**레벨:** `{level}`\n**직업:** `{char.type.value}`')
         embed.add_field(name='• 생일', value=str(char.birth))
         embed.add_field(name='• 경험치', value='>>> {}ㅤ **{}/{}**\n레벨업 필요 경험치: **`{}`/`{}`** ({}%)'.format(
-            progressbar.get(ctx, self.emj, nowexp-prev_req, req-prev_req, 10),
-            format(nowexp, ','), format(req, ','), nowexp-prev_req, req-prev_req, percent
+            progressbar.get(ctx, self.emj, nowexp-prev_req, accu-prev_accu, 10),
+            format(nowexp, ','), format(req, ','), nowexp-prev_req, accu-prev_accu, percent
         ))
+        print(embed.to_dict())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[내정보]')
 
@@ -555,9 +559,11 @@ class InGamecmds(BaseCog):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
         samgr = StatMgr(self.cur, char.name)
+        edgr = ExpTableDBMgr(self.datadb)
         rcv_money = cmgr.get_raw_character(char.name)['received_money']
         now = datetime.datetime.now()
-        xp = round(get_required_exp(samgr.level)/100*2+50)
+        level = samgr.get_level(edgr)
+        xp = edgr.get_required_exp(level)/100*2+50
         embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
             embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'

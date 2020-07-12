@@ -7,7 +7,10 @@ def get(ctx: commands.Context, emjctrl: emojictrl.Emoji, value, mx, totallen):
     if mx == 0 or value < 0 or mx < 0:
         colorcount = 0
     else:
-        colorcount = round(value/mx*totallen)
+        if mx > value:
+            colorcount = round(value/mx*totallen)
+        else:
+            colorcount = totallen
     colormid = []
     graymid = []
     end = emjctrl.get(ctx, 'pgb8')
