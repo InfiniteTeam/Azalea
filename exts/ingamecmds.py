@@ -55,6 +55,14 @@ class InGamecmds(BaseCog):
             char = cmgr.get_current_char(ctx.author.id)
             charname = char.name
             imgr = ItemMgr(self.cur, char.uid)
+
+        sdgr = SettingDBMgr(self.datadb)
+        smgr = SettingMgr(self.cur, sdgr, char.uid)
+
+        if char.id != ctx.author.id and smgr.get_setting('private-item'):
+            await ctx.send(embed=discord.Embed(title='⛔ 이 캐릭터의 아이템을 볼 수 없습니다!', description='아이템이 비공개로 설정되어 있어요.', color=self.color['error']))
+            return
+        
         items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
@@ -527,14 +535,13 @@ class InGamecmds(BaseCog):
                 embed = errembeds.CharNotFound.getembed(ctx, charname)
                 await ctx.send(embed=embed)
                 return
-        samgr = StatMgr(self.cur, char.uid)
+        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
         edgr = ExpTableDBMgr(self.datadb)
         icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
         level = samgr.get_level(edgr)
         nowexp = char.stat.EXP
         req = edgr.get_required_exp(level+1)
         accu = edgr.get_accumulate_exp(level+1)
-        # print(level ,nowexp, req)
         prev_req = edgr.get_required_exp(level)
         prev_accu = edgr.get_accumulate_exp(level)
         if req-prev_req <= 0:
@@ -550,7 +557,6 @@ class InGamecmds(BaseCog):
             progressbar.get(ctx, self.emj, req-accu+nowexp, req, 10),
             format(req-accu+nowexp, ','), format(req, ','), percent, nowexp, accu
         ))
-        print(embed.to_dict())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[내정보]')
 
@@ -558,7 +564,7 @@ class InGamecmds(BaseCog):
     async def _getmoney(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
-        samgr = StatMgr(self.cur, char.uid)
+        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
         edgr = ExpTableDBMgr(self.datadb)
         rcv_money = cmgr.get_raw_character(char.uid)['received_money']
         now = datetime.datetime.now()
@@ -575,7 +581,7 @@ class InGamecmds(BaseCog):
             return
         imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).uid)
         imgr.money += 5000
-        samgr.EXP += xp
+        samgr.give_exp(xp, edgr, ctx.channel.id)
         self.cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
         await ctx.send(ctx.author.mention, embed=embed)
         self.msglog.log(ctx, '[돈받기: 완료]')

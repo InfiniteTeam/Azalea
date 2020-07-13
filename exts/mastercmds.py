@@ -130,7 +130,6 @@ class Mastercmds(BaseCog):
         async def wrapper(coro, guild, channel):
             nonlocal notilog, rst, completed
             try:
-                print('d')
                 await coro
             except discord.Forbidden:
                 rst['exc'] += 1
@@ -148,7 +147,6 @@ class Mastercmds(BaseCog):
                 cpembed.set_field_at(1, name='성공', value='{} 서버'.format(rst['suc']))
                 cpembed.set_field_at(2, name='실패', value='{} 서버'.format(rst['exc']))
                 await ctrlpanel.edit(embed=cpembed)
-                print(rst['done'])
                 if rst['done']:
                     break
                 await asyncio.sleep(0.2)
@@ -177,7 +175,6 @@ class Mastercmds(BaseCog):
     async def _pgs(self, ctx: commands.Context):
         msg = await ctx.send(embed=discord.Embed(description=progressbar.get(ctx, self.emj, 0, 100, 20)))
         for x in range(0, 100+1, 10):
-            print(x)
             await msg.edit(embed=discord.Embed(description=progressbar.get(ctx, self.emj, x, 100, 20)))
             await asyncio.sleep(0.5)
 
@@ -191,7 +188,6 @@ class Mastercmds(BaseCog):
             name = arg.lower()
             if name in ['azalea', '아젤리아']:
                 f = discord.File(fp='./logs/azalea/azalea.log', filename='azalea.log')
-                print('d')
                 await ctx.send(file=f)
             elif name in ['ping', '핑']:
                 f = discord.File(fp='./logs/ping/ping.log', filename='ping.log')

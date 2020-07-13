@@ -9,6 +9,7 @@ import re
 from exts.utils import pager, emojibuttons, timedelta, event_waiter
 from exts.utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
 from templates import ingameembeds, errembeds
+from ingame.db import charsettings
 
 class Charcmds(BaseCog):
     def __init__(self, client):
@@ -377,7 +378,7 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[로그아웃: 취소됨]')
 
-    @_char.group(name='설정', aliases=['셋', '설'], invoke_without_command=True)
+    @_char.command(name='설정', aliases=['셋', '설'])
     async def _char_settings(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         perpage = 8
         cmgr = CharMgr(self.cur)
@@ -388,6 +389,9 @@ class Charcmds(BaseCog):
                 return
         else:
             char = cmgr.get_current_char(ctx.author.id)
+
+        sdgr = SettingDBMgr(self.datadb)
+        smgr = SettingMgr(self.cur, sdgr, char.uid)
         pgr = pager.Pager(self.datadb.char_settings, perpage)
         
         msg = await ctx.send(embed=ingameembeds.char_settings_embed(self, pgr, char))
@@ -454,12 +458,30 @@ class Charcmds(BaseCog):
                                         except:
                                             pass
                                     else:
-                                        sdgr = SettingDBMgr(self.datadb)
-                                        smgr = SettingMgr(self.cur, sdgr, char)
                                         if rct.emoji == editemjs[0]:
                                             smgr.edit_setting(setting.name, True)
                                         elif rct.emoji == editemjs[1]:
                                             smgr.edit_setting(setting.name, False)
+                                elif setting.type == charsettings.Where_to_Levelup_Message:
+                                    editopts = {}
+                                    for k, v in setting.type.selections.items():
+                                        editopts[v[0]] = k
+                                        embed.description += '{}: {}\n'.format(v[0], v[1])
+                                    editmsg = await ctx.send(embed=embed)
+                                    for em in editopts.keys():
+                                        await editmsg.add_reaction(em)
+                                    def opt_check(reaction, user):
+                                        return user == ctx.author and editmsg.id == reaction.message.id and reaction.emoji in editopts
+                                    try:
+                                        rct, usr = await self.client.wait_for('reaction_add', check=opt_check, timeout=60*2)
+                                    except asyncio.TimeoutError:
+                                        try:
+                                            await editmsg.clear_reactions()
+                                        except:
+                                            pass
+                                    else:
+                                        smgr.edit_setting(setting.name, editopts[rct.emoji])
+                                    
                                 await editmsg.delete()
                             else:
                                 embed = discord.Embed(title='❓ 설정 번째수가 올바르지 않습니다!', description='위 메시지에 항목 앞마다 번호가 붙어 있습니다.', color=self.color['error'])

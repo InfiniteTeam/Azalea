@@ -3,7 +3,6 @@ from discord.ext import commands
 from exts.utils import emojictrl
 
 def get(ctx: commands.Context, emjctrl: emojictrl.Emoji, value, mx, totallen):
-    print(value, mx)
     if mx == 0 or value < 0 or mx < 0:
         colorcount = 0
     else:

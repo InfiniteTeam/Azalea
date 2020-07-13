@@ -1,9 +1,12 @@
 import discord
+from discord.ext import commands
+import asyncio
 import pymysql
+import inspect
 import datetime
 from enum import Enum
 from functools import reduce
-from typing import List, Union, NamedTuple, Dict, Optional, Any
+from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
 import json
 from exts.utils import errors
 import os
@@ -16,6 +19,9 @@ class AzaleaData:
             reprs.append(f'{key}={value.__repr__()}')
         reprstr = f'<{self.__class__.__name__}: ' + ' '.join(reprs) + '>'
         return reprstr
+
+class SettingType(Enum):
+    select = 0
 
 class Setting(AzaleaData):
     def __init__(self, name: str, title: str, description: str, type: Any, default: Any):
@@ -271,22 +277,36 @@ class SettingDBMgr:
         return base
 
 class SettingMgr:
-    def __init__(self, cur: pymysql.cursors.DictCursor, sdgr: SettingDBMgr, character: CharacterData):
+    def __init__(self, cur: pymysql.cursors.DictCursor, sdgr: SettingDBMgr, charuuid: str):
         self.cur = cur
         self.sdgr = sdgr
-        self.char = character
+        self.charuuid = charuuid
 
+    @classmethod
     def get_dict_from_settings(self, settings: List[SettingData]):
         setdict = {}
         for one in settings:
             setdict[one.name] = one.value
         return setdict
 
+    @classmethod
+    def get_settings_from_dict(self, settingdict: Dict):
+        sets = []
+        for key, value in settingdict.items():
+            sets.append(SettingData(key, value))
+        return sets
+
     def _save_settings(self, settings: Dict):
-        return self.cur.execute('update chardata set settings=%s where uuid=%s', (json.dumps(settings, ensure_ascii=False), self.char.uid))
+        return self.cur.execute('update chardata set settings=%s where uuid=%s', (json.dumps(settings, ensure_ascii=False), self.charuuid))
+
+    def get_raw_settings(self):
+        self.cur.execute('select settings from chardata where uuid=%s', self.charuuid)
+        raw = json.loads(self.cur.fetchone()['settings'])
+        return raw
 
     def get_setting(self, name: str) -> Any:
-        sets = self.char.settings
+        raw = self.get_raw_settings()
+        sets = self.get_settings_from_dict(raw)
         rawset = self.get_dict_from_settings(sets)
         setting = list(filter(lambda x: x.name == name, sets))
         if setting:
@@ -301,8 +321,7 @@ class SettingMgr:
             raise errors.SettingNotFound
 
     def edit_setting(self, name: str, value):
-        sets = self.char.settings
-        rawset = self.get_dict_from_settings(sets)
+        rawset = self.get_raw_settings()
         setting = list(filter(lambda x: x.name == name, self.sdgr.settings))
         if setting:
             setedit = self.sdgr.fetch_setting(name)
@@ -461,7 +480,6 @@ class ExpTableDBMgr:
 
     def get_accumulate_exp(self, until_level: int) -> int:
         accumulate = [self.get_required_exp(x) for x in range(1, until_level+1)]
-        print(sum(accumulate))
         return sum(accumulate)
 
     def clac_level(self, exp: int) -> int:
@@ -476,17 +494,22 @@ class ExpTableDBMgr:
         return count
 
 class StatMgr:
-    def __init__(self, cur: pymysql.cursors.DictCursor, charuuid: str):
+    def __init__(self, cur: pymysql.cursors.DictCursor, charuuid: str, on_levelup: Callable[[str, int, int], Awaitable[Any]]=None, channel_id: int=None):
+        """
+        캐릭터의 경험치를 포함한 능력치를 관리합니다.
+        on_levelup 어웨이터블은 레벨이 상승할 때 호출되며 레벨업한 캐릭터의 uuid, 레벨업 전 레벨, 레벨업 후 레벨이 인자값으로 차례대로 전달됩니다.
+        """
         self.cur = cur
         self.charuuid = charuuid
         self.cmgr = CharMgr(self.cur)
+        self.on_levelup = on_levelup
 
-    def get_raw_stat(self):
+    def get_raw_stat(self) -> Dict:
         self.cur.execute('select * from statdata where uuid=%s', self.charuuid)
         statraw = self.cur.fetchone()
         return statraw
     
-    def get_stat(self):
+    def get_stat(self) -> StatData:
         raw = self.get_raw_stat()
         stat = StatData(
             EXP=raw['exp'],
@@ -497,7 +520,7 @@ class StatMgr:
         )
         return stat
 
-    def get_level(self, edgr: ExpTableDBMgr):
+    def get_level(self, edgr: ExpTableDBMgr) -> int:
         exp = self.EXP
         level = edgr.clac_level(exp)
         return level
@@ -507,9 +530,23 @@ class StatMgr:
         stat = self.get_stat()
         return stat.EXP
 
-    @EXP.setter
-    def EXP(self, value):
+    def give_exp(self, value: int, edgr: ExpTableDBMgr, channel_id=None):
+        exp = self.EXP
+        prev = edgr.clac_level(exp)
+        self.cur.execute('update statdata set exp=exp+%s where uuid=%s', (value, self.charuuid))
+        after = edgr.clac_level(exp+value)
+        if after > prev:
+            coro = self.on_levelup(self.charuuid, prev, after, channel_id)
+            asyncio.create_task(coro)
+
+    def set_exp(self, value: int, edgr: ExpTableDBMgr, channel_id=None):
+        exp = self.EXP
+        prev = edgr.clac_level(exp)
         self.cur.execute('update statdata set exp=%s where uuid=%s', (value, self.charuuid))
+        after = edgr.clac_level(value)
+        if after > prev:
+            coro = self.on_levelup(self.charuuid, prev, after, channel_id)
+            asyncio.create_task(coro)
 
     @property
     def STR(self):

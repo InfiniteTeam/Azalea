@@ -94,7 +94,7 @@ class GameDebugcmds(BaseCog):
             char = cmgr.get_current_char(ctx.author.id)
             charname = char.name
         
-        samgr = StatMgr(self.cur, char.uid)
+        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
         edgr = ExpTableDBMgr(self.datadb)
         nowexp = samgr.EXP
         lv = samgr.get_level(edgr)
@@ -120,7 +120,7 @@ class GameDebugcmds(BaseCog):
                 pass
         else:
             if reaction.emoji == '⭕':
-                samgr.EXP += exp
+                samgr.give_exp(exp, edgr)
                 await ctx.send(embed=discord.Embed(title='{} 경험치 {} 만큼 성공적으로 주었습니다!'.format(self.emj.get(ctx, 'check'), exp), color=self.color['success']))
                 self.msglog.log(ctx, '[경험치지급: 완료]')
             elif reaction.emoji == '❌':

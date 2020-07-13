@@ -8,7 +8,7 @@ class Emoji:
         self.client = client
 
     def get(self, ctx: commands.Context, name: str):
-        if not ctx.guild or ctx.channel.permissions_for(ctx.guild.get_member(self.client.user.id)).external_emojis:
+        if ctx is None or not ctx.guild or ctx.channel.permissions_for(ctx.guild.get_member(self.client.user.id)).external_emojis:
             return self.client.get_emoji(self.emojis[name]['default'])
         else:
             try:
