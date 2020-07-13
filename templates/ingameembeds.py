@@ -3,7 +3,7 @@ from discord.ext import commands
 import datetime
 from dateutil.relativedelta import relativedelta
 from exts.utils import pager, timedelta, basecog
-from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr
+from exts.utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr, ExpTableDBMgr
 
 def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     items = pgr.get_thispage()
@@ -30,14 +30,15 @@ def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     return embed
 
 def char_embed(cog, username, pgr: pager.Pager, *, mode='default'):
+    edgr = ExpTableDBMgr(cog.datadb)
     chars = pgr.get_thispage()
     charstr = ''
     for idx, one in enumerate(chars):
         name = one.name
-        samgr = StatMgr(cog.cur, name)
+        samgr = StatMgr(cog.cur, one.uid)
         if mode == 'select':
             name = f'{idx+1}. {name}'
-        level = samgr.level
+        level = samgr.get_level(edgr)
         chartype = one.type.value
         online = one.online
         onlinestr = ''
@@ -115,12 +116,12 @@ def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default
     embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
-def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='default'):
+def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='default'):
     items = pgr.get_thispage()
     itemstr = ''
     moneystr = ''
     cmgr = CharMgr(cog.cur)
-    char = cmgr.get_character(charname)
+    char = cmgr.get_character(charuuid)
     imgr = ItemDBMgr(cog.datadb)
     idgr = ItemDBMgr(cog.datadb)
     for idx, one in enumerate(items):
@@ -139,7 +140,7 @@ def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='
         else:
             itemstr += '{} **{}** ({}개)\n{}'.format(icon, name, count, enchantstr)
     embed = discord.Embed(
-        title=f'💼 `{charname}`의 가방',
+        title=f'💼 `{char.name}`의 가방',
         color=cog.color['info']
     )
     moneystr = f'\n**💵 {char.money} 골드**'

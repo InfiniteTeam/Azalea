@@ -29,7 +29,8 @@ class GameDebugcmds(BaseCog):
                 return
             charname = char.name
         else:
-            charname = cmgr.get_current_char(ctx.author.id).name
+            char = cmgr.get_current_char(ctx.author.id)
+            charname = char.name
 
         idgr = ItemDBMgr(self.datadb)
         item = idgr.fetch_item(itemid)
@@ -64,7 +65,7 @@ class GameDebugcmds(BaseCog):
         else:
             remj = str(reaction.emoji)
             if remj == '⭕':
-                imgr = ItemMgr(self.cur, charname)
+                imgr = ItemMgr(self.cur, char.uid)
                 imgr.give_item(ItemData(itemid, count, enchantments))
                 await ctx.send(embed=discord.Embed(title='{} 아이템을 성공적으로 받았습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success']))
                 self.msglog.log(ctx, '[아이템 받기: 완료]')
@@ -90,9 +91,10 @@ class GameDebugcmds(BaseCog):
                 return
             charname = char.name
         else:
-            charname = cmgr.get_current_char(ctx.author.id).name
+            char = cmgr.get_current_char(ctx.author.id)
+            charname = char.name
         
-        samgr = StatMgr(self.cur, charname)
+        samgr = StatMgr(self.cur, char.uid)
         edgr = ExpTableDBMgr(self.datadb)
         nowexp = samgr.EXP
         lv = samgr.get_level(edgr)

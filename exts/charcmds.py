@@ -146,9 +146,9 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
-            cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], {})
+            char = cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], {})
             if charcount == 0:
-                cmgr.change_character(ctx.author.id, charname)
+                cmgr.change_character(ctx.author.id, char.uid)
                 desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
             else:
                 desc = '`{}캐릭터 변경` 명령으로 이 캐릭터를 선텍해 게임을 시작할 수 있습니다!'.format(self.prefix)
@@ -162,8 +162,8 @@ class Charcmds(BaseCog):
         if char:
             cname = char[0].name
             if not char[0].online:
-                if not cmgr.is_being_forgotten(cname):
-                    cmgr.change_character(ctx.author.id, cname)
+                if not cmgr.is_being_forgotten(char[0].uid):
+                    cmgr.change_character(ctx.author.id, char[0].uid)
                     await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
                     self.msglog.log(ctx, '[캐릭터 변경: 완료]')
                 else:
@@ -187,7 +187,7 @@ class Charcmds(BaseCog):
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
         cname = char[0].name
-        if cmgr.is_being_forgotten(name):
+        if cmgr.is_being_forgotten(char[0].uid):
             await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{cname}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제: 이미 삭제 요청됨]')
             return
@@ -212,7 +212,7 @@ class Charcmds(BaseCog):
         else:
             remj = reaction.emoji
             if remj == '⭕':
-                cmgr.schedule_delete(ctx.author.id, cname)
+                cmgr.schedule_delete(ctx.author.id, char[0].uid)
                 await ctx.send(embed=discord.Embed(
                     title='{} `{}` 캐릭터가 24시간 후에 완전히 지워집니다.'.format(self.emj.get(ctx, 'check'), cname),
                     description=f'24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
@@ -234,11 +234,11 @@ class Charcmds(BaseCog):
             self.msglog.log(ctx, '[캐릭터 삭제취소: 존재하지 않는 캐릭터]')
             return
         cname = char[0].name
-        if not cmgr.is_being_forgotten(cname):
+        if not cmgr.is_being_forgotten(char[0].uid):
             await ctx.send(embed=discord.Embed(title=f'❓ 삭제중이 아닌 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중인 캐릭터가 아닙니다.', color=self.color['error']))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제중이 아닌 캐릭터]')
             return
-        cmgr.cancel_delete(cname)
+        cmgr.cancel_delete(char[0].uid)
         await ctx.send(embed=discord.Embed(title='{} 캐릭터 삭제를 취소했습니다!: `{}`'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
         self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제 취소 완료]')
         return
@@ -270,7 +270,7 @@ class Charcmds(BaseCog):
     async def _char_changename(self, ctx: commands.Context, *, charname: typing.Optional[str]):
         cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_character(charname, ctx.author.id)
+            char = cmgr.get_character_by_name(charname, ctx.author.id)
             if not char:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[이름변경: 존재하지 않는 캐릭터]')
@@ -335,7 +335,7 @@ class Charcmds(BaseCog):
                     pass
             else:
                 if reaction.emoji == '⭕':
-                    cmgr.change_nick(char.name, newname)
+                    cmgr.change_nick(char.uid, newname)
                     await ctx.send(embed=discord.Embed(title='{} `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), newname), color=self.color['success']))
                     self.msglog.log(ctx, '[이름변경: 완료]')
                 elif reaction.emoji == '❌':
@@ -382,7 +382,7 @@ class Charcmds(BaseCog):
         perpage = 8
         cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_character(charname, ctx.author.id)
+            char = cmgr.get_character_by_name(charname, ctx.author.id)
             if not char:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 return
@@ -473,7 +473,7 @@ class Charcmds(BaseCog):
                             self.msglog.log(ctx, '[설정: 변경: 숫자만 입력]')
 
                 if charname:
-                    char = cmgr.get_character(charname, ctx.author.id)
+                    char = cmgr.get_character_by_name(charname, ctx.author.id)
                     if not char:
                         await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                         return

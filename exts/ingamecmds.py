@@ -28,7 +28,7 @@ class InGamecmds(BaseCog):
     async def _money(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_character(charname)
+            char = cmgr.get_character_by_name(charname)
             if not char:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[가방: 존재하지 않는 캐릭터]')
@@ -44,9 +44,9 @@ class InGamecmds(BaseCog):
         perpage = 8
         cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_character(charname)
+            char = cmgr.get_character_by_name(charname)
             if char:
-                imgr = ItemMgr(self.cur, char.name)
+                imgr = ItemMgr(self.cur, char.uid)
             else:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[가방: 존재하지 않는 캐릭터]')
@@ -54,11 +54,11 @@ class InGamecmds(BaseCog):
         else:
             char = cmgr.get_current_char(ctx.author.id)
             charname = char.name
-            imgr = ItemMgr(self.cur, charname)
+            imgr = ItemMgr(self.cur, char.uid)
         items = imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
-        msg = await ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default'))
+        msg = await ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default'))
         self.msglog.log(ctx, '[가방]')
         extemjs = ['❔']
         owner = False
@@ -91,11 +91,11 @@ class InGamecmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
+                        await msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'select'))
+                            ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -213,7 +213,7 @@ class InGamecmds(BaseCog):
                 pgr.set_obj(imgr.get_items())
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
-                    msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, charname, 'default')),
+                    msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default')),
                 )
 
     @commands.command(name='상점')
@@ -223,7 +223,7 @@ class InGamecmds(BaseCog):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
         idgr = ItemDBMgr(self.datadb)
-        imgr = ItemMgr(self.cur, char.name)
+        imgr = ItemMgr(self.cur, char.uid)
         mkt = mdgr.get_market('main')
         pgr = pager.Pager(mkt, perpage)
         msg = await ctx.send(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
@@ -426,7 +426,7 @@ class InGamecmds(BaseCog):
                                                         # 캐릭터 갱신 후 다시 한번 잔고 충분한지 확인
                                                         char = cmgr.get_current_char(ctx.author.id)
                                                         if final_price <= char.money:
-                                                            imgr = ItemMgr(self.cur, char.name)
+                                                            imgr = ItemMgr(self.cur, char.uid)
                                                             imgr.money -= final_price
                                                             item.item.count = count
                                                             imgr.give_item(item.item)
@@ -522,12 +522,12 @@ class InGamecmds(BaseCog):
         if not charname:
             char = cmgr.get_current_char(ctx.author.id)
         else:
-            char = cmgr.get_character(charname, ctx.author.id)
+            char = cmgr.get_character_by_name(charname)
             if not char:
                 embed = errembeds.CharNotFound.getembed(ctx, charname)
                 await ctx.send(embed=embed)
                 return
-        samgr = StatMgr(self.cur, char.name)
+        samgr = StatMgr(self.cur, char.uid)
         edgr = ExpTableDBMgr(self.datadb)
         icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
         level = samgr.get_level(edgr)
@@ -558,9 +558,9 @@ class InGamecmds(BaseCog):
     async def _getmoney(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
         char = cmgr.get_current_char(ctx.author.id)
-        samgr = StatMgr(self.cur, char.name)
+        samgr = StatMgr(self.cur, char.uid)
         edgr = ExpTableDBMgr(self.datadb)
-        rcv_money = cmgr.get_raw_character(char.name)['received_money']
+        rcv_money = cmgr.get_raw_character(char.uid)['received_money']
         now = datetime.datetime.now()
         level = samgr.get_level(edgr)
         xp = edgr.get_required_exp(level)/100*2+50
@@ -573,10 +573,10 @@ class InGamecmds(BaseCog):
             await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
             self.msglog.log(ctx, '[돈받기: 이미 받음]')
             return
-        imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
+        imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).uid)
         imgr.money += 5000
         samgr.EXP += xp
-        self.cur.execute('update chardata set received_money=%s where name=%s', (now, char.name))
+        self.cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
         await ctx.send(ctx.author.mention, embed=embed)
         self.msglog.log(ctx, '[돈받기: 완료]')
 
@@ -625,7 +625,7 @@ class InGamecmds(BaseCog):
         else:
             idx = emjs.index(reaction.emoji)
             region = rgn[idx]
-            cmgr.move_to(char.name, region)
+            cmgr.move_to(char.uid, region)
             await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
             self.msglog.log(ctx, '[이동: 완료]')
 

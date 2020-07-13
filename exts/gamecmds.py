@@ -3,7 +3,8 @@ from discord.ext import commands
 import asyncio
 import random
 from exts.utils.basecog import BaseCog
-from exts.utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData
+from exts.utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
+from ingame.db import exps
 
 class Gamecmds(BaseCog):
     def __init__(self, client):
@@ -15,6 +16,11 @@ class Gamecmds(BaseCog):
     @commands.command(name='낚시')
     async def _fishing(self, ctx: commands.Context):
         cmgr = CharMgr(self.cur)
+        char = cmgr.get_current_char(ctx.author.id)
+        idgr = ItemDBMgr(self.datadb)
+        imgr = ItemMgr(self.cur, char.uid)
+        edgr = ExpTableDBMgr(self.datadb)
+        samgr = StatMgr(self.cur, char.uid)
         embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
         msg = await ctx.send(embed=embed)
         self.msglog.log(ctx, '[낚시: 시작]')
@@ -59,13 +65,14 @@ class Gamecmds(BaseCog):
             await do()
         else:
             if reaction.emoji == '⁉':
-                idgr = ItemDBMgr(self.datadb)
+                
                 fishes = idgr.fetch_items_with(tags=['fish'], meta={'catchable': True})
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
-                imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).name)
                 imgr.give_item(ItemData(fish.id, 1, []))
+                exp = exps.fishing(req=edgr.get_required_exp(samgr.get_level(edgr)), fish=fish)
+                samgr.EXP += exp
                 embed.title += ' - 잡았습니다!'
-                embed.description = '**`{}` 을(를)** 잡았습니다!'.format(fish.name)
+                embed.description = '**`{}` 을(를)** 잡았습니다!\n+`{}` 경험치를 받았습니다.'.format(fish.name, exp)
                 self.msglog.log(ctx, '[낚시: 잡음]')
                 await do()
 

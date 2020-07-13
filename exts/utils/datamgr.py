@@ -283,7 +283,7 @@ class SettingMgr:
         return setdict
 
     def _save_settings(self, settings: Dict):
-        return self.cur.execute('update chardata set settings=%s where name=%s', (json.dumps(settings, ensure_ascii=False), self.char.name))
+        return self.cur.execute('update chardata set settings=%s where uuid=%s', (json.dumps(settings, ensure_ascii=False), self.char.uid))
 
     def get_setting(self, name: str) -> Any:
         sets = self.char.settings
@@ -375,12 +375,12 @@ class ItemDBMgr:
         return final
 
 class ItemMgr:
-    def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
+    def __init__(self, cur: pymysql.cursors.DictCursor, charuuid: str):
         self.cur = cur
-        self.charname = charname
+        self.charuuid = charuuid
 
     def get_items_dict(self) -> List[Dict]:
-        self.cur.execute('select items from chardata where name=%s', self.charname)
+        self.cur.execute('select items from chardata where uuid=%s', self.charuuid)
         return json.loads(self.cur.fetchone()['items'])['items']
 
     @classmethod
@@ -411,7 +411,7 @@ class ItemMgr:
         경고! 이 메서드는 캐릭터 기존의 아이템 정보를 완전히 덮어쓰게 됩니다! 자칫 아이템 데이터가 모두 삭제되거나 손상될 우려가 있습니다! 외부적 사용은 권장하지 않습니다.
         """
         items = {'items': itemdicts}
-        self.cur.execute('update chardata set items=%s where name=%s', (json.dumps(items, ensure_ascii=False), self.charname))
+        self.cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), self.charuuid))
 
     def delete_item(self, itemdata: ItemData, count: int= None) -> bool:
         count = int(count)
@@ -441,13 +441,13 @@ class ItemMgr:
 
     @property
     def money(self):
-        self.cur.execute('select money from chardata where name=%s', self.charname)
+        self.cur.execute('select money from chardata where uuid=%s', self.charuuid)
         money = self.cur.fetchone()['money']
         return money
 
     @money.setter
     def money(self, value):
-        self.cur.execute('update chardata set money=%s where name=%s', (value, self.charname))
+        self.cur.execute('update chardata set money=%s where uuid=%s', (value, self.charuuid))
 
 class ExpTableDBMgr:
     def __init__(self, datadb: DataDB):
@@ -476,13 +476,13 @@ class ExpTableDBMgr:
         return count
 
 class StatMgr:
-    def __init__(self, cur: pymysql.cursors.DictCursor, charname: str):
+    def __init__(self, cur: pymysql.cursors.DictCursor, charuuid: str):
         self.cur = cur
-        self.charname = charname
+        self.charuuid = charuuid
         self.cmgr = CharMgr(self.cur)
 
     def get_raw_stat(self):
-        self.cur.execute('select * from statdata where name=%s', self.charname)
+        self.cur.execute('select * from statdata where uuid=%s', self.charuuid)
         statraw = self.cur.fetchone()
         return statraw
     
@@ -509,7 +509,7 @@ class StatMgr:
 
     @EXP.setter
     def EXP(self, value):
-        self.cur.execute('update statdata set exp=%s where name=%s', (value, self.charname))
+        self.cur.execute('update statdata set exp=%s where uuid=%s', (value, self.charuuid))
 
     @property
     def STR(self):
@@ -518,7 +518,7 @@ class StatMgr:
 
     @STR.setter
     def STR(self, value):
-        self.cur.execute('update statdata set Strength=%s where name=%s', (value, self.charname))
+        self.cur.execute('update statdata set Strength=%s where uuid=%s', (value, self.charuuid))
 
     @property
     def INT(self):
@@ -527,7 +527,7 @@ class StatMgr:
 
     @INT.setter
     def INT(self, value):
-        self.cur.execute('update statdata set Intelligence=%s where name=%s', (value, self.charname))
+        self.cur.execute('update statdata set Intelligence=%s where uuid=%s', (value, self.charuuid))
 
     @property
     def DEX(self):
@@ -536,7 +536,7 @@ class StatMgr:
 
     @DEX.setter
     def DEX(self, value):
-        self.cur.execute('update statdata set Dexterity=%s where name=%s', (value, self.charname))
+        self.cur.execute('update statdata set Dexterity=%s where uuid=%s', (value, self.charuuid))
 
     @property
     def LUK(self):
@@ -545,7 +545,7 @@ class StatMgr:
 
     @LUK.setter
     def LUK(self, value):
-        self.cur.execute('update statdata set Luck=%s where name=%s', (value, self.charname))
+        self.cur.execute('update statdata set Luck=%s where uuid=%s', (value, self.charuuid))
 
 class CharMgr:
     def __init__(self, cur: pymysql.cursors.DictCursor):
@@ -560,7 +560,7 @@ class CharMgr:
         settings = [SettingData(setting, setraw[setting]) for setting in setraw]
         region = RegionData(chardict['location'])
         char = CharacterData(
-            chardict['name'], chardict['id'], chardict['online'], chardict['name'], chartype,
+            chardict['uuid'], chardict['id'], chardict['online'], chardict['name'], chartype,
             chardict['money'], items, stat, chardict['birthdatetime'], chardict['last_nick_change'], chardict['delete_request'], settings, region
         )
         return char
@@ -575,10 +575,18 @@ class CharMgr:
 
     def get_chars(self, userid: int=None) -> List[CharacterData]:
         raw = self.get_raw_chars(userid)
-        chars = [self.get_char_from_dict(one, StatMgr(self.cur, one['name']).get_stat()) for one in raw]
+        chars = [self.get_char_from_dict(one, StatMgr(self.cur, one['uuid']).get_stat()) for one in raw]
         return chars
 
-    def get_raw_character(self, name: str, userid: int=None) -> Dict:
+    def get_raw_character(self, charuuid: str, userid: int=None) -> Dict:
+        if userid:
+            self.cur.execute('select * from chardata where id=%s and uuid=%s', (userid, charuuid))
+        else:
+            self.cur.execute('select * from chardata where uuid=%s', charuuid)
+        raw = self.cur.fetchone()
+        return raw
+
+    def get_raw_character_by_name(self, name: str, userid: int=None) -> Dict:
         if userid:
             self.cur.execute('select * from chardata where id=%s and name=%s', (userid, name))
         else:
@@ -586,10 +594,18 @@ class CharMgr:
         raw = self.cur.fetchone()
         return raw
 
-    def get_character(self, name: str, userid: int=None) -> CharacterData:
-        char = self.get_raw_character(name, userid)
+    def get_character(self, charuuid: str, userid: int=None) -> CharacterData:
+        char = self.get_raw_character(charuuid, userid)
         if char:
-            samgr = StatMgr(self.cur, char['name'])
+            samgr = StatMgr(self.cur, char['uuid'])
+            chardata = self.get_char_from_dict(char, samgr.get_stat())
+            return chardata
+        return None
+
+    def get_character_by_name(self, name: str, userid: int=None) -> CharacterData:
+        char = self.get_raw_character_by_name(name, userid)
+        if char:
+            samgr = StatMgr(self.cur, char['uuid'])
             chardata = self.get_char_from_dict(char, samgr.get_stat())
             return chardata
         return None
@@ -597,54 +613,56 @@ class CharMgr:
     def get_current_char(self, userid: int):
         self.cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
         char = self.cur.fetchone()
-        samgr = StatMgr(self.cur, char['name'])
+        samgr = StatMgr(self.cur, char['uuid'])
         chardata = self.get_char_from_dict(char, samgr.get_stat())
         return chardata
 
-    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings):
+    def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings) -> CharacterData:
+        uid = uuid.uuid4()
         datas = (
-            userid, name, chartype,
+            uid, userid, name, chartype,
             json.dumps(items, ensure_ascii=False),
             json.dumps(settings, ensure_ascii=False)
         )
-        self.cur.execute('insert into chardata (id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, NULL)', datas)
-        self.cur.execute('insert into statdata (name) values (%s)', name)
+        self.cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
+        self.cur.execute('insert into statdata (uuid) values (%s)', uid)
+        return self.get_character(uid)
 
     def logout_all(self, userid: int):
         self.cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))
 
-    def change_character(self, userid: int, name: str):
-        if self.cur.execute('select * from chardata where name=%s and delete_request is not NULL', name) != 0:
+    def change_character(self, userid: int, charuuid: str):
+        if self.cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
             raise errors.CannotLoginBeingDeleted
         self.logout_all(userid)
-        self.cur.execute('update chardata set online=%s where name=%s', (True, name))
+        self.cur.execute('update chardata set online=%s where uuid=%s', (True, charuuid))
 
-    def delete_character(self, name: str):
-        self.cur.execute('delete from statdata where name=%s', name)
-        if self.cur.execute('delete from chardata where name=%s', name) == 0:
+    def delete_character(self, charuuid: str):
+        self.cur.execute('delete from statdata where uuid=%s', charuuid)
+        if self.cur.execute('delete from chardata where uuid=%s', charuuid) == 0:
             raise errors.CharacterNotFound
 
-    def change_nick(self, name: str, new: str):
-        self.cur.execute('update chardata set name=%s, last_nick_change=%s where name=%s', (new, datetime.datetime.now(), name))
-        self.cur.execute('update statdata set name=%s where name=%s', (new, name))
+    def change_nick(self, charuuid: str, new: str):
+        self.cur.execute('update chardata set uuid=%s, last_nick_change=%s where uuid=%s', (new, datetime.datetime.now(), charuuid))
+        self.cur.execute('update statdata set uuid=%s where uuid=%s', (new, charuuid))
 
-    def schedule_delete(self, userid: int, name: str):
-        if self.cur.execute('select * from chardata where name=%s and online=%s', (name, True)) != 0:
+    def schedule_delete(self, userid: int, charuuid: str):
+        if self.cur.execute('select * from chardata where uuid=%s and online=%s', (charuuid, True)) != 0:
             self.logout_all(userid)
-        if self.cur.execute('update chardata set delete_request=%s where name=%s', (datetime.datetime.now(), name)) == 0:
+        if self.cur.execute('update chardata set delete_request=%s where uuid=%s', (datetime.datetime.now(), charuuid)) == 0:
             raise errors.CharacterNotFound
 
-    def cancel_delete(self, name: str):
-        if self.cur.execute('update chardata set delete_request=%s where name=%s', (None, name)) == 0:
+    def cancel_delete(self, charuuid: str):
+        if self.cur.execute('update chardata set delete_request=%s where uuid=%s', (None, charuuid)) == 0:
             raise errors.CharacterNotFound
 
-    def is_being_forgotten(self, name: str):
-        if (self.cur.execute('select * from chardata where name=%s', name) != 0) and self.cur.execute('select * from chardata where name=%s and delete_request is not NULL', name) != 0:
+    def is_being_forgotten(self, charuuid: str):
+        if (self.cur.execute('select * from chardata where uuid=%s', charuuid) != 0) and self.cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
             return True
         return False
 
-    def move_to(self, name: str, region: RegionData):
-        self.cur.execute('update chardata set location=%s where name=%s', (region.name, name))
+    def move_to(self, charuuid: str, region: RegionData):
+        self.cur.execute('update chardata set location=%s where uuid=%s', (region.name, charuuid))
 
     def get_ranking(self, guild: discord.Guild=None, *, orderby='money'):
         chars = self.get_chars()
