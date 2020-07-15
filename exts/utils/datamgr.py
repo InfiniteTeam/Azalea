@@ -710,3 +710,20 @@ class CharMgr:
         else:
             rank = sorted(chars, key=lambda one: one.__getattribute__(orderby), reverse=True)
             return rank
+
+class MigrateTool:
+    def __init__(self, cur: pymysql.cursors.DictCursor):
+        self.cur = cur
+
+    def migrate_item_id(self, itemid, newid):
+        migrated = 0
+        self.cur.execute('select uuid, items from chardata')
+        fetch = self.cur.fetchall()
+        for one in fetch:
+            items = json.loads(one['items'])
+            for item in items['items']:
+                if item['id'] == itemid:
+                    item['id'] = newid
+                    migrated += 1
+            self.cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), one['uuid']))
+        return migrated
