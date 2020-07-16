@@ -44,10 +44,9 @@ class Checks:
                     if (value & perm.value) != perm.value:
                         continue
                 missings.append(perm.name)
-                break
-            else:
-                return True
-            raise errors.MissingAzaleaPermissions(missings)
+                raise errors.MissingAzaleaPermissions(missings)
+            return True
+            
         return predicate
 
     async def notbot(self, ctx: commands.Context):

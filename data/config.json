@@ -17,5 +17,6 @@
     "localRun": false,
     "betamode": true,
     "ims_host": "arpa.kro.kr",
-    "max_charcount": 5
+    "max_charcount": 5,
+    "surpport_url": "https://discord.com/invite/7aFczQk"
 }

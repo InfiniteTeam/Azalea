@@ -43,8 +43,9 @@ class Tasks(BaseCog):
             self.pinglogger.info(f'{ping}ms')
             self.pinglogger.info(f'CLIENT_CONNECTED: {not self.client.is_closed()}')
             guildshards = {}
-            for one in self.client.latencies:
-                guildshards[one[0]] = tuple(filter(lambda guild: guild.shard_id == one[0], self.client.guilds))
+            if self.client.shard_id:
+                for one in self.client.latencies:
+                    guildshards[one[0]] = tuple(filter(lambda guild: guild.shard_id == one[0], self.client.guilds))
             self.client.set_data('guildshards', guildshards)
         except:
             self.errlogger.error(traceback.format_exc())

@@ -85,7 +85,12 @@ class Azaleacmds(BaseCog):
     @commands.command(name='샤드')
     @commands.guild_only()
     async def _shard_id(self, ctx: commands.Context):
-        await ctx.send(embed=discord.Embed(description=f'**이 서버의 샤드 아이디는 `{ctx.guild.shard_id}`입니다.**\n현재 총 {self.client.get_data("guildshards").__len__()} 개의 샤드가 활성 상태입니다.', color=self.color['info']))
+        gshs = self.client.get_data("guildshards")
+        if gshs:
+            embed = discord.Embed(description=f'**이 서버의 샤드 아이디는 `{ctx.guild.shard_id}`입니다.**\n현재 총 {gshs.__len__()} 개의 샤드가 활성 상태입니다.', color=self.color['info'])
+        else:
+            embed = discord.Embed(description=f'**현재 Azalea는 자동 샤딩을 사용하고 있지 않습니다.**', color=self.color['info'])
+        await ctx.send(embed=embed)
         self.msglog.log(ctx, '[샤드]')
 
     @commands.command(name='공지채널')

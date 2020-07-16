@@ -108,12 +108,16 @@ class Events(BaseCog):
             if error.__cause__.code == 50013:
                 missings = permutil.find_missing_perms_by_tbstr(originerrstr)
                 fmtperms = [permutil.format_perm_by_name(perm) for perm in missings]
-                embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n`' + '`, `'.join(fmtperms) + '`', color=self.color['error'])
+                if missings:
+                    embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n`' + '`, `'.join(fmtperms) + '`', color=self.color['error'])
+                else:
+                    embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n부족한 권한이 무엇인지 감지하는 데 실패했습니다. [InfiniteTEAM 서포트 서버]({})로 문의하면 빠르게 도와드립니다.'.format(self.config['surpport_url']), color=self.color['error'])
                 try:
                     await ctx.send(embed=embed)
                 except discord.Forbidden:
                     self.msglog.log(ctx, '[봇 메시지 전송 권한 없음]')
                 else:
+                    self.msglog.print('')
                     self.msglog.log(ctx, '[봇 권한 부족]')
                 return
             elif error.__cause__.code == 50035:
@@ -135,7 +139,7 @@ class Events(BaseCog):
         if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) == 0:
             self.errlogger.error(f'\n========== CMDERROR ========== {uid.hex}\n' + errstr + '\n========== CMDERREND ==========')
             embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다! 오류 코드:\n```{uid.hex}```\n', color=self.color['error'])
-            embed.set_footer(text='오류 정보가 기록되었습니다. 나중에 개발자가 처리하게 되며 빠른 처리를 위해서는 서포트 서버에 문의하십시오.')
+            embed.set_footer(text='오류 정보가 기록되었습니다. 나중에 개발자가 처리하게 되며 빠른 처리를 위해서는 [InfiniteTEAM 서포트 서버]({})에 문의하십시오.'.format(self.config['surpport_url']))
             await ctx.send(embed=embed)
             
         else:

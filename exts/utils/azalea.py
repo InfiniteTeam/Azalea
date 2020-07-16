@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-class Azalea(commands.AutoShardedBot):
+class Azalea(commands.Bot):
     def __init__(self, command_prefix, error, help_command=commands.bot._default, description=None, **options):
         super().__init__(command_prefix, help_command, description, **options)
         self.error = error
