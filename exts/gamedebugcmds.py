@@ -19,10 +19,10 @@ class GameDebugcmds(BaseCog):
             cmd.add_check(self.check.char_online)
 
     @commands.command(name='내놔')
-    async def _giveme(self, ctx: commands.Context, itemid: int, count: typing.Optional[int]=1, enchantments: commands.Greedy[converters.EnchantmentConverter]=[], charname: typing.Optional[str]=None):
+    async def _giveme(self, ctx: commands.Context, itemid: str, count: typing.Optional[int]=1, enchantments: commands.Greedy[converters.EnchantmentConverter]=[], *, charname: typing.Optional[str]=None):
         cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_character(charname)
+            char = cmgr.get_character_by_name(charname)
             if not char :
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
@@ -84,7 +84,7 @@ class GameDebugcmds(BaseCog):
     async def _give_exp(self, ctx: commands.Context, exp: int, charname: typing.Optional[str]=None):
         cmgr = CharMgr(self.cur)
         if charname:
-            char = cmgr.get_character(charname)
+            char = cmgr.get_character_by_name(charname)
             if not char :
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[경험치지급: 존재하지 않는 캐릭터]')

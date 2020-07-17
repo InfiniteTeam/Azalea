@@ -126,6 +126,7 @@ def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='
     imgr = ItemDBMgr(cog.datadb)
     idgr = ItemDBMgr(cog.datadb)
     for idx, one in enumerate(items):
+        print(one.id)
         founditem = idgr.fetch_item(one.id)
         icon = founditem.icon
         name = founditem.name

@@ -66,16 +66,21 @@ class EnchantmentData(AzaleaData):
     def __eq__(self, enchantment):
         return self.name == enchantment.name and self.level == enchantment.level
 
+class ItemType(Enum):
+    Phone = '핸드폰'
+    Fish = '물고기'
+
 class Item(AzaleaData):
     """
     전체 아이템을 정의하는 클래스입니다. 예외적으로 아이템 데이터베이스 파일에서 사용되는 Item 객체에서는 self.enchantments 속성이 str입니다.
     """
-    def __init__(self, id: str, name: str, description: str, max_count: int, icon: Union[str, int], tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}, *, selling=None):
+    def __init__(self, id: str, name: str, description: str, max_count: int, icon: Union[str, int], *, type: Optional[ItemType]=None, tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}, selling=None):
         self.id = id
         self.name = name
         self.description = description
         self.max_count = max_count
         self.icon = icon
+        self.type = type
         self.tags = tags
         self.enchantments = enchantments
         self.meta = meta
@@ -366,7 +371,7 @@ class ItemDBMgr:
             return found[0]
         return None
 
-    def fetch_items_with(self, *, tags: Optional[list]=None, meta: Optional[dict]=None) -> List[Item]:
+    def fetch_items_with(self, *, tags: Optional[list]=None, meta: Optional[dict]=None, type: Optional[ItemType]=None) -> List[Item]:
         if tags:
             foundtags = set(filter(lambda x: set(x.tags) & set(tags), self.datadb.items))
             if not foundtags:
