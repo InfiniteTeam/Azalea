@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
-from exts.utils.basecog import BaseCog
-from exts.utils import datamgr
+from utils.basecog import BaseCog
+from utils import datamgr
 import traceback
 import datetime
 import math

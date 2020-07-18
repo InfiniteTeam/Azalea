@@ -1,4 +1,4 @@
-from exts.utils.datamgr import Setting, SettingType
+from utils.datamgr import Setting, SettingType
 
 class Where_to_Levelup_Message:
     selections = {

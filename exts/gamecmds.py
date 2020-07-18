@@ -2,9 +2,10 @@ import discord
 from discord.ext import commands
 import asyncio
 import random
-from exts.utils.basecog import BaseCog
-from exts.utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
-from ingame.db import exps
+import os
+from utils.basecog import BaseCog
+from utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
+from db import exps
 
 class Gamecmds(BaseCog):
     def __init__(self, client):

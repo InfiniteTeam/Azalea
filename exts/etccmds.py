@@ -3,7 +3,7 @@ from discord.ext import commands
 import datetime
 import asyncio
 import typing
-from exts.utils.basecog import BaseCog
+from utils.basecog import BaseCog
 
 class Etccmds(BaseCog):
     def __init__(self, client):

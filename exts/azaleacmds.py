@@ -7,9 +7,9 @@ import time
 import math
 import asyncio
 import typing
-from exts.utils.basecog import BaseCog
-from exts.utils.datamgr import NewsMgr, NewsData
-from exts.utils import timedelta, pager, emojibuttons
+from utils.basecog import BaseCog
+from utils.datamgr import NewsMgr, NewsData
+from utils import timedelta, pager, emojibuttons
 from templates import errembeds, azaleaembeds, help
 
 class Azaleacmds(BaseCog):

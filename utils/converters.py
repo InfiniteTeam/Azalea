@@ -1,5 +1,5 @@
 from discord.ext import commands
-from exts.utils import datamgr
+from . import datamgr
 
 class EnchantmentConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, arg) -> datamgr.EnchantmentData:

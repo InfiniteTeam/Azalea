@@ -8,7 +8,7 @@ from enum import Enum
 from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
 import json
-from exts.utils import errors
+from . import errors
 import os
 import uuid
 

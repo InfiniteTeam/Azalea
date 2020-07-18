@@ -1,5 +1,5 @@
-from exts.utils import datamgr
-from exts.utils.basecog import BaseCog
+from utils import datamgr
+from utils.basecog import BaseCog
 import random
 
 def fishing(*, req: int, fish: datamgr.Item):

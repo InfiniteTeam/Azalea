@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands
 import asyncio
 import datetime
-from exts.utils.basecog import BaseCog
-from exts.utils import errors
+from utils.basecog import BaseCog
+from utils import errors
 
 class BaseCmds(BaseCog):
     def __init__(self, client):

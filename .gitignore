@@ -135,3 +135,5 @@ dmypy.json
 # logging
 logs/
 
+# tmp
+tmp/

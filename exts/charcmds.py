@@ -1,15 +1,15 @@
 import discord
 from discord.ext import commands
-from exts.utils.basecog import BaseCog
+from utils.basecog import BaseCog
 import typing
 import datetime
 from dateutil.relativedelta import relativedelta
 import asyncio
 import re
-from exts.utils import pager, emojibuttons, timedelta, event_waiter
-from exts.utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
+from utils import pager, emojibuttons, timedelta, event_waiter
+from utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
 from templates import ingameembeds, errembeds
-from ingame.db import charsettings
+from db import charsettings
 
 class Charcmds(BaseCog):
     def __init__(self, client):

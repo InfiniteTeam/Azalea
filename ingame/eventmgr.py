@@ -1,4 +1,4 @@
-from exts.utils.datamgr import ItemData, EnchantmentData
+from utils.datamgr import ItemData, EnchantmentData
 import typing
 
 class IngameEvent:

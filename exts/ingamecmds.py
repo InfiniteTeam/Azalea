@@ -8,11 +8,11 @@ import re
 import random
 import json
 import math
-from exts.utils import pager, emojibuttons, errors, timedelta, event_waiter, progressbar
-from exts.utils.basecog import BaseCog
+from utils import pager, emojibuttons, errors, timedelta, event_waiter, progressbar
+from utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
-from exts.utils.datamgr import (
+from utils.datamgr import (
     CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
     SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, ExpTableDBMgr
 )

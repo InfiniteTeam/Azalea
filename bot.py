@@ -12,9 +12,9 @@ import logging.handlers
 import traceback
 import paramiko
 from random import randint
-from exts.utils import errors, checks, msglogger, emojictrl, permutil, datamgr, progressbar
-from exts.utils.azalea import Azalea
-from ingame.db import enchantments, items, charsettings, market, regions, permissions
+from utils import errors, checks, msglogger, emojictrl, permutil, datamgr, progressbar
+from utils.azalea import Azalea
+from db import enchantments, items, charsettings, market, regions, permissions
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -160,7 +160,7 @@ datadb.load_region('azalea', regions.REGIONS)
 datadb.load_market('main', market.MARKET)
 datadb.load_permissions(permissions.PERMISSIONS)
 
-with open('./ingame/db/exptable.json', encoding='utf-8') as exptable_file:
+with open('./db/exptable.json', encoding='utf-8') as exptable_file:
     datadb.load_exp_table(json.load(exptable_file))
 
 check = checks.Checks(cur, datadb)
@@ -232,8 +232,10 @@ else:
     client.add_data('on_inspection', False)
 
 client.datas['allexts'] = []
-for ext in list(filter(lambda x: x.endswith('.py'), os.listdir('./exts'))):
+for ext in list(filter(lambda x: x.endswith('.py') and not x.startswith('_'), os.listdir('./exts'))):
+    if ext == 'azaleacmds.py': continue
     client.datas['allexts'].append('exts.' + os.path.splitext(ext)[0])
     client.load_extension('exts.' + os.path.splitext(ext)[0])
+logger.info('{} 개의 확장을 로드했습니다'.format(len(client.datas.get('allexts'))))
 
 client.run(token)

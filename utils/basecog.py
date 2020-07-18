@@ -1,7 +1,7 @@
 import pymysql
 import logging
 from discord.ext import commands
-from exts.utils import msglogger, checks, itemmgr, azalea, emojictrl, datamgr
+from . import msglogger, checks, azalea, emojictrl, datamgr
 import sqlite3
 
 class BaseCog(commands.Cog):

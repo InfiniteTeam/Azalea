@@ -8,8 +8,8 @@ import math
 import sys
 import os
 import io
-from exts.utils.basecog import BaseCog
-from exts.utils import errors, progressbar
+from utils.basecog import BaseCog
+from utils import errors, progressbar
 import traceback
 
 class Mastercmds(BaseCog):

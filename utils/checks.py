@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
-from exts.utils import errors
-from exts.utils import datamgr
+from . import errors
+from . import datamgr
 
 class Checks:
     def __init__(self, cur, datadb: datamgr.DataDB):

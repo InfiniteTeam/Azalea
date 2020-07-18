@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from exts.utils import emojictrl
+from . import emojictrl
 
 def get(ctx: commands.Context, emjctrl: emojictrl.Emoji, value, mx, totallen):
     if mx == 0 or value < 0 or mx < 0:

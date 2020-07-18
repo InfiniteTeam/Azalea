@@ -1,4 +1,4 @@
-from exts.utils.datamgr import Region, RegionType
+from utils.datamgr import Region, RegionType
 
 REGIONS = (
     Region('azalea', 'Azalea', '🔰', RegionType.Village, market='main', warpable=True),

@@ -1,7 +1,7 @@
 import discord
 import datetime
-from exts.utils import pager, timedelta
-from exts.utils.basecog import BaseCog
+from utils import pager, timedelta
+from utils.basecog import BaseCog
 
 async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
     embed = discord.Embed(title='📰 뉴스', description='', color=cog.color['info'])

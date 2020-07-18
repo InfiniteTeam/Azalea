@@ -1,4 +1,4 @@
-from exts.utils.datamgr import MarketItem, ItemData, EnchantmentData
+from utils.datamgr import MarketItem, ItemData, EnchantmentData
 
 MARKET = (
     MarketItem(ItemData('galaxy_zflip', 1, []), price=10000, discount=9000),

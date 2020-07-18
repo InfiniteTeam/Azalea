@@ -6,10 +6,10 @@ import datetime
 import json
 import typing
 import inspect
-from exts.utils import pager, datamgr, converters
+from utils import pager, datamgr, converters
 from templates import errembeds
-from exts.utils.basecog import BaseCog
-from exts.utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
+from utils.basecog import BaseCog
+from utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
 class GameDebugcmds(BaseCog):
     def __init__(self, client):

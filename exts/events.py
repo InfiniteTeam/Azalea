@@ -4,8 +4,8 @@ import traceback
 import datetime
 import io
 import sys
-from exts.utils.basecog import BaseCog
-from exts.utils import errors, permutil, timedelta
+from utils.basecog import BaseCog
+from utils import errors, permutil, timedelta
 from dateutil.relativedelta import relativedelta
 import uuid
 import sqlite3

@@ -1,4 +1,4 @@
-from exts.utils.datamgr import Permission
+from utils.datamgr import Permission
 
 PERMISSIONS = (
     Permission(1, 'master'),

@@ -1,6 +1,6 @@
 import discord
 import asyncio
-from exts.utils import pager, errors
+from . import pager, errors
 
 class PageButton:
     emojis = ['⏪','◀', '⏹', '▶', '⏩']
