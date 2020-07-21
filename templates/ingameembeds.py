@@ -30,16 +30,16 @@ def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     embed.set_footer(text='💎: 구매 | 💰: 판매 | ❔ 자세히')
     return embed
 
-def char_embed(cog, username, pgr: pager.Pager, *, mode='default'):
+async def char_embed(cog, username, pgr: pager.Pager, *, mode='default'):
     edgr = ExpTableDBMgr(cog.datadb)
     chars = pgr.get_thispage()
     charstr = ''
     for idx, one in enumerate(chars):
         name = one.name
-        samgr = StatMgr(cog.cur, one.uid)
+        samgr = StatMgr(cog.pool, one.uid)
         if mode == 'select':
             name = f'{idx+1}. {name}'
-        level = samgr.get_level(edgr)
+        level = await samgr.get_level(edgr)
         chartype = one.type.value
         online = one.online
         onlinestr = ''
@@ -121,7 +121,7 @@ def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='
     items = pgr.get_thispage()
     itemstr = ''
     moneystr = ''
-    cmgr = CharMgr(cog.cur)
+    cmgr = CharMgr(cog.pool)
     char = cmgr.get_character(charuuid)
     imgr = ItemDBMgr(cog.datadb)
     idgr = ItemDBMgr(cog.datadb)
@@ -188,7 +188,7 @@ def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, m
 
 def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default'):
     sdgr = SettingDBMgr(cog.datadb)
-    smgr = SettingMgr(cog.cur, sdgr, char.uid)
+    smgr = SettingMgr(cog.pool, sdgr, char.uid)
     settitles = []
     setvalue = []
     embed = discord.Embed(title='⚙ `{}` 캐릭터 설정'.format(char.name), color=cog.color['info'])

@@ -5,7 +5,7 @@ import json
 import math
 import asyncio
 import platform
-import pymysql
+import aiomysql
 import os
 import logging
 import logging.handlers
@@ -117,6 +117,8 @@ elif platform.system() == 'Linux':
         with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['sshFileName'], encoding='utf-8') as ssh_file:
             ssh = json.load(ssh_file)
 
+loop = asyncio.get_event_loop()
+
 # SSH Connect
 sshclient = paramiko.SSHClient()
 sshclient.set_missing_host_key_policy(paramiko.AutoAddPolicy)
@@ -132,15 +134,18 @@ dbkey = 'default'
 if config['betamode']:
     dbkey = 'beta'
 
-sqldb = pymysql.connect(
-    host=dbac[dbkey]['host'],
-    user=dbac[dbkey]['dbUser'],
-    password=dbac[dbkey]['dbPassword'],
-    db=dbac[dbkey]['dbName'],
-    charset='utf8',
-    autocommit=True
-)
-cur = sqldb.cursor(pymysql.cursors.DictCursor)
+async def connect_db():
+    global pool
+    pool = await aiomysql.create_pool(
+        host=dbac[dbkey]['host'],
+        user=dbac[dbkey]['dbUser'],
+        password=dbac[dbkey]['dbPassword'],
+        db=dbac[dbkey]['dbName'],
+        charset='utf8',
+        autocommit=True
+    )
+    
+loop.run_until_complete(connect_db())
 
 client = Azalea(command_prefix=prefixes, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
 client.remove_command('help')
@@ -163,18 +168,18 @@ datadb.load_permissions(permissions.PERMISSIONS)
 with open('./db/exptable.json', encoding='utf-8') as exptable_file:
     datadb.load_exp_table(json.load(exptable_file))
 
-check = checks.Checks(cur, datadb)
+check = checks.Checks(pool, datadb)
 
 def awaiter(coro):
     return asyncio.ensure_future(coro)
 
 async def on_levelup(charuuid, before, after, channel_id):
-    cmgr = datamgr.CharMgr(cur)
+    cmgr = datamgr.CharMgr(pool)
     char = cmgr.get_character(charuuid)
     user = client.get_user(char.id)
     sdgr = datamgr.SettingDBMgr(datadb)
-    smgr = datamgr.SettingMgr(cur, sdgr, charuuid)
-    samgr = datamgr.StatMgr(cur, char.uid)
+    smgr = datamgr.SettingMgr(pool, sdgr, charuuid)
+    samgr = datamgr.StatMgr(pool, char.uid)
     edgr = datamgr.ExpTableDBMgr(datadb)
     level = samgr.get_level(edgr)
     nowexp = char.stat.EXP
@@ -212,8 +217,7 @@ client.add_data('errlogger', errlogger)
 client.add_data('pinglogger', pinglogger)
 client.add_data('logger', logger)
 client.add_data('templates', templates)
-client.add_data('dbconn', sqldb)
-client.add_data('cur', cur)
+client.add_data('pool', pool)
 client.add_data('dbcmd', dbcmd)
 client.add_data('ping', None)
 client.add_data('shutdown_left', None)

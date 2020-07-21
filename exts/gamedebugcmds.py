@@ -9,6 +9,7 @@ import inspect
 from utils import pager, datamgr, converters
 from templates import errembeds
 from utils.basecog import BaseCog
+from utils.dbtool import DB
 from utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
 class GameDebugcmds(BaseCog):
@@ -20,16 +21,16 @@ class GameDebugcmds(BaseCog):
 
     @commands.command(name='내놔')
     async def _giveme(self, ctx: commands.Context, itemid: str, count: typing.Optional[int]=1, enchantments: commands.Greedy[converters.EnchantmentConverter]=[], *, charname: typing.Optional[str]=None):
-        cmgr = CharMgr(self.cur)
+        cmgr = CharMgr(self.pool)
         if charname:
-            char = cmgr.get_character_by_name(charname)
+            char = await cmgr.get_character_by_name(charname)
             if not char :
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
         else:
-            char = cmgr.get_current_char(ctx.author.id)
+            char = await cmgr.get_current_char(ctx.author.id)
             charname = char.name
 
         idgr = ItemDBMgr(self.datadb)
@@ -65,8 +66,8 @@ class GameDebugcmds(BaseCog):
         else:
             remj = str(reaction.emoji)
             if remj == '⭕':
-                imgr = ItemMgr(self.cur, char.uid)
-                imgr.give_item(ItemData(itemid, count, enchantments))
+                imgr = ItemMgr(self.pool, char.uid)
+                await imgr.give_item(ItemData(itemid, count, enchantments))
                 await ctx.send(embed=discord.Embed(title='{} 아이템을 성공적으로 받았습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success']))
                 self.msglog.log(ctx, '[아이템 받기: 완료]')
             elif remj == '❌':
@@ -82,21 +83,22 @@ class GameDebugcmds(BaseCog):
 
     @commands.command(name='경험치지급')
     async def _give_exp(self, ctx: commands.Context, exp: int, charname: typing.Optional[str]=None):
-        cmgr = CharMgr(self.cur)
+        cmgr = CharMgr(self.pool)
         if charname:
-            char = cmgr.get_character_by_name(charname)
+            char = await cmgr.get_character_by_name(charname)
             if not char :
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[경험치지급: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
         else:
-            char = cmgr.get_current_char(ctx.author.id)
+            char = await cmgr.get_current_char(ctx.author.id)
             charname = char.name
         
-        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
+        samgr = StatMgr(self.pool, char.uid, self.on_levelup)
         edgr = ExpTableDBMgr(self.datadb)
-        nowexp = samgr.EXP
+        stat = await samgr.get_stat()
+        nowexp = stat.EXP
         lv = samgr.get_level(edgr)
         embed = discord.Embed(title='🏷 경험치 지급하기', description='다음과 같이 계속할까요?', color=self.color['warn'])
         embed.add_field(name='경험치 변동', value=f'{nowexp} → {nowexp+exp}')

@@ -12,6 +12,7 @@ from utils import pager, emojibuttons, errors, timedelta, event_waiter, progress
 from utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
+from utils.dbtool import DB
 from utils.datamgr import (
     CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
     SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, ExpTableDBMgr
@@ -26,15 +27,15 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='돈', aliases=['내돈', '지갑'])
     async def _money(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
-        cmgr = CharMgr(self.cur)
+        cmgr = CharMgr(self.pool)
         if charname:
-            char = cmgr.get_character_by_name(charname)
+            char = await cmgr.get_character_by_name(charname)
             if not char:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[가방: 존재하지 않는 캐릭터]')
                 return
         else:
-            char = cmgr.get_current_char(ctx.author.id)
+            char = await cmgr.get_current_char(ctx.author.id)
 
         await ctx.send(embed=discord.Embed(title=f'💰 `{char.name}` 의 지갑', description=f'> 💵 **{char.money}** 골드', color=self.color['info']))
 
@@ -42,28 +43,28 @@ class InGamecmds(BaseCog):
     @commands.guild_only()
     async def _backpack(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
         perpage = 8
-        cmgr = CharMgr(self.cur)
+        cmgr = CharMgr(self.pool)
         if charname:
-            char = cmgr.get_character_by_name(charname)
+            char = await cmgr.get_character_by_name(charname)
             if char:
-                imgr = ItemMgr(self.cur, char.uid)
+                imgr = ItemMgr(self.pool, char.uid)
             else:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[가방: 존재하지 않는 캐릭터]')
                 return
         else:
-            char = cmgr.get_current_char(ctx.author.id)
+            char = await cmgr.get_current_char(ctx.author.id)
             charname = char.name
-            imgr = ItemMgr(self.cur, char.uid)
+            imgr = ItemMgr(self.pool, char.uid)
 
         sdgr = SettingDBMgr(self.datadb)
-        smgr = SettingMgr(self.cur, sdgr, char.uid)
+        smgr = SettingMgr(self.pool, sdgr, char.uid)
 
-        if char.id != ctx.author.id and smgr.get_setting('private-item'):
+        if char.id != ctx.author.id and await smgr.get_setting('private-item'):
             await ctx.send(embed=discord.Embed(title='⛔ 이 캐릭터의 아이템을 볼 수 없습니다!', description='아이템이 비공개로 설정되어 있어요.', color=self.color['error']))
             return
         
-        items = imgr.get_items()
+        items = await imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
         msg = await ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default'))
@@ -192,7 +193,7 @@ class InGamecmds(BaseCog):
                                             await deloxmsg.delete()
                                             if rst:
                                                 if rst[0].emoji == self.emj.get(ctx, 'check'):
-                                                    imgr.delete_item(delitem, delcount)
+                                                    await imgr.delete_item(delitem, delcount)
                                                     embed = discord.Embed(title='{} 아이템을 버렸습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success'])
                                                     embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
                                                     await ctx.send(embed=embed, delete_after=7)
@@ -218,7 +219,7 @@ class InGamecmds(BaseCog):
                             await ctx.send(embed=embed, delete_after=7)
                             self.msglog.log(ctx, '[가방: 아이템 버리기: 숫자만 입력]')
                     
-                pgr.set_obj(imgr.get_items())
+                pgr.set_obj(await imgr.get_items())
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
                     msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default')),
@@ -228,10 +229,10 @@ class InGamecmds(BaseCog):
     async def _market(self, ctx: commands.Context):
         perpage = 8
         mdgr = MarketDBMgr(self.datadb)
-        cmgr = CharMgr(self.cur)
-        char = cmgr.get_current_char(ctx.author.id)
+        cmgr = CharMgr(self.pool)
+        char = await cmgr.get_current_char(ctx.author.id)
         idgr = ItemDBMgr(self.datadb)
-        imgr = ItemMgr(self.cur, char.uid)
+        imgr = ItemMgr(self.pool, char.uid)
         mkt = mdgr.get_market('main')
         pgr = pager.Pager(mkt, perpage)
         msg = await ctx.send(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info']))
@@ -270,7 +271,7 @@ class InGamecmds(BaseCog):
                         await addreaction(msg)
                         reaction.message = msg
                 elif reaction.emoji in ['💰']:
-                    can_sell = list(filter(lambda x: idgr.fetch_item(x.id).selling is not None, imgr.get_items()))
+                    can_sell = list(filter(lambda x: idgr.fetch_item(x.id).selling is not None, await imgr.get_items()))
                     pgr2 = pager.Pager(can_sell, perpage=8)
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
                         await msg.edit(embed=ingameembeds.backpack_sell_embed(self, ctx, pgr2, char.name))
@@ -332,10 +333,10 @@ class InGamecmds(BaseCog):
                                                         rct = rst[0]
                                                         if rct.emoji == '⭕':
                                                             #판매 전 최종 확인
-                                                            if item in imgr.get_items():
-                                                                imgr.delete_item(item, count)
+                                                            if item in await imgr.get_items():
+                                                                await imgr.delete_item(item, count)
                                                                 final_price = idgr.get_final_price(item, count)
-                                                                imgr.money += final_price
+                                                                imgr.give_money(final_price)
                                                                 await ctx.send(embed=discord.Embed(
                                                                     title='{} 성공적으로 판매했습니다!'.format(self.emj.get(ctx, 'check')),
                                                                     description='{} 을(를) {} 개 판매했어요.'.format(idgr.fetch_item(item.id).name, count),
@@ -419,7 +420,7 @@ class InGamecmds(BaseCog):
                                         else:
                                             final_price = count * item.price
 
-                                        char = cmgr.get_current_char(ctx.author.id)
+                                        char = await cmgr.get_current_char(ctx.author.id)
                                         if count >= 1:
                                             if final_price <= char.money:
                                                 # 최종적 구매 확인
@@ -432,12 +433,12 @@ class InGamecmds(BaseCog):
                                                     rct = rst[0]
                                                     if rct.emoji == '⭕':
                                                         # 캐릭터 갱신 후 다시 한번 잔고 충분한지 확인
-                                                        char = cmgr.get_current_char(ctx.author.id)
+                                                        char = await cmgr.get_current_char(ctx.author.id)
                                                         if final_price <= char.money:
-                                                            imgr = ItemMgr(self.cur, char.uid)
-                                                            imgr.money -= final_price
+                                                            imgr = ItemMgr(self.pool, char.uid)
+                                                            imgr.give_money(-final_price)
                                                             item.item.count = count
-                                                            imgr.give_item(item.item)
+                                                            await imgr.give_item(item.item)
 
                                                             embed = discord.Embed(title='{} 성공적으로 구매했습니다!'.format(self.emj.get(ctx, 'check')), description='`{}` 을(를) {}개 구입했어요.'.format(idgr.fetch_item(item.item.id).name, count), color=self.color['success'])
                                                             await ctx.send(embed=embed)
@@ -526,19 +527,19 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='내정보', aliases=['능력치', '스탯', '나'])
     async def _stat(self, ctx: commands.Context, charname: typing.Optional[str] = None):
-        cmgr = CharMgr(self.cur)
+        cmgr = CharMgr(self.pool)
         if not charname:
-            char = cmgr.get_current_char(ctx.author.id)
+            char = await cmgr.get_current_char(ctx.author.id)
         else:
-            char = cmgr.get_character_by_name(charname)
+            char = await cmgr.get_character_by_name(charname)
             if not char:
                 embed = errembeds.CharNotFound.getembed(ctx, charname)
                 await ctx.send(embed=embed)
                 return
-        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
+        samgr = StatMgr(self.pool, char.uid, self.on_levelup)
         edgr = ExpTableDBMgr(self.datadb)
         icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
-        level = samgr.get_level(edgr)
+        level = await samgr.get_level(edgr)
         nowexp = char.stat.EXP
         req = edgr.get_required_exp(level+1)
         accu = edgr.get_accumulate_exp(level+1)
@@ -562,34 +563,37 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='출석체크', aliases=['돈받기', '돈줘', '돈내놔', '출첵', '출석'])
     async def _getmoney(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        char = cmgr.get_current_char(ctx.author.id)
-        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
-        edgr = ExpTableDBMgr(self.datadb)
-        rcv_money = cmgr.get_raw_character(char.uid)['received_money']
-        now = datetime.datetime.now()
-        level = samgr.get_level(edgr)
-        xp = edgr.get_required_exp(level)/100*2+50
-        embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
-        if self.cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
-            embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'
-        elif rcv_money is None:
-            pass
-        elif now.day <= rcv_money.day:
-            await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
-            self.msglog.log(ctx, '[돈받기: 이미 받음]')
-            return
-        imgr = ItemMgr(self.cur, cmgr.get_current_char(ctx.author.id).uid)
-        imgr.money += 5000
-        samgr.give_exp(xp, edgr, ctx.channel.id)
-        self.cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
-        await ctx.send(ctx.author.mention, embed=embed)
-        self.msglog.log(ctx, '[돈받기: 완료]')
+        async with DB(self.pool) as db:
+            cur = db.cur
+            cmgr = CharMgr(self.pool)
+            char = await cmgr.get_current_char(ctx.author.id)
+            samgr = StatMgr(self.pool, char.uid, self.on_levelup)
+            edgr = ExpTableDBMgr(self.datadb)
+            rawchar = await cmgr.get_raw_character(char.uid)
+            rcv_money = rawchar['received_money']
+            now = datetime.datetime.now()
+            level = await samgr.get_level(edgr)
+            xp = edgr.get_required_exp(level)/100*2+50
+            embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
+            if await cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
+                embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'
+            elif rcv_money is None:
+                pass
+            elif now.day <= rcv_money.day:
+                await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
+                self.msglog.log(ctx, '[돈받기: 이미 받음]')
+                return
+            imgr = ItemMgr(self.pool, char.uid)
+            imgr.give_money(5000)
+            await samgr.give_exp(xp, edgr, ctx.channel.id)
+            await cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
+            await ctx.send(ctx.author.mention, embed=embed)
+            self.msglog.log(ctx, '[돈받기: 완료]')
 
     @commands.command(name='지도', aliases=['내위치', '위치', '현재위치', '맵'])
     async def _map(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        char = cmgr.get_current_char(ctx.author.id)
+        cmgr = CharMgr(self.pool)
+        char = await cmgr.get_current_char(ctx.author.id)
         rdgr = RegionDBMgr(self.datadb)
         rgn = rdgr.get_warpables('azalea')
         embed = discord.Embed(title='🗺 지도', description='', color=self.color['info'])
@@ -603,8 +607,8 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='이동', aliases=['워프'])
     async def _warp(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        char = cmgr.get_current_char(ctx.author.id)
+        cmgr = CharMgr(self.pool)
+        char = await cmgr.get_current_char(ctx.author.id)
         rdgr = RegionDBMgr(self.datadb)
         rgn = rdgr.get_warpables('azalea')
         rgn = list(filter(lambda x: x.name != char.location.name, rgn))
@@ -631,7 +635,7 @@ class InGamecmds(BaseCog):
         else:
             idx = emjs.index(reaction.emoji)
             region = rgn[idx]
-            cmgr.move_to(char.uid, region)
+            await cmgr.move_to(char.uid, region)
             await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
             self.msglog.log(ctx, '[이동: 완료]')
 
@@ -643,8 +647,8 @@ class InGamecmds(BaseCog):
     
     @_rank.command(name='서버', aliases=['길드', '섭'])
     async def _rank_server(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        rank = cmgr.get_ranking(ctx.guild)
+        cmgr = CharMgr(self.pool)
+        rank = await cmgr.get_ranking(ctx.guild)
         pgr = pager.Pager(rank, 5)
         msg = await ctx.send(embed=ingameembeds.rank_embed(self, pgr, guild=ctx.guild))
         self.msglog.log(ctx, '[순위: 서버]')
@@ -671,8 +675,8 @@ class InGamecmds(BaseCog):
 
     @_rank.command(name='전체', aliases=['올', '전부', '모두', '글로벌'])
     async def _rank_global(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        rank = cmgr.get_ranking()
+        cmgr = CharMgr(self.pool)
+        rank = await cmgr.get_ranking()
         pgr = pager.Pager(rank, 5)
         msg = await ctx.send(embed=ingameembeds.rank_embed(self, pgr, where='global'))
         self.msglog.log(ctx, '[순위: 전체]')

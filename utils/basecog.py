@@ -1,4 +1,4 @@
-import pymysql
+import aiomysql
 import logging
 from discord.ext import commands
 from . import msglogger, checks, azalea, emojictrl, datamgr
@@ -12,8 +12,7 @@ class BaseCog(commands.Cog):
         self.emj: emojictrl.Emoji = client.get_data('emojictrl')
         self.msglog: msglogger.Msglog = client.get_data('msglog')
         self.logger: logging.Logger = client.get_data('logger')
-        self.db: pymysql.connections.Connection = client.get_data('dbconn')
-        self.cur: pymysql.cursors.Cursor = client.get_data('cur')
+        self.pool: aiomysql.Connection = client.get_data('pool')
         self.check: checks.Checks = client.get_data('check')
         self.errlogger = client.get_data('errlogger')
         self.pinglogger = client.get_data('pinglogger')

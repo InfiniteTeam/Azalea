@@ -5,6 +5,7 @@ import random
 import os
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
+from utils.dbtool import DB
 from db import exps
 
 class Gamecmds(BaseCog):
@@ -16,12 +17,12 @@ class Gamecmds(BaseCog):
 
     @commands.command(name='낚시')
     async def _fishing(self, ctx: commands.Context):
-        cmgr = CharMgr(self.cur)
-        char = cmgr.get_current_char(ctx.author.id)
+        cmgr = CharMgr(self.pool)
+        char = await cmgr.get_current_char(ctx.author.id)
         idgr = ItemDBMgr(self.datadb)
-        imgr = ItemMgr(self.cur, char.uid)
+        imgr = ItemMgr(self.pool, char.uid)
         edgr = ExpTableDBMgr(self.datadb)
-        samgr = StatMgr(self.cur, char.uid, self.on_levelup)
+        samgr = StatMgr(self.pool, char.uid, self.on_levelup)
         embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
         msg = await ctx.send(embed=embed)
         self.msglog.log(ctx, '[낚시: 시작]')
@@ -69,9 +70,9 @@ class Gamecmds(BaseCog):
                 
                 fishes = idgr.fetch_items_with(tags=['fish'], meta={'catchable': True})
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
-                imgr.give_item(ItemData(fish.id, 1, []))
-                exp = exps.fishing(req=edgr.get_required_exp(samgr.get_level(edgr)), fish=fish)
-                samgr.give_exp(exp, edgr, ctx.channel.id)
+                await imgr.give_item(ItemData(fish.id, 1, []))
+                exp = exps.fishing(req=edgr.get_required_exp(await samgr.get_level(edgr)), fish=fish)
+                await samgr.give_exp(exp, edgr, ctx.channel.id)
                 embed.title += ' - 잡았습니다!'
                 embed.description = '**`{}` 을(를)** 잡았습니다!\n+`{}` 경험치를 받았습니다.'.format(fish.name, exp)
                 self.msglog.log(ctx, '[낚시: 잡음]')
