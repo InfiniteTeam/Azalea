@@ -5,7 +5,6 @@ import random
 import os
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
-from utils.dbtool import DB
 from db import exps
 
 class Gamecmds(BaseCog):

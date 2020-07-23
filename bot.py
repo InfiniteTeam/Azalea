@@ -237,7 +237,6 @@ else:
 
 client.datas['allexts'] = []
 for ext in list(filter(lambda x: x.endswith('.py') and not x.startswith('_'), os.listdir('./exts'))):
-    if ext == 'azaleacmds.py': continue
     client.datas['allexts'].append('exts.' + os.path.splitext(ext)[0])
     client.load_extension('exts.' + os.path.splitext(ext)[0])
 logger.info('{} 개의 확장을 로드했습니다'.format(len(client.datas.get('allexts'))))

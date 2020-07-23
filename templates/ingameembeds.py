@@ -117,16 +117,15 @@ def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default
     embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
-def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='default'):
+async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='default'):
     items = pgr.get_thispage()
     itemstr = ''
     moneystr = ''
     cmgr = CharMgr(cog.pool)
-    char = cmgr.get_character(charuuid)
+    char = await cmgr.get_character(charuuid)
     imgr = ItemDBMgr(cog.datadb)
     idgr = ItemDBMgr(cog.datadb)
     for idx, one in enumerate(items):
-        print(one.id)
         founditem = idgr.fetch_item(one.id)
         icon = founditem.icon
         name = founditem.name

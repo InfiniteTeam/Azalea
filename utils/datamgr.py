@@ -10,7 +10,6 @@ from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
 import json
 from . import errors
-from .dbtool import DB
 import os
 import uuid
 
@@ -304,18 +303,18 @@ class SettingMgr:
         return sets
 
     async def _save_settings(self, settings: Dict):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            rst = await cur.execute('update chardata set settings=%s where uuid=%s', (json.dumps(settings, ensure_ascii=False), self.charuuid))
-            return rst
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                rst = await cur.execute('update chardata set settings=%s where uuid=%s', (json.dumps(settings, ensure_ascii=False), self.charuuid))
+                return rst
 
     async def get_raw_settings(self):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select settings from chardata where uuid=%s', self.charuuid)
-            fetch = await cur.fetchone()
-            raw = json.loads(fetch['settings'])
-            return raw
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select settings from chardata where uuid=%s', self.charuuid)
+                fetch = await cur.fetchone()
+                raw = json.loads(fetch['settings'])
+                return raw
 
     async def get_setting(self, name: str) -> Any:
         raw = await self.get_raw_settings()
@@ -348,23 +347,23 @@ class NewsMgr:
         self.pool = pool
 
     async def fetch(self, limit=10):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select * from news order by `datetime` desc limit %s', limit)
-            news = await cur.fetchall()
-            newsdatas = []
-            for one in news:
-                newsdatas.append(NewsData(uuid.UUID(hex=one['uuid']), one['title'], one['content'], one['company'], one['datetime']))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select * from news order by `datetime` desc limit %s', limit)
+                news = await cur.fetchall()
+                newsdatas = []
+                for one in news:
+                    newsdatas.append(NewsData(uuid.UUID(hex=one['uuid']), one['title'], one['content'], one['company'], one['datetime']))
         return newsdatas
 
     async def publish(self, newsdata: NewsData):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if newsdata.uid:
-                uid = newsdata.uid.hex
-            else:
-                uid = uuid.uuid4().hex
-            await cur.execute('insert into news (uuid, datetime, title, content, company) values (%s, %s, %s, %s, %s)', (uid, newsdata.datetime, newsdata.title, newsdata.content, newsdata.company))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if newsdata.uid:
+                    uid = newsdata.uid.hex
+                else:
+                    uid = uuid.uuid4().hex
+                await cur.execute('insert into news (uuid, datetime, title, content, company) values (%s, %s, %s, %s, %s)', (uid, newsdata.datetime, newsdata.title, newsdata.content, newsdata.company))
 
 class ItemDBMgr:
     def __init__(self, datadb: DataDB):
@@ -416,10 +415,10 @@ class ItemMgr:
         self.charuuid = charuuid
 
     async def get_items_dict(self) -> List[Dict]:
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select items from chardata where uuid=%s', self.charuuid)
-            fetch = await cur.fetchone()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select items from chardata where uuid=%s', self.charuuid)
+                fetch = await cur.fetchone()
         return json.loads(fetch['items'])['items']
 
     @classmethod
@@ -450,10 +449,10 @@ class ItemMgr:
         """
         경고! 이 메서드는 캐릭터 기존의 아이템 정보를 완전히 덮어쓰게 됩니다! 자칫 아이템 데이터가 모두 삭제되거나 손상될 우려가 있습니다! 외부적 사용은 권장하지 않습니다.
         """
-        async with DB(self.pool) as db:
-            cur = db.cur
-            items = {'items': itemdicts}
-            await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), self.charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                items = {'items': itemdicts}
+                await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), self.charuuid))
 
     async def delete_item(self, itemdata: ItemData, count: int= None) -> bool:
         count = int(count)
@@ -482,22 +481,22 @@ class ItemMgr:
         return True
 
     async def fetch_money(self):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select money from chardata where uuid=%s', self.charuuid)
-            fetch = await cur.fetchone()
-            money = fetch['money']
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select money from chardata where uuid=%s', self.charuuid)
+                fetch = await cur.fetchone()
+                money = fetch['money']
         return money
 
     async def set_money(self, value: int):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update chardata set money=%s where uuid=%s', (value, self.charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update chardata set money=%s where uuid=%s', (value, self.charuuid))
 
     async def give_money(self, value: int):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update chardata set money=money+%s where uuid=%s', (value, self.charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update chardata set money=money+%s where uuid=%s', (value, self.charuuid))
 
 class ExpTableDBMgr:
     def __init__(self, datadb: DataDB):
@@ -542,10 +541,10 @@ class StatMgr:
         self.on_levelup = on_levelup
 
     async def get_raw_stat(self) -> Dict:
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select * from statdata where uuid=%s', self.charuuid)
-            statraw = await cur.fetchone()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select * from statdata where uuid=%s', self.charuuid)
+                statraw = await cur.fetchone()
         return statraw
     
     async def get_stat(self) -> StatData:
@@ -566,42 +565,42 @@ class StatMgr:
         return level
 
     async def give_exp(self, value: int, edgr: ExpTableDBMgr, channel_id=None):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            stat = await self.get_stat()
-            exp = stat.EXP
-            prev = edgr.clac_level(exp)
-            await cur.execute('update statdata set exp=exp+%s where uuid=%s', (value, self.charuuid))
-            after = edgr.clac_level(exp+value)
-            if after > prev:
-                coro = self.on_levelup(self.charuuid, prev, after, channel_id)
-                asyncio.create_task(coro)
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                stat = await self.get_stat()
+                exp = stat.EXP
+                prev = edgr.clac_level(exp)
+                await cur.execute('update statdata set exp=exp+%s where uuid=%s', (value, self.charuuid))
+                after = edgr.clac_level(exp+value)
+                if after > prev:
+                    coro = self.on_levelup(self.charuuid, prev, after, channel_id)
+                    asyncio.create_task(coro)
 
     async def set_exp(self, value: int, edgr: ExpTableDBMgr, channel_id=None):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            stat = await self.get_stat()
-            exp = stat.EXP
-            prev = edgr.clac_level(exp)
-            await cur.execute('update statdata set exp=%s where uuid=%s', (value, self.charuuid))
-            after = edgr.clac_level(value)
-            if after > prev:
-                coro = self.on_levelup(self.charuuid, prev, after, channel_id)
-                asyncio.create_task(coro)
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                stat = await self.get_stat()
+                exp = stat.EXP
+                prev = edgr.clac_level(exp)
+                await cur.execute('update statdata set exp=%s where uuid=%s', (value, self.charuuid))
+                after = edgr.clac_level(value)
+                if after > prev:
+                    coro = self.on_levelup(self.charuuid, prev, after, channel_id)
+                    asyncio.create_task(coro)
 
     async def set_stat(self, stat: StatType, value: int):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            stat = self.column.get(stat)
-            if stat is not None:
-                await cur.execute('update statdata set `{}`=%s where uuid=%s'.format(stat), (value, self.charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                stat = self.column.get(stat)
+                if stat is not None:
+                    await cur.execute('update statdata set `{}`=%s where uuid=%s'.format(stat), (value, self.charuuid))
 
     async def give_stat(self, stat: StatType, value: int):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            stat = self.column.get(stat)
-            if stat is not None:
-                await cur.execute('update statdata set `{name}`=`{name}`+%s where uuid=%s'.format(name=stat), (value, self.charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                stat = self.column.get(stat)
+                if stat is not None:
+                    await cur.execute('update statdata set `{name}`=`{name}`+%s where uuid=%s'.format(name=stat), (value, self.charuuid))
 
 class CharMgr:
     def __init__(self, pool: aiomysql.Pool):
@@ -622,13 +621,13 @@ class CharMgr:
         return char
 
     async def get_raw_chars(self, userid: int=None) -> List[Dict]:
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if userid:
-                await cur.execute('select * from chardata where id=%s', userid)
-            else:
-                await cur.execute('select * from chardata')
-            rst = await cur.fetchall()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if userid:
+                    await cur.execute('select * from chardata where id=%s', userid)
+                else:
+                    await cur.execute('select * from chardata')
+                rst = await cur.fetchall()
         return rst
 
     async def get_chars(self, userid: int=None) -> List[CharacterData]:
@@ -640,23 +639,23 @@ class CharMgr:
         return chars
 
     async def get_raw_character(self, charuuid: str, userid: int=None) -> Dict:
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if userid:
-                await cur.execute('select * from chardata where id=%s and uuid=%s', (userid, charuuid))
-            else:
-                await cur.execute('select * from chardata where uuid=%s', charuuid)
-            raw = await cur.fetchone()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if userid:
+                    await cur.execute('select * from chardata where id=%s and uuid=%s', (userid, charuuid))
+                else:
+                    await cur.execute('select * from chardata where uuid=%s', charuuid)
+                raw = await cur.fetchone()
         return raw
 
     async def get_raw_character_by_name(self, name: str, userid: int=None) -> Dict:
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if userid:
-                await cur.execute('select * from chardata where id=%s and name=%s', (userid, name))
-            else:
-                await cur.execute('select * from chardata where name=%s', name)
-            raw = await cur.fetchone()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if userid:
+                    await cur.execute('select * from chardata where id=%s and name=%s', (userid, name))
+                else:
+                    await cur.execute('select * from chardata where name=%s', name)
+                raw = await cur.fetchone()
         return raw
 
     async def get_character(self, charuuid: str, userid: int=None) -> CharacterData:
@@ -676,79 +675,79 @@ class CharMgr:
         return None
 
     async def get_current_char(self, userid: int):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
-            char = await cur.fetchone()
-            samgr = StatMgr(self.pool, char['uuid'])
-            chardata = self.get_char_from_dict(char, await samgr.get_stat())
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
+                char = await cur.fetchone()
+                samgr = StatMgr(self.pool, char['uuid'])
+                chardata = self.get_char_from_dict(char, await samgr.get_stat())
         return chardata
 
     async def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings) -> CharacterData:
-        async with DB(self.pool) as db:
-            cur = db.cur
-            uid = uuid.uuid4().hex
-            datas = (
-                uid, userid, name, chartype,
-                json.dumps(items, ensure_ascii=False),
-                json.dumps(settings, ensure_ascii=False)
-            )
-            await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
-            await cur.execute('insert into statdata (uuid) values (%s)', uid)
-            char = await self.get_character(uid)
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                uid = uuid.uuid4().hex
+                datas = (
+                    uid, userid, name, chartype,
+                    json.dumps(items, ensure_ascii=False),
+                    json.dumps(settings, ensure_ascii=False)
+                )
+                await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
+                await cur.execute('insert into statdata (uuid) values (%s)', uid)
+                char = await self.get_character(uid)
         return char
 
     async def logout_all(self, userid: int):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update chardata set online=%s where id=%s and online=%s', (False, userid, True))
 
     async def change_character(self, userid: int, charuuid: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if await cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
-                raise errors.CannotLoginBeingDeleted
-            await self.logout_all(userid)
-            await cur.execute('update chardata set online=%s where uuid=%s', (True, charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if await cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
+                    raise errors.CannotLoginBeingDeleted
+                await self.logout_all(userid)
+                await cur.execute('update chardata set online=%s where uuid=%s', (True, charuuid))
 
     async def delete_character(self, charuuid: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('delete from statdata where uuid=%s', charuuid)
-            if await cur.execute('delete from chardata where uuid=%s', charuuid) == 0:
-                raise errors.CharacterNotFound
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('delete from statdata where uuid=%s', charuuid)
+                if await cur.execute('delete from chardata where uuid=%s', charuuid) == 0:
+                    raise errors.CharacterNotFound
 
     async def change_nick(self, charuuid: str, new: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update chardata set uuid=%s, last_nick_change=%s where uuid=%s', (new, datetime.datetime.now(), charuuid))
-            await cur.execute('update statdata set uuid=%s where uuid=%s', (new, charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update chardata set uuid=%s, last_nick_change=%s where uuid=%s', (new, datetime.datetime.now(), charuuid))
+                await cur.execute('update statdata set uuid=%s where uuid=%s', (new, charuuid))
 
     async def schedule_delete(self, userid: int, charuuid: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if await cur.execute('select * from chardata where uuid=%s and online=%s', (charuuid, True)) != 0:
-                await self.logout_all(userid)
-            if await cur.execute('update chardata set delete_request=%s where uuid=%s', (datetime.datetime.now(), charuuid)) == 0:
-                raise errors.CharacterNotFound
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if await cur.execute('select * from chardata where uuid=%s and online=%s', (charuuid, True)) != 0:
+                    await self.logout_all(userid)
+                if await cur.execute('update chardata set delete_request=%s where uuid=%s', (datetime.datetime.now(), charuuid)) == 0:
+                    raise errors.CharacterNotFound
 
     async def cancel_delete(self, charuuid: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if await cur.execute('update chardata set delete_request=%s where uuid=%s', (None, charuuid)) == 0:
-                raise errors.CharacterNotFound
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if await cur.execute('update chardata set delete_request=%s where uuid=%s', (None, charuuid)) == 0:
+                    raise errors.CharacterNotFound
 
     async def is_being_forgotten(self, charuuid: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            if await cur.execute('select * from chardata where uuid=%s', charuuid) != 0 and await cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
-                return True
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if await cur.execute('select * from chardata where uuid=%s', charuuid) != 0 and await cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
+                    return True
         return False
 
     async def move_to(self, charuuid: str, region: RegionData):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update chardata set location=%s where uuid=%s', (region.name, charuuid))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update chardata set location=%s where uuid=%s', (region.name, charuuid))
 
     async def get_ranking(self, guild: discord.Guild=None, *, orderby='money'):
         chars = await self.get_chars()
@@ -765,16 +764,16 @@ class MigrateTool:
         self.pool = pool
 
     async def migrate_item_id(self, itemid, newid):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            migrated = 0
-            await cur.execute('select uuid, items from chardata')
-            fetch = await cur.fetchall()
-            for one in fetch:
-                items = json.loads(one['items'])
-                for item in items['items']:
-                    if item['id'] == itemid:
-                        item['id'] = newid
-                        migrated += 1
-                await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), one['uuid']))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                migrated = 0
+                await cur.execute('select uuid, items from chardata')
+                fetch = await cur.fetchall()
+                for one in fetch:
+                    items = json.loads(one['items'])
+                    for item in items['items']:
+                        if item['id'] == itemid:
+                            item['id'] = newid
+                            migrated += 1
+                    await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), one['uuid']))
         return migrated

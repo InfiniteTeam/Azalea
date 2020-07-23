@@ -6,13 +6,13 @@ import datetime
 import typing
 import re
 import random
+import aiomysql
 import json
 import math
 from utils import pager, emojibuttons, errors, timedelta, event_waiter, progressbar
 from utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
-from utils.dbtool import DB
 from utils.datamgr import (
     CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
     SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, ExpTableDBMgr
@@ -67,7 +67,7 @@ class InGamecmds(BaseCog):
         items = await imgr.get_items()
         
         pgr = pager.Pager(items, perpage=perpage)
-        msg = await ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default'))
+        msg = await ctx.send(embed=await ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default'))
         self.msglog.log(ctx, '[가방]')
         extemjs = ['❔']
         owner = False
@@ -100,11 +100,11 @@ class InGamecmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'select'))
+                        await msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'select'))
+                            ctx.send(embed=await ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -222,7 +222,7 @@ class InGamecmds(BaseCog):
                 pgr.set_obj(await imgr.get_items())
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
-                    msg.edit(embed=ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default')),
+                    msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default')),
                 )
 
     @commands.command(name='상점')
@@ -563,32 +563,32 @@ class InGamecmds(BaseCog):
 
     @commands.command(name='출석체크', aliases=['돈받기', '돈줘', '돈내놔', '출첵', '출석'])
     async def _getmoney(self, ctx: commands.Context):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            cmgr = CharMgr(self.pool)
-            char = await cmgr.get_current_char(ctx.author.id)
-            samgr = StatMgr(self.pool, char.uid, self.on_levelup)
-            edgr = ExpTableDBMgr(self.datadb)
-            rawchar = await cmgr.get_raw_character(char.uid)
-            rcv_money = rawchar['received_money']
-            now = datetime.datetime.now()
-            level = await samgr.get_level(edgr)
-            xp = edgr.get_required_exp(level)/100*2+50
-            embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
-            if await cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
-                embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'
-            elif rcv_money is None:
-                pass
-            elif now.day <= rcv_money.day:
-                await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
-                self.msglog.log(ctx, '[돈받기: 이미 받음]')
-                return
-            imgr = ItemMgr(self.pool, char.uid)
-            imgr.give_money(5000)
-            await samgr.give_exp(xp, edgr, ctx.channel.id)
-            await cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
-            await ctx.send(ctx.author.mention, embed=embed)
-            self.msglog.log(ctx, '[돈받기: 완료]')
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                cmgr = CharMgr(self.pool)
+                char = await cmgr.get_current_char(ctx.author.id)
+                samgr = StatMgr(self.pool, char.uid, self.on_levelup)
+                edgr = ExpTableDBMgr(self.datadb)
+                rawchar = await cmgr.get_raw_character(char.uid)
+                rcv_money = rawchar['received_money']
+                now = datetime.datetime.now()
+                level = await samgr.get_level(edgr)
+                xp = edgr.get_required_exp(level)/100*2+50
+                embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
+                if await cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
+                    embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'
+                elif rcv_money is None:
+                    pass
+                elif now.day <= rcv_money.day:
+                    await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
+                    self.msglog.log(ctx, '[돈받기: 이미 받음]')
+                    return
+                imgr = ItemMgr(self.pool, char.uid)
+                imgr.give_money(5000)
+                await samgr.give_exp(xp, edgr, ctx.channel.id)
+                await cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
+                await ctx.send(ctx.author.mention, embed=embed)
+                self.msglog.log(ctx, '[돈받기: 완료]')
 
     @commands.command(name='지도', aliases=['내위치', '위치', '현재위치', '맵'])
     async def _map(self, ctx: commands.Context):

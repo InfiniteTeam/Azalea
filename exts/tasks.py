@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands, tasks
 import asyncio
+import aiomysql
 from utils.basecog import BaseCog
 from utils import datamgr
-from utils.dbtool import DB
 import traceback
 import datetime
 import math
@@ -55,58 +55,58 @@ class Tasks(BaseCog):
     @tasks.loop(seconds=5)
     async def sync_guilds(self):
         try:
-            async with DB(self.pool) as db:
-                cur = db.cur
-                await cur.execute('select id from serverdata')
-                db_guilds = await cur.fetchall()
-                db_guild_ids = list(map(lambda one: one['id'], db_guilds))
-                client_guild_ids = list(map(lambda one: one.id, self.client.guilds))
-                
-                # 등록 섹션
-                added_ids = list(set(client_guild_ids) - set(db_guild_ids))
-                added = list(map(lambda one: self.client.get_guild(one), added_ids))
-                for guild in added:
-                    self.logger.info(f'새 서버를 발견했습니다: {guild.name}({guild.id})')
-                    sendables = list(filter(lambda ch: ch.permissions_for(guild.me).send_messages, guild.text_channels))
-                    if sendables:
-                        selected = []
-                        for sch in sendables:
-                            sname = sch.name.lower()
-                            if '공지' in sname and '봇' in sname:
-                                pass
-                            elif 'noti' in sname and 'bot' in sname:
-                                pass
+            async with self.pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cur:
+                    await cur.execute('select id from serverdata')
+                    db_guilds = await cur.fetchall()
+                    db_guild_ids = list(map(lambda one: one['id'], db_guilds))
+                    client_guild_ids = list(map(lambda one: one.id, self.client.guilds))
+                    
+                    # 등록 섹션
+                    added_ids = list(set(client_guild_ids) - set(db_guild_ids))
+                    added = list(map(lambda one: self.client.get_guild(one), added_ids))
+                    for guild in added:
+                        self.logger.info(f'새 서버를 발견했습니다: {guild.name}({guild.id})')
+                        sendables = list(filter(lambda ch: ch.permissions_for(guild.me).send_messages, guild.text_channels))
+                        if sendables:
+                            selected = []
+                            for sch in sendables:
+                                sname = sch.name.lower()
+                                if '공지' in sname and '봇' in sname:
+                                    pass
+                                elif 'noti' in sname and 'bot' in sname:
+                                    pass
 
-                            elif '공지' in sname:
-                                pass
-                            elif 'noti' in sname:
-                                pass
-                            elif 'announce' in sname:
-                                pass
+                                elif '공지' in sname:
+                                    pass
+                                elif 'noti' in sname:
+                                    pass
+                                elif 'announce' in sname:
+                                    pass
 
-                            elif '봇' in sname:
-                                pass
-                            elif 'bot' in sname:
-                                pass
+                                elif '봇' in sname:
+                                    pass
+                                elif 'bot' in sname:
+                                    pass
 
-                            else:
-                                continue
-                            selected.append(sch)
-                        
-                        if not selected:
-                            selected.append(sendables[0])
-                        await cur.execute('insert into serverdata(id, noticechannel, master) values (%s, %s, %s)', (guild.id, sendables[0].id, 0))
-                        self.logger.info(f'서버 추가 성공: ' + guild.name + f'({guild.id})')
-                        embed = discord.Embed(title='🎉 안녕하세요!', description=f'안녕하세요! Azalea을 초대해 주셔서 감사합니다. `{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요!\n혹시 이 채널이 공지 채널이 아닌가요? `{self.prefix}공지채널` 명령으로 선택하세요!', color=self.color['primary'])
-                        await sendables[0].send(embed=embed)
-                    else:
-                        await cur.execute('insert into serverdata(id, noticechannel, master) values (%s, %s, %s)', (guild.id, None, 0))
-                        self.logger.info(f'접근 가능한 채널이 없는 서버 추가 성공: ' + guild.name + f'({guild.id})')
-                # 제거 섹션
-                deleted_ids = list(set(db_guild_ids) - set(client_guild_ids))
-                for gid in deleted_ids:
-                    self.logger.info(f'존재하지 않는 서버를 발견했습니다: {gid}')
-                    await cur.execute('delete from serverdata where id=%s', gid)
+                                else:
+                                    continue
+                                selected.append(sch)
+                            
+                            if not selected:
+                                selected.append(sendables[0])
+                            await cur.execute('insert into serverdata(id, noticechannel, master) values (%s, %s, %s)', (guild.id, sendables[0].id, 0))
+                            self.logger.info(f'서버 추가 성공: ' + guild.name + f'({guild.id})')
+                            embed = discord.Embed(title='🎉 안녕하세요!', description=f'안녕하세요! Azalea을 초대해 주셔서 감사합니다. `{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요!\n혹시 이 채널이 공지 채널이 아닌가요? `{self.prefix}공지채널` 명령으로 선택하세요!', color=self.color['primary'])
+                            await sendables[0].send(embed=embed)
+                        else:
+                            await cur.execute('insert into serverdata(id, noticechannel, master) values (%s, %s, %s)', (guild.id, None, 0))
+                            self.logger.info(f'접근 가능한 채널이 없는 서버 추가 성공: ' + guild.name + f'({guild.id})')
+                    # 제거 섹션
+                    deleted_ids = list(set(db_guild_ids) - set(client_guild_ids))
+                    for gid in deleted_ids:
+                        self.logger.info(f'존재하지 않는 서버를 발견했습니다: {gid}')
+                        await cur.execute('delete from serverdata where id=%s', gid)
 
         except:
             self.client.get_data('errlogger').error(traceback.format_exc())
@@ -144,15 +144,15 @@ class Tasks(BaseCog):
     @tasks.loop(seconds=10)
     async def delete_char(self):
         try:
-            async with DB(self.pool) as db:
-                cur = db.cur
-                await cur.execute('select * from chardata where delete_request is not NULL')
-                delreqs = await cur.fetchall()
-                delnow = list(filter(lambda x: (datetime.datetime.now() - x['delete_request']) > datetime.timedelta(hours=24), delreqs))
-                for one in delnow:
-                    cmgr = datamgr.CharMgr(self.pool)
-                    await cmgr.delete_character(one['uuid'])
-                    self.logger.info('{}({}) 의 "{}"캐릭터가 예약된 시간이 지나 잊혀졌습니다.'.format(self.client.get_user(one['id']), one['id'], one['name']))
+            async with self.pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cur:
+                    await cur.execute('select * from chardata where delete_request is not NULL')
+                    delreqs = await cur.fetchall()
+                    delnow = list(filter(lambda x: (datetime.datetime.now() - x['delete_request']) > datetime.timedelta(hours=24), delreqs))
+                    for one in delnow:
+                        cmgr = datamgr.CharMgr(self.pool)
+                        await cmgr.delete_character(one['uuid'])
+                        self.logger.info('{}({}) 의 "{}"캐릭터가 예약된 시간이 지나 잊혀졌습니다.'.format(self.client.get_user(one['id']), one['id'], one['name']))
         except:
             self.errlogger.error(traceback.format_exc())
 

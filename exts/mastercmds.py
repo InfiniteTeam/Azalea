@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import asyncio
 import datetime
+import aiomysql
 import time
 import typing
 import math
@@ -10,7 +11,6 @@ import os
 import io
 from utils.basecog import BaseCog
 from utils import errors, progressbar
-from utils.dbtool import DB
 import traceback
 
 class Mastercmds(BaseCog):
@@ -71,104 +71,104 @@ class Mastercmds(BaseCog):
 
     @commands.command(name='noti', aliases=['공지전송'])
     async def _noti(self, ctx: commands.Context, *args):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            try:
-                title = args[0]
-                desc = args[1]
-            except IndexError:
-                await ctx.send('공지 타이틀과 내용은 필수입니다')
-                return
-            try:
-                imgurl = args[2]
-            except:
-                imgurl = None
-            notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'], timestamp=datetime.datetime.utcnow())
-            notiembed.set_footer(text='작성자: ' + ctx.author.name, icon_url=ctx.author.avatar_url)
-            if imgurl:
-                notiembed.set_image(url=imgurl)
-            preview = await ctx.send('다음과 같이 공지를 보냅니다. 계속할까요?', embed=notiembed)
-            emjs = ['⭕', '❌']
-            for em in emjs:
-                await preview.add_reaction(em)
-            self.msglog.log(ctx, '[공지전송: 미리보기]')
-            def check(reaction, user):
-                return user == ctx.author and preview.id == reaction.message.id and str(reaction.emoji) in emjs
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=60*5, check=check)
-            except asyncio.TimeoutError:
-                await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
-                self.msglog.log(ctx, '[공지전송: 시간 초과]')
-            else:
-                remj = str(reaction.emoji)
-                if remj == '⭕':
-                    pass
-                elif remj == '❌':
-                    await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
-                    self.msglog.log(ctx, '[공지전송: 취소됨]')
-                    return
-
-            start = time.time()
-
-            await cur.execute('select * from serverdata where noticechannel is not NULL')
-            guild_dbs = await cur.fetchall()
-            guilds = []
-            channels = []
-            for one in guild_dbs:
-                guild = self.client.get_guild(one['id'])
-                if guild:
-                    guilds.append(guild)
-                    channels.append(guild.get_channel(one['noticechannel']))
-
-            cpembed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 유효한 서버 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['primary'])
-            cpembed.add_field(name='진행률', value=progressbar.get(ctx, self.emj, 0, 1, 12) + ' `0.00%`', inline=False)
-            cpembed.add_field(name='성공', value='0 서버')
-            cpembed.add_field(name='실패', value='0 서버')
-            ctrlpanel = await ctx.send(embed=cpembed)
-
-            notilog = ''
-            rst = {'suc': 0, 'exc': 0, 'done': False}
-            completed = 0
-
-            async def wrapper(coro, guild, channel):
-                nonlocal notilog, rst, completed
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
                 try:
-                    await coro
-                except discord.Forbidden:
-                    rst['exc'] += 1
-                    notilog += f'권한이 없습니다: {guild.name}({guild.id}) 서버의 {channel.name}({channel.id}) 채널.\n'
+                    title = args[0]
+                    desc = args[1]
+                except IndexError:
+                    await ctx.send('공지 타이틀과 내용은 필수입니다')
+                    return
+                try:
+                    imgurl = args[2]
+                except:
+                    imgurl = None
+                notiembed = discord.Embed(title=title, description=desc, color=self.color['primary'], timestamp=datetime.datetime.utcnow())
+                notiembed.set_footer(text='작성자: ' + ctx.author.name, icon_url=ctx.author.avatar_url)
+                if imgurl:
+                    notiembed.set_image(url=imgurl)
+                preview = await ctx.send('다음과 같이 공지를 보냅니다. 계속할까요?', embed=notiembed)
+                emjs = ['⭕', '❌']
+                for em in emjs:
+                    await preview.add_reaction(em)
+                self.msglog.log(ctx, '[공지전송: 미리보기]')
+                def check(reaction, user):
+                    return user == ctx.author and preview.id == reaction.message.id and str(reaction.emoji) in emjs
+                try:
+                    reaction, user = await self.client.wait_for('reaction_add', timeout=60*5, check=check)
+                except asyncio.TimeoutError:
+                    await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
+                    self.msglog.log(ctx, '[공지전송: 시간 초과]')
                 else:
-                    rst['suc'] += 1
-                    notilog += f'공지 전송에 성공했습니다: {guild.id}({guild.name}) 서버의 {channel.id}({channel.name}) 채널.\n'
-                finally:
-                    completed += 1
+                    remj = str(reaction.emoji)
+                    if remj == '⭕':
+                        pass
+                    elif remj == '❌':
+                        await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                        self.msglog.log(ctx, '[공지전송: 취소됨]')
+                        return
 
-            async def update_panel():
-                nonlocal notilog, rst, completed
-                while True:
-                    cpembed.set_field_at(0, name='진행률', value=progressbar.get(ctx, self.emj, completed, len(guilds), 12) + ' `{}%`'.format(round(100*(completed/len(guilds)), 2)), inline=False)
-                    cpembed.set_field_at(1, name='성공', value='{} 서버'.format(rst['suc']))
-                    cpembed.set_field_at(2, name='실패', value='{} 서버'.format(rst['exc']))
-                    await ctrlpanel.edit(embed=cpembed)
-                    if rst['done']:
-                        break
-                    await asyncio.sleep(0.2)
-            
-            notis = []
-            for guild, channel in zip(guilds, channels):
-                notis.append(wrapper(channel.send(embed=notiembed), guild, channel))
+                start = time.time()
 
-            asyncio.ensure_future(update_panel())
-            notisendtasks = asyncio.gather(*notis)
-            await asyncio.gather(notisendtasks)
-            rst['done'] = True
-            end = time.time()
-            alltime = round(end - start, 2)
-            doneembed = discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 전송을 완료했습니다! ({alltime}초)', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['primary'])
-            logfile = discord.File(fp=io.StringIO(notilog), filename='notilog.log')
-            await ctx.send(embed=doneembed)
-            await ctx.send(file=logfile)
-            self.msglog.log(ctx, '[공지전송: 완료]')
+                await cur.execute('select * from serverdata where noticechannel is not NULL')
+                guild_dbs = await cur.fetchall()
+                guilds = []
+                channels = []
+                for one in guild_dbs:
+                    guild = self.client.get_guild(one['id'])
+                    if guild:
+                        guilds.append(guild)
+                        channels.append(guild.get_channel(one['noticechannel']))
+
+                cpembed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 유효한 서버 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['primary'])
+                cpembed.add_field(name='진행률', value=progressbar.get(ctx, self.emj, 0, 1, 12) + ' `0.00%`', inline=False)
+                cpembed.add_field(name='성공', value='0 서버')
+                cpembed.add_field(name='실패', value='0 서버')
+                ctrlpanel = await ctx.send(embed=cpembed)
+
+                notilog = ''
+                rst = {'suc': 0, 'exc': 0, 'done': False}
+                completed = 0
+
+                async def wrapper(coro, guild, channel):
+                    nonlocal notilog, rst, completed
+                    try:
+                        await coro
+                    except discord.Forbidden:
+                        rst['exc'] += 1
+                        notilog += f'권한이 없습니다: {guild.name}({guild.id}) 서버의 {channel.name}({channel.id}) 채널.\n'
+                    else:
+                        rst['suc'] += 1
+                        notilog += f'공지 전송에 성공했습니다: {guild.id}({guild.name}) 서버의 {channel.id}({channel.name}) 채널.\n'
+                    finally:
+                        completed += 1
+
+                async def update_panel():
+                    nonlocal notilog, rst, completed
+                    while True:
+                        cpembed.set_field_at(0, name='진행률', value=progressbar.get(ctx, self.emj, completed, len(guilds), 12) + ' `{}%`'.format(round(100*(completed/len(guilds)), 2)), inline=False)
+                        cpembed.set_field_at(1, name='성공', value='{} 서버'.format(rst['suc']))
+                        cpembed.set_field_at(2, name='실패', value='{} 서버'.format(rst['exc']))
+                        await ctrlpanel.edit(embed=cpembed)
+                        if rst['done']:
+                            break
+                        await asyncio.sleep(0.2)
+                
+                notis = []
+                for guild, channel in zip(guilds, channels):
+                    notis.append(wrapper(channel.send(embed=notiembed), guild, channel))
+
+                asyncio.ensure_future(update_panel())
+                notisendtasks = asyncio.gather(*notis)
+                await asyncio.gather(notisendtasks)
+                rst['done'] = True
+                end = time.time()
+                alltime = round(end - start, 2)
+                doneembed = discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 전송을 완료했습니다! ({alltime}초)', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['primary'])
+                logfile = discord.File(fp=io.StringIO(notilog), filename='notilog.log')
+                await ctx.send(embed=doneembed)
+                await ctx.send(file=logfile)
+                self.msglog.log(ctx, '[공지전송: 완료]')
     
     @commands.command(name='프로그레스')
     async def _progressbar(self, ctx: commands.Context, value: int, mx: int, totallen: typing.Optional[int] = 10):
@@ -213,17 +213,17 @@ class Mastercmds(BaseCog):
 
     @_master.command(name='add', aliases=['추가'])
     async def _master_add(self, ctx: commands.Context, *, user: discord.Member):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update userdata set type=%s where id=%s', ('Master', user.id))
-            await ctx.send('함')
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update userdata set type=%s where id=%s', ('Master', user.id))
+                await ctx.send('함')
 
     @_master.command(name='delete', aliases=['삭제'])
     async def _master_delete(self, ctx: commands.Context, *, user: discord.Member):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('update userdata set type=%s where id=%s', ('User', user.id))
-            await ctx.send('함')
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('update userdata set type=%s where id=%s', ('User', user.id))
+                await ctx.send('함')
 
     async def shutdown(self):
         self.pool.close()
@@ -353,14 +353,14 @@ class Mastercmds(BaseCog):
 
     @commands.command(name='오류', aliases=['에러'])
     async def _error(self, ctx: commands.Context, uid: str):
-        async with DB(self.pool) as db:
-            cur = db.cur
-            await cur.execute('select * from error where uuid=%s', uid)
-            err = await cur.fetchone()
-            if err:
-                await ctx.send(embed=discord.Embed(title=f'💥 오류 뷰어 - `{uid}`', description=f'```py\n{err["content"]}```', color=self.color['info']))
-            else:
-                await ctx.send(embed=discord.Embed(title='❌ 해당 ID의 오류를 찾을 수 없습니다', color=self.color['error']))
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select * from error where uuid=%s', uid)
+                err = await cur.fetchone()
+                if err:
+                    await ctx.send(embed=discord.Embed(title=f'💥 오류 뷰어 - `{uid}`', description=f'```py\n{err["content"]}```', color=self.color['info']))
+                else:
+                    await ctx.send(embed=discord.Embed(title='❌ 해당 ID의 오류를 찾을 수 없습니다', color=self.color['error']))
 
     @commands.group(name='점검')
     async def _inspection(self, ctx: commands.Context):

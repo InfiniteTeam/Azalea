@@ -9,7 +9,6 @@ import inspect
 from utils import pager, datamgr, converters
 from templates import errembeds
 from utils.basecog import BaseCog
-from utils.dbtool import DB
 from utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
 class GameDebugcmds(BaseCog):
