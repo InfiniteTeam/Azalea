@@ -135,7 +135,6 @@ if config['betamode']:
     dbkey = 'beta'
 
 async def connect_db():
-    global pool
     pool = await aiomysql.create_pool(
         host=dbac[dbkey]['host'],
         user=dbac[dbkey]['dbUser'],
@@ -144,8 +143,9 @@ async def connect_db():
         charset='utf8',
         autocommit=True
     )
+    return pool
     
-loop.run_until_complete(connect_db())
+pool = loop.run_until_complete(connect_db())
 
 client = Azalea(command_prefix=prefixes, error=errors, status=discord.Status.dnd, activity=discord.Game('아젤리아 시작'))
 client.remove_command('help')

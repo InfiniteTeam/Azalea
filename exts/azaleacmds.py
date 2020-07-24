@@ -24,7 +24,7 @@ class Azaleacmds(BaseCog):
                     if sub.name == '작성':
                         sub.add_check(self.check.has_azalea_permissions(write_news=True))
 
-    @commands.command(name='도움')
+    @commands.command(name='도움', aliases=['도움말', '명령어', '명령', '커맨드', '기능'])
     async def _help(self, ctx: commands.Context):
         embed = discord.Embed(title='📃 Azalea 전체 명령어', description='(소괄호)는 필수 입력, [대괄호]는 선택 입력입니다.\n\n', color=self.color['primary'])
         for name, value in help.gethelps():

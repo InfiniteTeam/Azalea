@@ -150,6 +150,10 @@ class Charcmds(BaseCog):
                         await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                         self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                         return
+                    elif await cur.execute('select * from chardata where name=%s', m.content) != 0:
+                        await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
+                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이미 사용중인 이름]')
+                        return
                     char = await cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], {})
                     if charcount == 0:
                         await cmgr.change_character(ctx.author.id, char.uid)

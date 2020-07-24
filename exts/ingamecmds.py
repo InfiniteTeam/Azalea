@@ -225,7 +225,7 @@ class InGamecmds(BaseCog):
                     msg.edit(embed=await ingameembeds.backpack_embed(self, ctx, pgr, char.uid, 'default')),
                 )
 
-    @commands.command(name='상점')
+    @commands.command(name='상점', aliases=['샵', '가게', '마트', '시장', '쇼핑', '마켓'])
     async def _market(self, ctx: commands.Context):
         perpage = 8
         mdgr = MarketDBMgr(self.datadb)
@@ -259,7 +259,7 @@ class InGamecmds(BaseCog):
                 except:
                     pass
             else:
-                if reaction.emoji in ['💎']:
+                if reaction.emoji in ['💎', '❔']:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
                         await msg.edit(embed=ingameembeds.market_embed(self.datadb, pgr, color=self.color['info'], mode='select'))
                     else:
@@ -336,7 +336,7 @@ class InGamecmds(BaseCog):
                                                             if item in await imgr.get_items():
                                                                 await imgr.delete_item(item, count)
                                                                 final_price = idgr.get_final_price(item, count)
-                                                                imgr.give_money(final_price)
+                                                                await imgr.give_money(final_price)
                                                                 await ctx.send(embed=discord.Embed(
                                                                     title='{} 성공적으로 판매했습니다!'.format(self.emj.get(ctx, 'check')),
                                                                     description='{} 을(를) {} 개 판매했어요.'.format(idgr.fetch_item(item.id).name, count),
@@ -436,7 +436,7 @@ class InGamecmds(BaseCog):
                                                         char = await cmgr.get_current_char(ctx.author.id)
                                                         if final_price <= char.money:
                                                             imgr = ItemMgr(self.pool, char.uid)
-                                                            imgr.give_money(-final_price)
+                                                            await imgr.give_money(-final_price)
                                                             item.item.count = count
                                                             await imgr.give_item(item.item)
 

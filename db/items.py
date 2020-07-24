@@ -9,5 +9,6 @@ ITEMS = (
     Item('carp', '잉어', '뭐라할 거 없이 그냥 잉어.', 100, '🐟', tags=['fish'], meta={'catchable': True, 'percentage': 1.5, 'exp_multiple': 1.1}, selling=6000),
     Item('salmon', '연어', '몸의 색이 붉은 연어다. 개발자 알파가 생선회 중 가장 좋아하는 거라고 한다.', 100, '🐟', tags=['fish'], meta={'catchable': True, 'percentage': 1.2, 'exp_multiple': 1.3}, selling=8000),
     Item('tuna', '참치', '엄청 크다.', 100, '🐟', tags=['fish'], meta={'catchable': True, 'percentage': 1, 'exp_multiple': 1.5}, selling=12000),
-    Item('common-fishing-rod', '평범한 낚싯대', '나뭇가지로 만든 낚싯대이다.', 100, '🎣', tags=['fish'], meta={'catchable': True, 'percentage': 1, 'exp_multiple': 1.5}, selling=12000),
+    Item('common_fishing_rod', '평범한 낚싯대', '나뭇가지로 만든 낚싯대이다.', 100, '🎣', tags=['fishing-rod'], meta={'luck': 1.2}, selling=800),
+    Item('common_pickaxe', '평범한 곡괭이', '그저 평범한 나무로 만든 곡괭이다.', 100, '⛏', tags=['pickaxe'], selling=800),
 )

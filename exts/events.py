@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import traceback
 import datetime
+import asyncio
 import io
 import sys
 import aiomysql
@@ -9,7 +10,7 @@ from utils.basecog import BaseCog
 from utils import errors, permutil, timedelta
 from dateutil.relativedelta import relativedelta
 import uuid
-import sqlite3
+from configs import advlogging
 
 class Events(BaseCog):
     def __init__(self, client):
@@ -159,7 +160,21 @@ class Events(BaseCog):
 
                     if ctx.channel.type != discord.ChannelType.private:
                         await ctx.send(ctx.author.mention, embed=discord.Embed(title='❌ 오류!', description=f'개발자용 오류 메시지를 [DM]({msg.jump_url})으로 전송했습니다.', color=self.color['error']))
-            
+
+                    async def send_log(channel_id: int):
+                        channel = self.client.get_channel(channel_id)
+                        if not channel:
+                            return
+                        try:
+                            await channel.send('오류 발생 명령어: `' + ctx.message.content + '`', embed=embed)
+                        except discord.HTTPException as exc:
+                            if exc.code == 50035:
+                                await channel.send(embed=discord.Embed(title='❌ 오류!', description=f'오류 ID: `{uid}`\n무언가 오류가 발생했습니다. 오류 메시지가 너무 길어 파일로 첨부됩니다.', color=self.color['error']), file=discord.File(fp=io.StringIO(errstr), filename='errcontent.txt'))
+
+                    sendlist = []
+                    for one in advlogging.ERROR_LOG_CHANNEL_IDS:
+                        sendlist.append(send_log(one))
+                    await asyncio.gather(*sendlist)
 
 def setup(client):
     cog = Events(client)

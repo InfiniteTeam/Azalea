@@ -7,6 +7,7 @@ from utils import datamgr
 import traceback
 import datetime
 import math
+from configs import advlogging
 
 # pylint: disable=no-member
 
@@ -20,12 +21,14 @@ class Tasks(BaseCog):
         self.presence_loop.start()
         self.pingloop.start()
         self.delete_char.start()
+        # self.nick_gojung.start()
 
     def cog_unload(self):
         self.sync_guilds.cancel()
         self.presence_loop.cancel()
         self.pingloop.cancel()
         self.delete_char.cancel()
+        # self.nick_gojung.cancel()
 
     @tasks.loop(seconds=5)
     async def pingloop(self):
@@ -65,7 +68,7 @@ class Tasks(BaseCog):
                     # 등록 섹션
                     added_ids = list(set(client_guild_ids) - set(db_guild_ids))
                     added = list(map(lambda one: self.client.get_guild(one), added_ids))
-                    for guild in added:
+                    async def add_guild(guild: discord.Guild):
                         self.logger.info(f'새 서버를 발견했습니다: {guild.name}({guild.id})')
                         sendables = list(filter(lambda ch: ch.permissions_for(guild.me).send_messages, guild.text_channels))
                         if sendables:
@@ -97,19 +100,63 @@ class Tasks(BaseCog):
                                 selected.append(sendables[0])
                             await cur.execute('insert into serverdata(id, noticechannel, master) values (%s, %s, %s)', (guild.id, sendables[0].id, 0))
                             self.logger.info(f'서버 추가 성공: ' + guild.name + f'({guild.id})')
-                            embed = discord.Embed(title='🎉 안녕하세요!', description=f'안녕하세요! Azalea을 초대해 주셔서 감사합니다. `{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요!\n혹시 이 채널이 공지 채널이 아닌가요? `{self.prefix}공지채널` 명령으로 선택하세요!', color=self.color['primary'])
+                            embed = discord.Embed(title='🎉 안녕하세요!', description=f'안녕하세요! Azalea을 초대해 주셔서 감사합니다. `{self.prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요!', color=self.color['primary'])
+                            embed.set_footer(text=f"혹시 이 채널이 공지 채널이 아닌가요? '{self.prefix}공지채널' 명령으로 선택하세요!\n")
                             await sendables[0].send(embed=embed)
+                            async def send_log(channel_id: int):
+                                channel = self.client.get_channel(channel_id)
+                                await channel.send(embed=discord.Embed(title='새 서버를 추가했습니다', description='{g}({g.id})'.format(g=guild), color=self.color['info']))
+                            aws = []
+                            for cid in advlogging.IO_LOG_CHANNEL_IDS:
+                                aws.append(send_log(cid))
+                            asyncio.gather(*aws)
                         else:
                             await cur.execute('insert into serverdata(id, noticechannel, master) values (%s, %s, %s)', (guild.id, None, 0))
                             self.logger.info(f'접근 가능한 채널이 없는 서버 추가 성공: ' + guild.name + f'({guild.id})')
+                            async def send_log(channel_id: int):
+                                channel = self.client.get_channel(channel_id)
+                                await channel.send(embed=discord.Embed(title='새 서버를 추가했습니다', description='{g}({g.id})\n(접근 가능한 채널 없음)'.format(g=guild), color=self.color['info']))
+                            aws = []
+                            for cid in advlogging.IO_LOG_CHANNEL_IDS:
+                                aws.append(send_log(cid))
+                            asyncio.gather(*aws)
+
+                    addlist = []
+                    for guild in added:
+                        addlist.append(add_guild(guild))
+                    
+                    await asyncio.gather(*addlist)
+
                     # 제거 섹션
                     deleted_ids = list(set(db_guild_ids) - set(client_guild_ids))
-                    for gid in deleted_ids:
+                    async def del_guild(gid: int):
                         self.logger.info(f'존재하지 않는 서버를 발견했습니다: {gid}')
                         await cur.execute('delete from serverdata where id=%s', gid)
+                        async def send_log(channel_id: int):
+                            channel = self.client.get_channel(channel_id)
+                            await channel.send(embed=discord.Embed(title='존재하지 않거나 나간 서버를 발견했습니다', description=str(gid), color=self.color['info']))
+                        aws = []
+                        for cid in advlogging.IO_LOG_CHANNEL_IDS:
+                            aws.append(send_log(cid))
+                        asyncio.gather(*aws)
+
+                    dellist = []
+                    for gid in deleted_ids:
+                        dellist.append(del_guild(gid))
+
+                    await asyncio.gather(*dellist)
 
         except:
             self.client.get_data('errlogger').error(traceback.format_exc())
+
+    @tasks.loop(seconds=5)
+    async def nick_gojung(self):
+        try:
+            guild = self.client.get_guild(621929509456838666)
+            member = guild.get_member(610666714430177291)
+            await member.edit(nick='콩순이')
+        except:
+            self.errlogger.error(traceback.format_exc())
 
     @tasks.loop(seconds=5)
     async def presence_loop(self):
@@ -160,6 +207,7 @@ class Tasks(BaseCog):
     @sync_guilds.before_loop
     @presence_loop.before_loop
     @delete_char.before_loop
+    @nick_gojung.before_loop
     async def before_loop(self):
         await self.client.wait_until_ready()
 

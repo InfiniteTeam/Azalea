@@ -342,7 +342,7 @@ class Mastercmds(BaseCog):
     async def _cog(self, ctx: commands.Context):
         await ctx.send(embed=discord.Embed(title='코그들', description='```python\n{}```'.format(set(self.client.cogs.keys()))))
 
-    @commands.command(name='명령어')
+    @commands.command(name='명령어들')
     async def _cmds(self, ctx: commands.Context, cog: typing.Optional[str]=None, *cmds):
         if cog:
             names = set(map(lambda x: x.name, self.client.get_cog(cog).get_commands()))
