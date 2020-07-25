@@ -21,7 +21,7 @@ class Gamecmds(BaseCog):
         idgr = ItemDBMgr(self.datadb)
         imgr = ItemMgr(self.pool, char.uid)
         edgr = ExpTableDBMgr(self.datadb)
-        samgr = StatMgr(self.pool, char.uid, self.on_levelup)
+        samgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
         embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
         msg = await ctx.send(embed=embed)
         self.msglog.log(ctx, '[낚시: 시작]')

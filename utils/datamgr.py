@@ -10,6 +10,7 @@ from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
 import json
 from . import errors
+from .gamemgr import MineMgr, FarmMgr
 import os
 import uuid
 
@@ -20,6 +21,12 @@ class AzaleaData:
             reprs.append(f'{key}={value.__repr__()}')
         reprstr = f'<{self.__class__.__name__}: ' + ' '.join(reprs) + '>'
         return reprstr
+
+class AzaleaManager:
+    pass
+
+class AzaleaDBManager:
+    pass
 
 class SettingType(Enum):
     select = 0
@@ -224,7 +231,7 @@ class DataDB:
     def load_exp_table(self, table: Dict[int, int]):
         self.exp_table = table
 
-class PermDBMgr:
+class PermDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
         self.permissions = datadb.permissions
 
@@ -238,7 +245,7 @@ class PermDBMgr:
         if perm:
             return perm[0]
 
-class MarketDBMgr:
+class MarketDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
         self.markets = datadb.markets
 
@@ -246,7 +253,7 @@ class MarketDBMgr:
         if name in self.markets:
             return self.markets[name]
 
-class RegionDBMgr:
+class RegionDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
         self.regions = datadb.regions
 
@@ -265,7 +272,7 @@ class RegionDBMgr:
         regions = self.get_world(world)
         return list(filter(lambda x: x.warpable, regions))
 
-class SettingDBMgr:
+class SettingDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB, mode='char'):
         self.settings = datadb.char_settings
 
@@ -281,7 +288,7 @@ class SettingDBMgr:
             base[one.name] = one.default
         return base
 
-class SettingMgr:
+class SettingMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool, sdgr: SettingDBMgr, charuuid: str):
         self.pool = pool
         self.sdgr = sdgr
@@ -341,7 +348,7 @@ class SettingMgr:
         else:
             raise errors.SettingNotFound
 
-class NewsMgr:
+class NewsMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool):
         self.pool = pool
 
@@ -364,7 +371,7 @@ class NewsMgr:
                     uid = uuid.uuid4().hex
                 await cur.execute('insert into news (uuid, datetime, title, content, company) values (%s, %s, %s, %s, %s)', (uid, newsdata.datetime, newsdata.title, newsdata.content, newsdata.company))
 
-class ItemDBMgr:
+class ItemDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
         self.datadb = datadb
 
@@ -408,7 +415,7 @@ class ItemDBMgr:
         final = round(percent*self.fetch_item(item.id).selling)*count
         return final
 
-class ItemMgr:
+class ItemMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool, charuuid: str):
         self.pool = pool
         self.charuuid = charuuid
@@ -497,7 +504,7 @@ class ItemMgr:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute('update chardata set money=money+%s where uuid=%s', (value, self.charuuid))
 
-class ExpTableDBMgr:
+class ExpTableDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
         self.datadb = datadb
 
@@ -522,7 +529,7 @@ class ExpTableDBMgr:
                 break
         return count
 
-class StatMgr:
+class StatMgr(AzaleaManager):
     column = {
         StatType.STR: 'Strength',
         StatType.INT: 'Intelligence',
@@ -601,7 +608,7 @@ class StatMgr:
                 if stat is not None:
                     await cur.execute('update statdata set `{name}`=`{name}`+%s where uuid=%s'.format(name=stat), (value, self.charuuid))
 
-class CharMgr:
+class CharMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool):
         self.pool = pool
 
@@ -673,7 +680,7 @@ class CharMgr:
             return chardata
         return None
 
-    async def get_current_char(self, userid: int):
+    async def get_current_char(self, userid: int) -> CharacterData:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute('select * from chardata where id=%s and online=%s', (userid, True))
@@ -693,6 +700,12 @@ class CharMgr:
                 )
                 await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
                 await cur.execute('insert into statdata (uuid) values (%s)', uid)
+                
+                mine_mgr = MineMgr(self.pool, uid)
+                await mine_mgr.create_minedata()
+                farm_mgr = FarmMgr(self.pool, uid)
+                await farm_mgr.create_farmdata()
+
                 char = await self.get_character(uid)
         return char
 
@@ -713,6 +726,12 @@ class CharMgr:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute('delete from statdata where uuid=%s', charuuid)
+
+                mine_mgr = MineMgr(self.pool, charuuid)
+                await mine_mgr.delete_minedata()
+                farm_mgr = FarmMgr(self.pool, charuuid)
+                await farm_mgr.delete_farmdata()
+
                 if await cur.execute('delete from chardata where uuid=%s', charuuid) == 0:
                     raise errors.CharacterNotFound
 
@@ -776,3 +795,11 @@ class MigrateTool:
                             migrated += 1
                     await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), one['uuid']))
         return migrated
+
+    async def copy_uuid_to_new_table(self, fetching_table: str, target_table: str):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(f'select uuid from `{fetching_table}`')
+                ls = await cur.fetchall()
+                for x in ls:
+                    await cur.execute(f'insert into `{target_table}` (uuid) values (%s)', x['uuid'])

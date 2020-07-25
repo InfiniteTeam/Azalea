@@ -94,11 +94,11 @@ class GameDebugcmds(BaseCog):
             char = await cmgr.get_current_char(ctx.author.id)
             charname = char.name
         
-        samgr = StatMgr(self.pool, char.uid, self.on_levelup)
+        samgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
         edgr = ExpTableDBMgr(self.datadb)
         stat = await samgr.get_stat()
         nowexp = stat.EXP
-        lv = samgr.get_level(edgr)
+        lv = await samgr.get_level(edgr)
         embed = discord.Embed(title='🏷 경험치 지급하기', description='다음과 같이 계속할까요?', color=self.color['warn'])
         embed.add_field(name='경험치 변동', value=f'{nowexp} → {nowexp+exp}')
         embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, edgr.clac_level(nowexp+exp)))
@@ -121,7 +121,7 @@ class GameDebugcmds(BaseCog):
                 pass
         else:
             if reaction.emoji == '⭕':
-                samgr.give_exp(exp, edgr)
+                await samgr.give_exp(exp, edgr)
                 await ctx.send(embed=discord.Embed(title='{} 경험치 {} 만큼 성공적으로 주었습니다!'.format(self.emj.get(ctx, 'check'), exp), color=self.color['success']))
                 self.msglog.log(ctx, '[경험치지급: 완료]')
             elif reaction.emoji == '❌':

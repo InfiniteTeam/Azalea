@@ -21,9 +21,9 @@ class BaseCog(commands.Cog):
         self.awaiter = client.get_data('awaiter')
         self.prefix = client.command_prefix[0]
         self.eventcogname = client.get_data('eventcogname')
-        self.on_levelup = client.get_data('on_levelup')
 
     def getlistener(self, name):
         listeners = self.client.get_cog(self.eventcogname).get_listeners()
-        listener = list(filter(lambda x: x[0] == name, listeners))[0][1]
-        return listener
+        listeners_filter = list(filter(lambda x: x[0] == name, listeners))
+        if listeners_filter:
+            return listeners_filter[0][1]

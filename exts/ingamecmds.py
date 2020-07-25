@@ -536,7 +536,7 @@ class InGamecmds(BaseCog):
                 embed = errembeds.CharNotFound.getembed(ctx, charname)
                 await ctx.send(embed=embed)
                 return
-        samgr = StatMgr(self.pool, char.uid, self.on_levelup)
+        samgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
         edgr = ExpTableDBMgr(self.datadb)
         icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
         level = await samgr.get_level(edgr)
@@ -567,7 +567,7 @@ class InGamecmds(BaseCog):
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 cmgr = CharMgr(self.pool)
                 char = await cmgr.get_current_char(ctx.author.id)
-                samgr = StatMgr(self.pool, char.uid, self.on_levelup)
+                samgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
                 edgr = ExpTableDBMgr(self.datadb)
                 rawchar = await cmgr.get_raw_character(char.uid)
                 rcv_money = rawchar['received_money']
