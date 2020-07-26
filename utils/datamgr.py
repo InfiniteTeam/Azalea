@@ -9,6 +9,7 @@ from enum import Enum
 from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
 import json
+import importlib
 from . import errors
 from .gamemgr import MineMgr, FarmMgr
 import os
@@ -199,8 +200,12 @@ class DataDB:
     def __init__(self):
         self.enchantments = []
         self.items = []
+        self.char_settings = []
         self.markets = {}
         self.regions = {}
+        self.permissions = []
+        self.exp_table = {}
+        self.reloader = None
 
     def load_enchantments(self, enchantments: List[Enchantment]):
         self.enchantments = enchantments
@@ -230,6 +235,15 @@ class DataDB:
 
     def load_exp_table(self, table: Dict[int, int]):
         self.exp_table = table
+
+    def set_reloader(self, callback: Callable):
+        self.reloader = callback
+
+    def set_loader(self, callback: Callable):
+        self.loader = callback
+
+    def reload(self):
+        self.reloader(self)
 
 class PermDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
@@ -510,7 +524,7 @@ class ExpTableDBMgr(AzaleaDBManager):
 
     def get_required_exp(self, level: int) -> int:
         try:
-            return self.datadb.exp_table[str(level)]
+            return self.datadb.exp_table[level]
         except KeyError:
             return 0
 

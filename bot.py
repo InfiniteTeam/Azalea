@@ -10,11 +10,13 @@ import os
 import logging
 import logging.handlers
 import traceback
+import importlib
 import paramiko
+from itertools import chain
 from random import randint
 from utils import errors, checks, msglogger, emojictrl, permutil, datamgr, progressbar
 from utils.azalea import Azalea
-from db import enchantments, items, charsettings, market, regions, permissions
+from db import enchantments, charsettings, market, regions, permissions, exptable
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -157,16 +159,44 @@ for i in color.keys(): # convert HEX to DEC
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
 # 인게임 DB 로드
-datadb = datamgr.DataDB()
-datadb.load_enchantments(enchantments.ENCHANTMENTS)
-datadb.load_items(items.ITEMS)
-datadb.load_char_settings(charsettings.CHAR_SETTINGS)
-datadb.load_region('azalea', regions.REGIONS)
-datadb.load_market('main', market.MARKET)
-datadb.load_permissions(permissions.PERMISSIONS)
+def load_items():
+    itemdbs = {}
+    for ext in list(filter(lambda x: x.endswith('.py') and not x.startswith('_'), os.listdir('./db/items'))):
+        name = 'db.items.' + os.path.splitext(ext)[0]
+        itemdbs[name] = importlib.import_module(name)
+    return itemdbs
 
-with open('./db/exptable.json', encoding='utf-8') as exptable_file:
-    datadb.load_exp_table(json.load(exptable_file))
+def loader(datadb: datamgr.DataDB):
+    datadb.load_enchantments(enchantments.ENCHANTMENTS)
+    datadb.load_items(chain.from_iterable(itemdbs))
+    datadb.load_char_settings(charsettings.CHAR_SETTINGS)
+    datadb.load_region('azalea', regions.REGIONS)
+    datadb.load_market('main', market.MARKET)
+    datadb.load_permissions(permissions.PERMISSIONS)
+    datadb.load_exp_table(exptable.EXP_TABLE)
+
+def reloader(datadb: datamgr.DataDB):
+    db_modules = [
+        enchantments,
+        *load_items().values(),
+        charsettings,
+        regions,
+        market,
+        permissions,
+        exptable
+    ]
+    for md in db_modules:
+        importlib.reload(md)
+    loader(datadb)
+
+itemdbs = []
+for itemdb in load_items().values():
+    itemdbs.append(itemdb.ITEMS)
+
+datadb = datamgr.DataDB()
+datadb.set_loader(loader)
+datadb.set_reloader(reloader)
+loader(datadb)
 
 check = checks.Checks(pool, datadb)
 

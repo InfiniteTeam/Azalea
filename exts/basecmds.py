@@ -142,9 +142,11 @@ class BaseCmds(BaseCog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 언로드 완료]')
 
-    @commands.command(name='r', aliases=['리'])
+    @commands.command(name='reload', aliases=['리', '리로드'])
     async def _ext_reload_wrapper(self, ctx: commands.Context, *names):
         await self._ext_reload(ctx, *names)
+        self.datadb.reload()
+        await ctx.send('내부 데이터베이스를 모두 리로드했습니다.')
 
 def setup(client):
     cog = BaseCmds(client)

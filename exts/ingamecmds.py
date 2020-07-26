@@ -573,7 +573,7 @@ class InGamecmds(BaseCog):
                 rcv_money = rawchar['received_money']
                 now = datetime.datetime.now()
                 level = await samgr.get_level(edgr)
-                xp = edgr.get_required_exp(level)/100*2+50
+                xp = round(edgr.get_required_exp(level)/100*2+50)
                 embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
                 if await cur.execute('select * from userdata where id=%s and type=%s', (ctx.author.id, 'Master')) != 0:
                     embed.description += '\n관리자여서 무제한으로 출첵할 수 있습니다. 멋지네요!'
@@ -584,7 +584,7 @@ class InGamecmds(BaseCog):
                     self.msglog.log(ctx, '[돈받기: 이미 받음]')
                     return
                 imgr = ItemMgr(self.pool, char.uid)
-                imgr.give_money(5000)
+                await imgr.give_money(5000)
                 await samgr.give_exp(xp, edgr, ctx.channel.id)
                 await cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
                 await ctx.send(ctx.author.mention, embed=embed)
