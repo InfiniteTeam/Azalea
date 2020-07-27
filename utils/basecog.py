@@ -16,7 +16,6 @@ class BaseCog(commands.Cog):
         self.check: checks.Checks = client.get_data('check')
         self.errlogger = client.get_data('errlogger')
         self.pinglogger = client.get_data('pinglogger')
-        self.templates = client.get_data('templates')
         self.datadb: datamgr.DataDB = client.get_data('datadb')
         self.awaiter = client.get_data('awaiter')
         self.prefix = client.command_prefix[0]

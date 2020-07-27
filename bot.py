@@ -31,13 +31,6 @@ with open('./data/prefixes.json', 'r', encoding='utf-8') as prefixes_file:
     prefixes = json.load(prefixes_file)['prefixes']
     prefix = prefixes[0]
 
-templates = {}
-# Load Templates
-with open('./templates/baseitem.json', encoding='utf-8') as tpltfile:
-    templates['baseitem'] = json.load(tpltfile)
-with open('./templates/basestat.json', encoding='utf-8') as tpltfile:
-    templates['basestat'] = json.load(tpltfile)
-
 # Make Dir
 reqdirs = ['./logs', './logs/azalea', './logs/error', './logs/ping', './logs/discord']
 for dit in reqdirs:
@@ -215,7 +208,6 @@ client.add_data('msglog', msglog)
 client.add_data('errlogger', errlogger)
 client.add_data('pinglogger', pinglogger)
 client.add_data('logger', logger)
-client.add_data('templates', templates)
 client.add_data('pool', pool)
 client.add_data('dbcmd', dbcmd)
 client.add_data('ping', None)

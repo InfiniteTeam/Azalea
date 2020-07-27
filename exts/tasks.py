@@ -21,14 +21,12 @@ class Tasks(BaseCog):
         self.presence_loop.start()
         self.pingloop.start()
         self.delete_char.start()
-        # self.nick_gojung.start()
 
     def cog_unload(self):
         self.sync_guilds.cancel()
         self.presence_loop.cancel()
         self.pingloop.cancel()
         self.delete_char.cancel()
-        # self.nick_gojung.cancel()
 
     @tasks.loop(seconds=5)
     async def pingloop(self):
@@ -105,7 +103,7 @@ class Tasks(BaseCog):
                             await sendables[0].send(embed=embed)
                             async def send_log(channel_id: int):
                                 channel = self.client.get_channel(channel_id)
-                                await channel.send(embed=discord.Embed(title='새 서버를 추가했습니다', description='{g}({g.id})'.format(g=guild), color=self.color['info']))
+                                await channel.send(embed=discord.Embed(title='{} 새 서버를 추가했습니다'.format(self.emj.get(None, 'check')), description='{g}({g.id})'.format(g=guild), color=self.color['info']))
                             aws = []
                             for cid in advlogging.IO_LOG_CHANNEL_IDS:
                                 aws.append(send_log(cid))
@@ -115,7 +113,7 @@ class Tasks(BaseCog):
                             self.logger.info(f'접근 가능한 채널이 없는 서버 추가 성공: ' + guild.name + f'({guild.id})')
                             async def send_log(channel_id: int):
                                 channel = self.client.get_channel(channel_id)
-                                await channel.send(embed=discord.Embed(title='새 서버를 추가했습니다', description='{g}({g.id})\n(접근 가능한 채널 없음)'.format(g=guild), color=self.color['info']))
+                                await channel.send(embed=discord.Embed(title='{} 새 서버를 추가했습니다'.format(self.emj.get(None, 'check')), description='{g}({g.id})\n(접근 가능한 채널 없음)'.format(g=guild), color=self.color['info']))
                             aws = []
                             for cid in advlogging.IO_LOG_CHANNEL_IDS:
                                 aws.append(send_log(cid))
@@ -134,7 +132,7 @@ class Tasks(BaseCog):
                         await cur.execute('delete from serverdata where id=%s', gid)
                         async def send_log(channel_id: int):
                             channel = self.client.get_channel(channel_id)
-                            await channel.send(embed=discord.Embed(title='존재하지 않거나 나간 서버를 발견했습니다', description=str(gid), color=self.color['info']))
+                            await channel.send(embed=discord.Embed(title='{} 존재하지 않거나 나간 서버를 발견했습니다'.format(self.emj.get(None, 'cross')), description=f'DB에서 제거했습니다\nID: `{gid}`', color=self.color['info']))
                         aws = []
                         for cid in advlogging.IO_LOG_CHANNEL_IDS:
                             aws.append(send_log(cid))
@@ -148,15 +146,6 @@ class Tasks(BaseCog):
 
         except:
             self.client.get_data('errlogger').error(traceback.format_exc())
-
-    @tasks.loop(seconds=5)
-    async def nick_gojung(self):
-        try:
-            guild = self.client.get_guild(621929509456838666)
-            member = guild.get_member(610666714430177291)
-            await member.edit(nick='콩순이')
-        except:
-            self.errlogger.error(traceback.format_exc())
 
     @tasks.loop(seconds=5)
     async def presence_loop(self):
@@ -207,7 +196,6 @@ class Tasks(BaseCog):
     @sync_guilds.before_loop
     @presence_loop.before_loop
     @delete_char.before_loop
-    @nick_gojung.before_loop
     async def before_loop(self):
         await self.client.wait_until_ready()
 

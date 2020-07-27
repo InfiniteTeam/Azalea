@@ -12,22 +12,9 @@ import json
 import importlib
 from . import errors
 from .gamemgr import MineMgr, FarmMgr
+from .basemgr import AzaleaData, AzaleaManager, AzaleaDBManager
 import os
 import uuid
-
-class AzaleaData:
-    def __repr__(self):
-        reprs = []
-        for key, value in zip(self.__dict__.keys(), self.__dict__.values()):
-            reprs.append(f'{key}={value.__repr__()}')
-        reprstr = f'<{self.__class__.__name__}: ' + ' '.join(reprs) + '>'
-        return reprstr
-
-class AzaleaManager:
-    pass
-
-class AzaleaDBManager:
-    pass
 
 class SettingType(Enum):
     select = 0
@@ -703,14 +690,17 @@ class CharMgr(AzaleaManager):
                 chardata = self.get_char_from_dict(char, await samgr.get_stat())
         return chardata
 
-    async def add_character_with_raw(self, userid: int, name: str, chartype: str, items, settings) -> CharacterData:
+    async def add_character_with_raw(self, userid: int, name: str, chartype: str) -> CharacterData:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 uid = uuid.uuid4().hex
                 datas = (
                     uid, userid, name, chartype,
-                    json.dumps(items, ensure_ascii=False),
-                    json.dumps(settings, ensure_ascii=False)
+                    json.dumps(
+                        {'items': []},
+                        ensure_ascii=False
+                    ),
+                    json.dumps({}, ensure_ascii=False)
                 )
                 await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
                 await cur.execute('insert into statdata (uuid) values (%s)', uid)

@@ -6,6 +6,7 @@ import os
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
 from db import exps
+from db.itemtags import Tag
 
 class Gamecmds(BaseCog):
     def __init__(self, client):
@@ -67,7 +68,7 @@ class Gamecmds(BaseCog):
         else:
             if reaction.emoji == '⁉':
                 
-                fishes = idgr.fetch_items_with(tags=['fish'], meta={'catchable': True})
+                fishes = idgr.fetch_items_with(tags=[Tag.Fish], meta={'catchable': True})
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
                 await imgr.give_item(ItemData(fish.id, 1, []))
                 exp = exps.fishing(req=edgr.get_required_exp(await samgr.get_level(edgr)), fish=fish)

@@ -154,7 +154,7 @@ class Charcmds(BaseCog):
                         await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
                         self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이미 사용중인 이름]')
                         return
-                    char = await cmgr.add_character_with_raw(ctx.author.id, charname, chartype, self.templates['baseitem'], {})
+                    char = await cmgr.add_character_with_raw(ctx.author.id, charname, chartype)
                     if charcount == 0:
                         await cmgr.change_character(ctx.author.id, char.uid)
                         desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'

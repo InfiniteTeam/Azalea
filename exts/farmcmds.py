@@ -21,7 +21,7 @@ class Farmcmds(BaseCog):
             char = await cmgr.get_character_by_name(charname)
             if not char:
                 await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
-                self.msglog.log(ctx, '[농장]: 존재하지 않는 캐릭터]')
+                self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
                 return
         else:
             char = await cmgr.get_current_char(ctx.author.id)
@@ -29,8 +29,9 @@ class Farmcmds(BaseCog):
 
         farm_mgr = FarmMgr(self.pool, char.uid)
         level = await farm_mgr.get_level()
+        area = await farm_mgr.get_area()
         embed = discord.Embed(title=f'🌲 `{char.name}` 의 농장', color=self.color['info'])
-        embed.description = '**레벨** `{}`'.format(level)
+        embed.add_field(name='기본 정보', value='**레벨** `{}`\n**농장 크기**: `{}` 칸'.format(level, area))
 
         await ctx.send(embed=embed)
 
