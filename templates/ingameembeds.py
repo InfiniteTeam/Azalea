@@ -3,10 +3,10 @@ from discord.ext import commands
 import datetime
 from dateutil.relativedelta import relativedelta
 from utils import pager, timedelta, basecog
-from utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr, ExpTableDBMgr
+from utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr, ExpTableDBMgr, ItemMgr
 from db import charsettings
 
-def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
+def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default') -> discord.Embed:
     items = pgr.get_thispage()
     embed = discord.Embed(title='🛍 상점', description='', color=color)
     idgr = ItemDBMgr(datadb)
@@ -28,7 +28,7 @@ def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default'):
     embed.set_footer(text='💎: 구매 | 💰: 판매 | ❔ 자세히')
     return embed
 
-async def char_embed(cog, username, pgr: pager.Pager, *, mode='default'):
+async def char_embed(cog, username, pgr: pager.Pager, *, mode='default') -> discord.Embed:
     edgr = ExpTableDBMgr(cog.datadb)
     chars = pgr.get_thispage()
     charstr = ''
@@ -57,7 +57,7 @@ async def char_embed(cog, username, pgr: pager.Pager, *, mode='default'):
     embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
     return embed
 
-def itemdata_embed(cog: basecog.BaseCog, itemdata: ItemData, mode='default', *, count: int=0, chardata: CharacterData=None):
+async def itemdata_embed(cog: basecog.BaseCog, itemdata: ItemData, mode='default', *, count: int=0, charuuid: str=None) -> discord.Embed:
     idgr = ItemDBMgr(cog.datadb)
     item = idgr.fetch_item(itemdata.id)
     color = cog.color['info']
@@ -83,11 +83,13 @@ def itemdata_embed(cog: basecog.BaseCog, itemdata: ItemData, mode='default', *, 
         embed.add_field(name='개수', value='{}개'.format(itemdata.count))
     embed.add_field(name='마법부여', value=enchantstr)
     if mode == 'sell':
+        imgr = ItemMgr(cog.pool, charuuid)
+        money = await imgr.fetch_money()
         embed.add_field(name='최종 판매', value='{:n} 골드 × {:n} 개\n= **{:n} 골드**'.format(idgr.get_final_price(itemdata), count, idgr.get_final_price(itemdata, count)))
-        embed.add_field(name='판매 후 잔고', value='{:n} 골드\n↓\n{:n} 골드'.format(chardata.money, chardata.money + idgr.get_final_price(itemdata, count)))
+        embed.add_field(name='판매 후 잔고', value='{:n} 골드\n↓\n{:n} 골드'.format(money, money + idgr.get_final_price(itemdata, count)))
     return embed
 
-def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default', *, count: int=0, chardata: CharacterData=None):
+def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default', *, count: int=0, chardata: CharacterData=None) -> discord.Embed:
     idgr = ItemDBMgr(cog.datadb)
     item = idgr.fetch_item(marketitem.item.id)
     embed = discord.Embed(title=item.icon + ' ' + item.name, description=item.description, color=cog.color['info'])
@@ -115,7 +117,7 @@ def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default
     embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
-async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='default'):
+async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='default') -> discord.Embed:
     items = pgr.get_thispage()
     itemstr = ''
     moneystr = ''
@@ -153,7 +155,7 @@ async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, 
         embed.description = '\n가방에는 공기 말고는 아무것도 없네요!\n' + moneystr
     return embed
 
-def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='select'):
+def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='select') -> discord.Embed:
     items = pgr.get_thispage()
     itemstr = ''
     mdgr = MarketDBMgr(cog.datadb)
@@ -183,7 +185,7 @@ def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, m
         embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
     return embed
 
-def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default'):
+def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default') -> discord.Embed:
     sdgr = SettingDBMgr(cog.datadb)
     smgr = SettingMgr(cog.pool, sdgr, char.uid)
     settitles = []
@@ -207,7 +209,7 @@ def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterD
     embed.add_field(name='설정값', value='\n'.join(setvalue))
     return embed
 
-def rank_embed(cog: basecog.BaseCog, pgr: pager.Pager, *, orderby='money', where='server', guild: discord.Guild=None):
+def rank_embed(cog: basecog.BaseCog, pgr: pager.Pager, *, orderby='money', where='server', guild: discord.Guild=None) -> discord.Embed:
     if orderby == 'money':
         orderby_str = '재산'
     if where == 'server':

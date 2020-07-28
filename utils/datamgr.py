@@ -390,6 +390,7 @@ class ItemDBMgr(AzaleaDBManager):
         return None
 
     def fetch_items_with(self, *, tags: Optional[list]=None, meta: Optional[dict]=None) -> List[Item]:
+        foundtags = foundmeta = set(self.datadb.items)
         if tags:
             foundtags = set(filter(lambda x: set(x.tags) & set(tags), self.datadb.items))
             if not foundtags:

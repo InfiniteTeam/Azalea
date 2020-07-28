@@ -81,7 +81,7 @@ class GameDebugcmds(BaseCog):
             await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
     @commands.command(name='경험치지급')
-    async def _give_exp(self, ctx: commands.Context, exp: int, charname: typing.Optional[str]=None):
+    async def _give_exp(self, ctx: commands.Context, exp: int, *, charname: typing.Optional[str]=None):
         cmgr = CharMgr(self.pool)
         if charname:
             char = await cmgr.get_character_by_name(charname)
@@ -136,6 +136,21 @@ class GameDebugcmds(BaseCog):
         level = edgr.clac_level(exp)
         e = time.time()
         await ctx.send(f'{level}- {e-s}')
+
+    @commands.command(name='아이디')
+    async def _charid(self, ctx: commands.Context, *, charname: typing.Optional[str]=None):
+        cmgr = CharMgr(self.pool)
+        if charname:
+            char = await cmgr.get_character_by_name(charname)
+            if not char:
+                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
+                return
+        else:
+            char = await cmgr.get_current_char(ctx.author.id)
+            charname = char.name
+
+        await ctx.send(embed=discord.Embed(description=char.uid, color=self.color['info']))
 
 def setup(client):
     cog = GameDebugcmds(client)

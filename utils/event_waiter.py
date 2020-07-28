@@ -13,9 +13,12 @@ async def wait_for_reaction(bot: commands.Bot, *, ctx: commands.Context, msg: di
     else:
         return reaction, user
 
-async def wait_for_message(bot: commands.Bot, *, ctx: commands.Context, timeout: int):
+async def wait_for_message(bot: commands.Bot, *, ctx: commands.Context, timeout: int, subcheck=None):
     def check(m):
-        return m.author == ctx.author and m.channel == ctx.channel and m.content
+        rst = m.author == ctx.author and m.channel == ctx.channel and m.content
+        if callable(subcheck):
+            return rst and subcheck(m)
+        return rst
     try:
         message = await bot.wait_for('message', check=check, timeout=timeout)
     except asyncio.TimeoutError:
