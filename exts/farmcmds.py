@@ -47,7 +47,6 @@ class Farmcmds(BaseCog):
             charname = char.name
 
         farm_mgr = FarmMgr(self.pool, char.uid)
-        print(await farm_mgr.get_plants())
         embed = await farmembeds.farm_status(self, char=char, farm_mgr=farm_mgr)
         await ctx.send(embed=embed)
 

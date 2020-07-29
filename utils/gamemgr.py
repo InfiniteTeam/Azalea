@@ -1,6 +1,6 @@
 import aiomysql
 from .basemgr import AzaleaData, AzaleaManager, AzaleaDBManager
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
 import json
 from enum import Enum
 import datetime
@@ -26,12 +26,11 @@ class FarmPlantStatus(Enum):
     AllGrownUp = '다 자람'
 
 class FarmPlantData(AzaleaData):
-    def __init__(self, id: str, count: int, planted_datetime: datetime.datetime, grow_time: datetime.timedelta, status: FarmPlantStatus):
+    def __init__(self, id: str, count: int, planted_datetime: datetime.datetime, grow_time: Dict):
         self.id = id
         self.count = count
         self.planted_datetime = planted_datetime
         self.grow_time = grow_time
-        self.status = status
 
 class MineMgr(AzaleaGameManager):
     def __init__(self, pool: aiomysql.Pool, charuuid: str):
@@ -99,12 +98,15 @@ class FarmMgr(AzaleaGameManager):
 
     @classmethod
     def get_plant_from_dict(cls, plantdict: Dict) -> FarmPlantData:
+        growtime = {}
+        for k, v in plantdict['grow_time'].items():
+            key = FarmPlantStatus.__dict__.get(k)
+            growtime[key] = v
         plant = FarmPlantData(
             plantdict['id'],
             plantdict['count'],
             datetime.datetime.fromisoformat(plantdict['planted_datetime']),
-            datetime.timedelta(seconds=plantdict['grow_time']),
-            FarmPlantStatus.__dict__.get(plantdict['status'])
+            growtime
         )
         return plant
 
@@ -114,8 +116,7 @@ class FarmMgr(AzaleaGameManager):
             'id': plantdata.id,
             'count': plantdata.count,
             'planted_datetime': plantdata.planted_datetime.isoformat(),
-            'grow_time': plantdata.grow_time.total_seconds(),
-            'status': plantdata.status.name
+            'grow_time': plantdata.grow_time
         }
         return data
 
@@ -134,6 +135,18 @@ class FarmMgr(AzaleaGameManager):
         raw = await self.get_raw_data()
         area = raw['area']
         return area
+
+    @classmethod
+    def get_status(cls, plantdata: FarmPlantData, when: Optional[datetime.datetime]=None) -> FarmPlantStatus:
+        if not when:
+            when = datetime.datetime.now()
+        now = (when-plantdata.planted_datetime).total_seconds()
+        
+        plus = 0
+        for k, v in plantdata.grow_time.items():
+            plus += v
+            if plus > now:
+                return FarmPlantStatus.__dict__.get(k)
 
     async def get_plants_with_status(self, status: FarmPlantStatus) -> List[FarmPlantData]:
         plants = await self.get_plants()
