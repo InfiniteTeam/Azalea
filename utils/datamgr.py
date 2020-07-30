@@ -691,7 +691,7 @@ class CharMgr(AzaleaManager):
                 chardata = self.get_char_from_dict(char, await samgr.get_stat())
         return chardata
 
-    async def add_character_with_raw(self, userid: int, name: str, chartype: str) -> CharacterData:
+    async def add_character_with_raw(self, userid: int, name: str, chartype: str, *, rollback_on_error: bool=True) -> CharacterData:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 uid = uuid.uuid4().hex
@@ -703,13 +703,19 @@ class CharMgr(AzaleaManager):
                     ),
                     json.dumps({}, ensure_ascii=False)
                 )
-                await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
-                await cur.execute('insert into statdata (uuid) values (%s)', uid)
-                
-                mine_mgr = MineMgr(self.pool, uid)
-                await mine_mgr.create_minedata()
-                farm_mgr = FarmMgr(self.pool, uid)
-                await farm_mgr.create_farmdata()
+                try:
+                    await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
+                    await cur.execute('insert into statdata (uuid) values (%s)', uid)
+                    
+                    mine_mgr = MineMgr(self.pool, uid)
+                    await mine_mgr.create_minedata()
+                    farm_mgr = FarmMgr(self.pool, uid)
+                    await farm_mgr.create_farmdata()
+
+                except Exception as exc:
+                    if rollback_on_error:
+                        await self.delete_character(uid)
+                        raise exc
 
                 char = await self.get_character(uid)
         return char

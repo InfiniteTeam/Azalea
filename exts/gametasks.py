@@ -27,7 +27,8 @@ class GameTasks(BaseCog):
                 for one in await cur.fetchall():
                     rawplants = json.loads(one['plants'])['plants']
                     for x in rawplants:
-                        plants.append(FarmMgr.get_plant_from_dict(x))
+                        plant = FarmMgr.get_plant_from_dict(x)
+                        plants.append(plant)
 
                 end = time.time()
                 # print(end-start)

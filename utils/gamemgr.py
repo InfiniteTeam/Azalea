@@ -50,7 +50,7 @@ class MineMgr(AzaleaGameManager):
 
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute('insert into minedata (uuid, plants) values (%s, %s)', (self.charuuid, json.dumps({"plants": []}, ensure_ascii=False)))
+                await cur.execute('insert into minedata (uuid) values (%s)', self.charuuid)
     
     async def delete_minedata(self):
         if not await self.has_minedata():
@@ -78,7 +78,7 @@ class FarmMgr(AzaleaGameManager):
 
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute('insert into farmdata (uuid) values (%s)', self.charuuid)
+                await cur.execute('insert into farmdata (uuid, plants) values (%s, %s)', (self.charuuid, json.dumps({'plants': []}, ensure_ascii=False)))
     
     async def delete_farmdata(self):
         if not await self.has_farmdata():
@@ -146,9 +146,10 @@ class FarmMgr(AzaleaGameManager):
         for k, v in plantdata.grow_time.items():
             plus += v
             if plus > now:
-                return FarmPlantStatus.__dict__.get(k)
+                break
+        return k
 
     async def get_plants_with_status(self, status: FarmPlantStatus) -> List[FarmPlantData]:
         plants = await self.get_plants()
-        filtered = list(filter(lambda one: one.status == status, plants))
+        filtered = list(filter(lambda one: self.get_status(one) == status, plants))
         return filtered
