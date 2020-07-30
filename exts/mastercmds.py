@@ -207,6 +207,17 @@ class Mastercmds(BaseCog):
         embed=discord.Embed(title='**💬 AWAIT**', color=self.color['primary'], description=out)
         await ctx.send(embed=embed)
 
+    @commands.command(name='shortcut', aliases=['숏컷'])
+    async def _shortcut(self, ctx: commands.Context, *, name):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if await cur.execute('select * from shortcuts where name=%s', name) == 0:
+                    await ctx.send('존재하지 않는 숏컷')
+                    return
+                fetch = await cur.fetchone()
+                sc = fetch['value']
+                await self._dbcmd(ctx, cmd=sc)
+
     @commands.group(name='master', aliases=['마스터'], invoke_without_command=False)
     async def _master(self, ctx):
         pass
