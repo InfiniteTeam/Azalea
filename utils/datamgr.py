@@ -11,7 +11,7 @@ from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Await
 import json
 import importlib
 from . import errors
-from .gamemgr import MineMgr, FarmMgr
+from .gamemgr import MineMgr, FarmMgr, FarmPlant
 from .basemgr import AzaleaData, AzaleaManager, AzaleaDBManager
 import os
 import uuid
@@ -222,6 +222,9 @@ class DataDB:
 
     def load_exp_table(self, table: Dict[int, int]):
         self.exp_table = table
+        
+    def load_farm_plants(self, plants: List[FarmPlant]):
+        self.farm_plants = plants
 
     def set_reloader(self, callback: Callable):
         self.reloader = callback

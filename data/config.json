@@ -2,7 +2,7 @@
     "botName": "Azalea",
     "betaprefix": "*",
     "inspection": false,
-    "is_android": false,
+    "is_android": true,
     "securedir": {
         "Windows": "C:/azalea",
         "Linux": "/home/pi/azalea",
