@@ -17,6 +17,7 @@ from random import randint
 from utils import errors, checks, msglogger, emojictrl, permutil, datamgr, progressbar
 from utils.azalea import Azalea
 from db import enchantments, charsettings, market, regions, permissions, exptable
+from ingame.farming import farm_plants
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -167,6 +168,7 @@ def loader(datadb: datamgr.DataDB):
     datadb.load_market('main', market.MARKET)
     datadb.load_permissions(permissions.PERMISSIONS)
     datadb.load_exp_table(exptable.EXP_TABLE)
+    datadb.load_farm_plants(farm_plants.PLANTS)
 
 def reloader(datadb: datamgr.DataDB):
     db_modules = [
@@ -176,7 +178,8 @@ def reloader(datadb: datamgr.DataDB):
         regions,
         market,
         permissions,
-        exptable
+        exptable,
+        farm_plants
     ]
     for md in db_modules:
         importlib.reload(md)

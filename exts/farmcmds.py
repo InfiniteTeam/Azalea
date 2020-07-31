@@ -2,12 +2,13 @@ import discord
 from discord.ext import commands
 import asyncio
 from utils.basecog import BaseCog
-from utils.gamemgr import FarmMgr
+from utils.gamemgr import FarmMgr, FarmDBMgr, FarmPlantData
 from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr
 from utils.pager import Pager
 from utils import event_waiter
 from templates import errembeds, farmembeds, ingameembeds
 import typing
+import datetime
 
 class Farmcmds(BaseCog):
     def __init__(self, client):
@@ -56,13 +57,21 @@ class Farmcmds(BaseCog):
         char = await cmgr.get_current_char(ctx.author.id)
         idgr = ItemDBMgr(self.datadb)
         imgr = ItemMgr(self.pool, char.uid)
+        farm_mgr = FarmMgr(self.pool, char.uid)
+        farm_dmgr = FarmDBMgr(self.datadb)
         plantable = list(filter(lambda x: idgr.fetch_item(x.id).meta.get('plantable'), await imgr.get_items()))
         pgr = Pager(plantable, perpage=8)
-        if len(pgr.pages()) == 0:
+        if await farm_mgr.get_free_space() == 0:
+            embed = discord.Embed(title='❌ 농장 공간이 부족합니다!', description='농장에 빈 공간이 전혀 없습니다! 수확을 기다리거나 작물 재배를 취소해 공간을 늘릴 수 있습니다.', color=self.color['error'])
+            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+            await ctx.send(embed=embed, delete_after=7)
+            self.msglog.log(ctx, '[심기: 농장 공간 부족]')
+        elif len(pgr.pages()) == 0:
             await ctx.send(embed=discord.Embed(title='📦 심을 수 있는 아이템이 하나도 없습니다!', color=self.color['error']))
         else:
             embed = await ingameembeds.backpack_embed(self, ctx, pgr, char.uid, mode='select')
             embed.set_author(name='🌱 심을 씨앗 선택하기')
+            embed.set_footer(text='※ 심을 수 있는 아이템만 표시됩니다.')
             msg = await ctx.send(embed=embed)
             itemidxmsg = await ctx.send(embed=discord.Embed(
                 title='🌱 작물 심기 - 아이템 선택',
@@ -83,7 +92,7 @@ class Farmcmds(BaseCog):
                     item: ItemData = pgr.get_thispage()[itemidx]
                     itemcountmsg = await ctx.send(embed=discord.Embed(
                         title='🌱 작물 심기 - 심을 씨앗 개수',
-                        description='몇 개를 심으시겠어요? (최대 {}개)\n❌를 클릭해 취소합니다.'.format(item.count),
+                        description='몇 개를 심으시겠어요? (최대 {}개)\n❌를 클릭해 취소합니다.'.format(min([await farm_mgr.get_free_space(), item.count])),
                         color=self.color['ask']
                     ))
                     self.msglog.log(ctx, '[심기: 개수 입력]')
@@ -97,23 +106,17 @@ class Farmcmds(BaseCog):
                         count = int(counttaskrst.content)
                         if count >= 1:
                             if count <= item.count:
-                                embed = await ingameembeds.itemdata_embed(self, item, 'sell', count=count, charuuid=char.uid)
-                                finalmsg = await ctx.send(embed=embed)
-                                await finalmsg.add_reaction('⭕')
-                                await finalmsg.add_reaction('❌')
-                                rst = await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=finalmsg, emojis=['⭕', '❌'], timeout=60)
-                                if rst:
-                                    rct = rst[0]
-                                    if rct.emoji == '⭕':
-                                        pass
-
-
-                                    elif rct.emoji == '❌':
-                                        embed = discord.Embed(title='❌ 취소되었습니다.', color=self.color['error'])
-                                        embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                        await ctx.send(embed=embed, delete_after=7)
-                                        self.msglog.log(ctx, '[심기: 취소]')
-                                await finalmsg.delete()
+                                free = await farm_mgr.get_free_space()
+                                if count <= free:
+                                    plantid = idgr.fetch_item(item.id).meta.get('farm_plant')
+                                    await imgr.delete_item(item, count)
+                                    await farm_mgr.add_plant(farm_dmgr, FarmPlantData(plantid, 1, None, None), count)
+                                    await ctx.send(embed=discord.Embed(title='🌱 `{}` 을(를) {} 개 심었습니다!'.format(farm_dmgr.fetch_plant(plantid).title, count), color=self.color['success']))
+                                else:
+                                    embed = discord.Embed(title='❌ 농장 공간이 부족합니다!', description='현재 농장에 최대 {}개를 심을 수 있습니다.'.format(free), color=self.color['error'])
+                                    embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
+                                    await ctx.send(embed=embed, delete_after=7)
+                                    self.msglog.log(ctx, '[심기: 농장 공간 부족]')
                             else:
                                 embed = discord.Embed(title='❌ 아이템의 양이 너무 많습니다!', description='이 아이템은 최대 {}개를 심을 수 있습니다.'.format(item.count), color=self.color['error'])
                                 embed.set_footer(text='이 메시지는 7초 후에 사라집니다')

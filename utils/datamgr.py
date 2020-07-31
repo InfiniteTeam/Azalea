@@ -144,7 +144,7 @@ class CharacterData(AzaleaData):
     def __init__(
         self, uid: str, id: int, online: bool, name: str, type: CharacterType, money: int,
         items: List[Item], stat: StatData, birth: datetime.datetime, last_nick_change: datetime.datetime,
-        delete_request: Union[None, datetime.datetime], settings: List[SettingData], location: RegionData
+        delete_request: Optional[datetime.datetime], settings: List[SettingData], location: RegionData
         ):
         self.uid = uid
         self.id = id
@@ -167,7 +167,7 @@ class MarketItem(AzaleaData):
         self.discount = discount
 
 class NewsData(AzaleaData):
-    def __init__(self, uid: Union[uuid.UUID, None], title: str, content: str, company: str, datetime: datetime.datetime):
+    def __init__(self, uid: Optional[uuid.UUID], title: str, content: str, company: str, datetime: datetime.datetime):
         self.uid = uid
         self.title = title
         self.content = content
@@ -192,6 +192,7 @@ class DataDB:
         self.regions = {}
         self.permissions = []
         self.exp_table = {}
+        self.farm_plants = []
         self.reloader = None
 
     def load_enchantments(self, enchantments: List[Enchantment]):
@@ -284,7 +285,6 @@ class SettingDBMgr(AzaleaDBManager):
         sets = list(filter(lambda x: x.name == name, self.settings))
         if sets:
             return sets[0]
-        return None
 
     def get_base_settings(self):
         base = {}
@@ -390,7 +390,6 @@ class ItemDBMgr(AzaleaDBManager):
         found = list(filter(lambda x: x.id == itemid, self.datadb.items))
         if found:
             return found[0]
-        return None
 
     def fetch_items_with(self, *, tags: Optional[list]=None, meta: Optional[dict]=None) -> List[Item]:
         foundtags = foundmeta = set(self.datadb.items)
@@ -409,7 +408,6 @@ class ItemDBMgr(AzaleaDBManager):
         found = list(filter(lambda x: name == x.name, self.datadb.enchantments))
         if found:
             return found[0]
-        return None
 
     def get_enchantment_percent(self, item: ItemData) -> float:
         percent = reduce(lambda x, y: x*self.fetch_enchantment(y.name).price_percent, item.enchantments, 1)
@@ -675,7 +673,6 @@ class CharMgr(AzaleaManager):
             samgr = StatMgr(self.pool, char['uuid'])
             chardata = self.get_char_from_dict(char, await samgr.get_stat())
             return chardata
-        return None
 
     async def get_character_by_name(self, name: str, userid: int=None) -> CharacterData:
         char = await self.get_raw_character_by_name(name, userid)
@@ -683,7 +680,6 @@ class CharMgr(AzaleaManager):
             samgr = StatMgr(self.pool, char['uuid'])
             chardata = self.get_char_from_dict(char, await samgr.get_stat())
             return chardata
-        return None
 
     async def get_current_char(self, userid: int) -> CharacterData:
         async with self.pool.acquire() as conn:

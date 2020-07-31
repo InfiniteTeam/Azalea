@@ -1,6 +1,5 @@
 import aiomysql
 from .basemgr import AzaleaData, AzaleaManager, AzaleaDBManager
-from .datamgr import DataDB
 from typing import Tuple, Dict, List, Optional
 import json
 import random
@@ -16,20 +15,19 @@ class AzaleaGameManager(AzaleaManager):
 class AzaleaGameDBManager(AzaleaDBManager):
     pass
 
-class FarmPlant(AzaleaData):
-    def __init__(self, id: str, title: str, grown: str, harvest_count: Tuple[int, int], *, size: int, growtime: Dict[FarmPlantStatus, Tuple[int, int]]):
-        self.id = id
-        self.title = title
-        self.grown = grown
-        self.harvest_count = harvest_count
-        self.size = size
-        self.growtime = growtime
-
 class FarmPlantStatus(Enum):
     Planted = '아직 싹이 트지 않음'
     Sprouted = '싹이 틈'
     Growing = '자라는 중'
     AllGrownUp = '다 자람'
+
+class FarmPlant(AzaleaData):
+    def __init__(self, id: str, title: str, grown: str, harvest_count: Tuple[int, int], *, growtime: Dict[FarmPlantStatus, Optional[Tuple[int, int]]]):
+        self.id = id
+        self.title = title
+        self.grown = grown
+        self.harvest_count = harvest_count
+        self.growtime = growtime
 
 class FarmPlantData(AzaleaData):
     def __init__(self, id: str, count: int, planted_datetime: datetime.datetime, grow_time: Dict):
@@ -67,14 +65,14 @@ class MineMgr(AzaleaGameManager):
                 await cur.execute('delete from minedata where uuid=%s', self.charuuid)
 
 class FarmDBMgr(AzaleaGameDBManager):
-    def __init__(self, datadb: DataDB):
+    def __init__(self, datadb):
         self.datadb = datadb
         
-    def fetch_plant(self, id: str):
+    def fetch_plant(self, id: str) -> Optional[FarmPlant]:
         plants = list(filter(lambda x: x.id == id, self.datadb.farm_plants))
         if plants:
             return plants[0]
-        return None
+        return
 
 class FarmMgr(AzaleaGameManager):
     def __init__(self, pool: aiomysql.Pool, charuuid: str):
@@ -128,11 +126,14 @@ class FarmMgr(AzaleaGameManager):
 
     @classmethod
     def get_dict_from_plant(cls, plantdata: FarmPlantData) -> Dict:
+        grow_time = {}
+        for k, v in plantdata.grow_time.items():
+            grow_time[k.name] = v
         data = {
             'id': plantdata.id,
             'count': plantdata.count,
             'planted_datetime': plantdata.planted_datetime.isoformat(),
-            'grow_time': plantdata.grow_time
+            'grow_time': grow_time
         }
         return data
         
@@ -175,19 +176,39 @@ class FarmMgr(AzaleaGameManager):
         return filtered
         
     async def _save_plants(self, plants: List[Dict]):
-        async with self.pool.acqurie() as conn:
+        async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 pdt = {'plants': plants}
-                rst = cur.execute('update farmdata set plants=%s where uuid=%s', (json.dumps(pdt, ensure_ascii=False), self.charuuid))
+                rst = await cur.execute('update farmdata set plants=%s where uuid=%s', (json.dumps(pdt, ensure_ascii=False), self.charuuid))
                 return rst
+
+    async def get_used_space(self):
+        return len(await self.get_raw_plants())
+
+    async def get_free_space(self):
+        area = await self.get_area()
+        used = await self.get_used_space()
+        return area - used
         
-    async def add_plant(self, farm_dmgr: FarmDBMgr, plantdata: FarmPlantData, *, autoreset_growtime: bool=True):
+    async def add_plant(self, farm_dmgr: FarmDBMgr, plantdata: FarmPlantData, count: int) -> List[FarmPlantData]:
+        """
+        작물을 심습니다. plantdata의 grow_time 속성 또는 planted_datetime 속성이 None 이면 자동으로 이를 설정합니다
+        """
         raw = await self.get_raw_plants()
-        plant = self.get_dict_from_plant(plantdata)
-        plantdb = farm_dmgr.fetch_plant(plant.id)
-        if autoreset_growtime:
-            for k, v in plantdb.growtime.items():
-                plant.grow_time[k] = random.randint(v[0], v[1])
-        raw.append(plant)
-        rst = await self._save_plants(raw)
-        return rst
+        plantdb = farm_dmgr.fetch_plant(plantdata.id)
+        ls = [plantdata] * count
+        plants = []
+        for one in ls:
+            if one.planted_datetime is None:
+                one.planted_datetime = datetime.datetime.now()
+            if one.grow_time is None:
+                one.grow_time = {}
+                for k, v in plantdb.growtime.items():
+                    if v is None:
+                        break
+                    one.grow_time[k] = random.randint(v[0], v[1])
+            plant = self.get_dict_from_plant(one)
+            raw.append(plant)
+            plants.append(plant)
+        await self._save_plants(raw)
+        return plants
