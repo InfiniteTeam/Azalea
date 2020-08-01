@@ -812,4 +812,7 @@ class MigrateTool:
                 await cur.execute(f'select uuid from `{fetching_table}`')
                 ls = await cur.fetchall()
                 for x in ls:
-                    await cur.execute(f'insert into `{target_table}` (uuid) values (%s)', x['uuid'])
+                    try:
+                        await cur.execute(f'insert into `{target_table}` (uuid) values (%s)', x['uuid'])
+                    except:
+                        pass

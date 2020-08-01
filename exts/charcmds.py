@@ -403,7 +403,7 @@ class Charcmds(BaseCog):
         smgr = SettingMgr(self.pool, sdgr, char.uid)
         pgr = pager.Pager(self.datadb.char_settings, perpage)
         
-        msg = await ctx.send(embed=ingameembeds.char_settings_embed(self, pgr, char))
+        msg = await ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char))
         extemjs = ['✏']
         if len(pgr.pages()) <= 1:
             emjs = extemjs
@@ -426,11 +426,11 @@ class Charcmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                        await msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                            ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -514,7 +514,7 @@ class Charcmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=ingameembeds.char_settings_embed(self, pgr, char))
+                        msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char))
                     )
 
 def setup(client):

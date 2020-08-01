@@ -185,7 +185,7 @@ def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, m
         embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
     return embed
 
-def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default') -> discord.Embed:
+async def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default') -> discord.Embed:
     sdgr = SettingDBMgr(cog.datadb)
     smgr = SettingMgr(cog.pool, sdgr, char.uid)
     settitles = []
@@ -194,7 +194,7 @@ def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterD
     now = pgr.get_thispage()
     for idx, st in enumerate(now):
         settitles.append(st.title)
-        valuestr = str(smgr.get_setting(st.name))
+        valuestr = str(await smgr.get_setting(st.name))
         if st.type == bool:
             for x in [('True', '켜짐'), ('False', '꺼짐')]:
                 valuestr = valuestr.replace(x[0], x[1])
