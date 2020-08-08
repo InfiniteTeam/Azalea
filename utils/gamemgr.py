@@ -16,8 +16,6 @@ class AzaleaGameDBManager(AzaleaDBManager):
     pass
 
 class FarmPlantStatus(Enum):
-    Planted = '아직 싹이 트지 않음'
-    Sprouted = '싹이 틈'
     Growing = '자라는 중'
     AllGrownUp = '다 자람'
 

@@ -13,34 +13,23 @@ async def farm_dashboard(cog: BaseCog, *, char: CharacterData, farm_mgr: FarmMgr
 
 async def farm_status(cog: BaseCog, *, char: CharacterData, farm_mgr: FarmMgr):
     area = await farm_mgr.get_area()
-    nulbi = 81
-    
-    ls = [
-        round(len(await farm_mgr.get_plants_with_status(FarmPlantStatus.AllGrownUp)) / area * nulbi),
-        round(len(await farm_mgr.get_plants_with_status(FarmPlantStatus.Growing)) / area * nulbi),
-        round(len(await farm_mgr.get_plants_with_status(FarmPlantStatus.Sprouted)) / area * nulbi),
-        round(len(await farm_mgr.get_plants_with_status(FarmPlantStatus.Planted)) / area * nulbi)
-    ]
-    ls.append(nulbi - sum(ls))
 
-    stats = list('🟥' * ls[0] + '🟨' * ls[1] + '🟩' * ls[2] + '⬜' * ls[3] + '🟫' * ls[4])
-    for x in range(9):
-        stats.insert(10*x, '\n')
+    ls = [
+        len(await farm_mgr.get_plants_with_status(FarmPlantStatus.AllGrownUp)),
+        len(await farm_mgr.get_plants_with_status(FarmPlantStatus.Growing))
+    ]
+    ls.append(area - sum(ls))
 
     statls = [
-        '🟥 다 자람',
-        '🟨 자라는 중',
-        '🟩 싹이 틈',
-        '⬜ 아직 싹이 트지 않음',
-        '🟫 빈 땅'
+        '다 자람',
+        '자라는 중',
+        '빈 땅'
     ]
 
-    statstat = []
-    for idx, y in enumerate(statls):
-        statstat.append('{} - {}%'.format(y, round(ls[idx]/nulbi*100)))
-
-    embed = discord.Embed(title=f'🌱 `{char.name}` 의 농장 상태', color=cog.color['info'])
-    embed.add_field(name='농장 작물 차지 비율', value=''.join(stats))
-    embed.set_footer(text='\n'.join(statstat))
+    embed = discord.Embed(title=f'🌱 `{char.name}` 의 농장 상태', description='', color=cog.color['info'])
+    embed.add_field(
+        name='🔸 작물 성장 상태',
+        value='\n'.join(['**{}** - {}칸 `({}%)`'.format(y, ls[idx], round(ls[idx]/area*100)) for idx, y in enumerate(statls)])
+    )
 
     return embed
