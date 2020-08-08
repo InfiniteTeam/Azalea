@@ -203,6 +203,7 @@ class FarmMgr(AzaleaGameManager):
                 one.grow_time = {}
                 for k, v in plantdb.growtime.items():
                     if v is None:
+                        one.grow_time[k] = -1
                         break
                     one.grow_time[k] = random.randint(v[0], v[1])
             plant = self.get_dict_from_plant(one)
