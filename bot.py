@@ -118,7 +118,7 @@ sshclient.set_missing_host_key_policy(paramiko.AutoAddPolicy)
 sshclient.connect(ssh['host'], username=ssh['user'], password=ssh['password'], port=ssh['port'])
 
 async def dbcmd(cmd):
-    stdin, stdout, stderr = await client.loop.run_in_executor(None, sshclient.exec_command, cmd)
+    _, stdout, _ = await client.loop.run_in_executor(None, sshclient.exec_command, cmd)
     lines = stdout.readlines()
     return ''.join(lines)
 

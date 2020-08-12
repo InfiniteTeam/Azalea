@@ -28,35 +28,6 @@ def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default') -> 
     embed.set_footer(text='💎: 구매 | 💰: 판매 | ❔ 자세히')
     return embed
 
-async def char_embed(cog, username, pgr: pager.Pager, *, mode='default') -> discord.Embed:
-    edgr = ExpTableDBMgr(cog.datadb)
-    chars = pgr.get_thispage()
-    charstr = ''
-    for idx, one in enumerate(chars):
-        name = one.name
-        samgr = StatMgr(cog.pool, one.uid)
-        if mode == 'select':
-            name = f'{idx+1}. {name}'
-        level = await samgr.get_level(edgr)
-        chartype = one.type.value
-        online = one.online
-        onlinestr = ''
-        if online:
-            onlinestr = '(**현재 플레이중**)'
-        deleteleftstr = ''
-        if one.delete_request:
-            tdleft = timedelta.format_timedelta((one.delete_request + relativedelta(hours=24)) - datetime.datetime.now())
-            deleteleft = ' '.join(tdleft.values())
-            deleteleftstr = '\n**`{}` 후에 삭제됨**'.format(deleteleft)
-        charstr += '**{}** {}\n레벨: `{}` \\| 직업: `{}` {}\n\n'.format(name, onlinestr, level, chartype, deleteleftstr)
-    embed = discord.Embed(
-        title=f'🎲 `{username}`님의 캐릭터 목록',
-        description=charstr,
-        color=cog.color['info']
-    )
-    embed.description = charstr + '```{}/{} 페이지, 전체 {}캐릭터```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
-    return embed
-
 async def itemdata_embed(cog: basecog.BaseCog, itemdata: ItemData, mode='default', *, count: int=0, charuuid: str=None) -> discord.Embed:
     idgr = ItemDBMgr(cog.datadb)
     item = idgr.fetch_item(itemdata.id)
