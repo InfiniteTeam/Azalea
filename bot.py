@@ -2,19 +2,16 @@ import discord
 from discord.ext import commands, tasks
 import datetime
 import json
-import math
 import asyncio
 import platform
 import aiomysql
 import os
 import logging
 import logging.handlers
-import traceback
 import importlib
 import paramiko
 from itertools import chain
-from random import randint
-from utils import errors, checks, msglogger, emojictrl, permutil, datamgr, progressbar
+from utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from utils.azalea import Azalea
 from db import enchantments, charsettings, market, regions, permissions, exptable
 from ingame.farming import farm_plants

@@ -2,10 +2,10 @@
     "botName": "Azalea",
     "betaprefix": "*",
     "inspection": false,
-    "is_android": true,
+    "is_android": false,
     "securedir": {
         "Windows": "C:/azalea",
-        "Linux": "/home/pi/azalea",
+        "Linux": "/workspace/azalea",
         "Android": "/sdcard/azalea"
     },
     "tokenFileName": "token.txt",

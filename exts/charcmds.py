@@ -9,8 +9,11 @@ import aiomysql
 import re
 from utils import pager, emojibuttons, timedelta, event_waiter
 from utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
+from utils.mgrerrors import CharCreateError, CharCreateErrReasons
 from templates import ingameembeds, errembeds
 from db import charsettings
+from templates import charembeds
+from functools import partial
 
 class Charcmds(BaseCog):
     def __init__(self, client):
@@ -63,6 +66,20 @@ class Charcmds(BaseCog):
                     await asyncio.gather(do,
                         msg.edit(embed=await ingameembeds.char_embed(self, user.name, pgr)),
                     )
+                    
+    async def char_name_check(self, name: str):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                if not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', name)  or '|' in name:
+                    raise CharCreateError(CharCreateErrReasons.InvalidName)
+                elif not (2 <= len(name) <= 10):
+                    raise CharCreateError(CharCreateErrReasons.InvalidLength)
+                elif await cur.execute('select * from chardata where name=%s', name) != 0:
+                    raise CharCreateError(CharCreateErrReasons.NameAlreadyExists)
+                else:
+                    for pfx in self.client.command_prefix:
+                        if pfx.rstrip().lower() in name.lower():
+                            raise CharCreateError(CharCreateErrReasons.CannotIncludePrefix)
 
     @_char.command(name='생성')
     async def _char_create(self, ctx:commands.Context):
@@ -86,29 +103,17 @@ class Charcmds(BaseCog):
                     await ctx.send(embed=embed, delete_after=7)
                     self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 시간 초과]')
                 else:
-                    if m.content == '취소':
-                        await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
-                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 취소됨]')
+                    charname = m.content
+                        
+                try:
+                    await self.char_name_check(m.content)
+                except CharCreateError as exc:
+                    embed = charembeds.charcreate_fail_embed(self, exc)
+                    if embed is not None:
+                        await ctx.send(embed=embed)
+                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이름 짓기 검사]')
                         return
-                    elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content)  or '|' in m.content:
-                        await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 올바르지 않은 이름]')
-                        return
-                    elif not (2 <= len(m.content) <= 10):
-                        await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2~10글자이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 너무 짧거나 긴 이름]')
-                        return
-                    elif await cur.execute('select * from chardata where name=%s', m.content) != 0:
-                        await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이미 사용중인 이름]')
-                        return
-                    else:
-                        for pfx in self.client.command_prefix:
-                            if pfx.rstrip().lower() in m.content.lower():
-                                await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='아젤리아 봇 접두사는 이름에 포함할 수 없습니다.\n다시 시도해 주세요!', color=self.color['error']))
-                                self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 접두사 포함 금지]')
-                                return
-                        charname = m.content
+                        
                 typemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 직업', color=self.color['ask'],
                     description="""\
                         `{}` 의 직업을 선택합니다.
@@ -150,11 +155,16 @@ class Charcmds(BaseCog):
                         await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
                         self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                         return
-                    elif await cur.execute('select * from chardata where name=%s', m.content) != 0:
-                        await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이미 사용중인 이름]')
-                        return
-                    char = await cmgr.add_character_with_raw(ctx.author.id, charname, chartype)
+                    
+                    try:
+                        char = await cmgr.add_character_with_raw(ctx.author.id, charname, chartype, check=self.char_name_check(charname))
+                    except CharCreateError as exc:
+                        embed = charembeds.charcreate_fail_embed(self, exc)
+                        if embed is not None:
+                            await ctx.send(embed=embed)
+                            self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이름 짓기 검사]')
+                            return
+                        
                     if charcount == 0:
                         await cmgr.change_character(ctx.author.id, char.uid)
                         desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
@@ -307,29 +317,17 @@ class Charcmds(BaseCog):
                     await ctx.send(embed=embed, delete_after=7)
                     self.msglog.log(ctx, '[이름변경: 시간 초과]')
                 else:
-                    if m.content == '취소':
-                        await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
-                        self.msglog.log(ctx, '[이름변경: 취소됨]')
-                        return
-                    elif not re.match('^[ |가-힣|a-z|A-Z|0-9]+$', m.content) or '|' in m.content:
-                        await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[이름변경: 올바르지 않은 이름]')
-                        return
-                    elif not (2 <= len(m.content) <= 10):
-                        await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='캐릭터 이름은 2~10글자이여야 합니다.\n다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[이름변경: 너무 짧거나 긴 이름]')
-                        return
-                    elif await cur.execute('select * from chardata where name=%s', m.content) != 0:
-                        await ctx.send(embed=discord.Embed(title='❌ 이미 사용중인 이름입니다!', description='다시 시도해 주세요!', color=self.color['error']))
-                        self.msglog.log(ctx, '[이름변경: 이미 사용중인 이름]')
-                        return
-                    else:
-                        for pfx in self.client.command_prefix:
-                            if pfx.rstrip().lower() in m.content.lower():
-                                await ctx.send(embed=discord.Embed(title='❌ 사용할 수 없는 이름입니다!', description='아젤리아 봇 접두사는 이름에 포함할 수 없습니다.\n다시 시도해 주세요!', color=self.color['error']))
-                                self.msglog.log(ctx, '[이름변경: 접두사 포함 금지]')
-                                return
                         newname = m.content
+                    
+                    try:
+                        await self.char_name_check(m.content)
+                    except CharCreateError as exc:
+                        embed = charembeds.charcreate_fail_embed(self, exc)
+                        if embed is not None:
+                            await ctx.send(embed=embed)
+                            self.msglog.log(ctx, '[이름변경: 이름 짓기 검사]')
+                            return
+                    
                     msg = await ctx.send(embed=discord.Embed(title=f'🏷 `{newname}` 으로 변경할까요?', description='변경하면 24시간 후에 다시 변경할 수 있습니다!', color=self.color['ask']))
                     emjs = ['⭕', '❌']
                     for em in emjs:

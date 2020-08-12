@@ -690,7 +690,7 @@ class CharMgr(AzaleaManager):
                 chardata = self.get_char_from_dict(char, await samgr.get_stat())
         return chardata
 
-    async def add_character_with_raw(self, userid: int, name: str, chartype: str, *, rollback_on_error: bool=True) -> CharacterData:
+    async def add_character_with_raw(self, userid: int, name: str, chartype: str, *, rollback_on_error: Optional[bool]=True, check: Optional[Callable]=None) -> CharacterData:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 uid = uuid.uuid4().hex
@@ -703,6 +703,10 @@ class CharMgr(AzaleaManager):
                     json.dumps({}, ensure_ascii=False)
                 )
                 try:
+                    if asyncio.iscoroutine(check):
+                        await check
+                    elif callable(check):
+                        check()
                     await cur.execute('insert into chardata (uuid, id, name, type, items, settings, last_nick_change) values (%s, %s, %s, %s, %s, %s, NULL)', datas)
                     await cur.execute('insert into statdata (uuid) values (%s)', uid)
                     
@@ -713,8 +717,10 @@ class CharMgr(AzaleaManager):
 
                 except Exception as exc:
                     if rollback_on_error:
-                        await self.delete_character(uid)
-                        raise exc
+                        try:
+                            await self.delete_character(uid)
+                        except: pass
+                    raise exc
 
                 char = await self.get_character(uid)
         return char
