@@ -10,7 +10,7 @@ from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
 import json
 import importlib
-from . import errors
+from . import mgrerrors
 from .gamemgr import MineMgr, FarmMgr, FarmPlant
 from .basemgr import AzaleaData, AzaleaManager, AzaleaDBManager
 import os
@@ -257,6 +257,14 @@ class MarketDBMgr(AzaleaDBManager):
     def get_market(self, name: str) -> List[MarketItem]:
         if name in self.markets:
             return self.markets[name]
+        
+class MarketMgr(AzaleaManager):
+    def __init__(self, pool: aiomysql.Pool, charuuid: str):
+        self.pool = pool
+        self.charuuid = charuuid
+        
+    def buy(self):
+        pass
 
 class RegionDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
@@ -340,7 +348,7 @@ class SettingMgr(AzaleaManager):
             await self._save_settings(rawset)
             return setadd.default
         else:
-            raise errors.SettingNotFound
+            raise mgrerrors.SettingNotFound(name)
 
     async def edit_setting(self, name: str, value):
         rawset = await self.get_raw_settings()
@@ -350,7 +358,7 @@ class SettingMgr(AzaleaManager):
             rawset[setedit.name] = value
             await self._save_settings(rawset)
         else:
-            raise errors.SettingNotFound
+            raise mgrerrors.SettingNotFound(name)
 
 class NewsMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool):
@@ -734,7 +742,7 @@ class CharMgr(AzaleaManager):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 if await cur.execute('select * from chardata where uuid=%s and delete_request is not NULL', charuuid) != 0:
-                    raise errors.CannotLoginBeingDeleted
+                    raise mgrerrors.CannotLoginBeingDeleted(charuuid)
                 await self.logout_all(userid)
                 await cur.execute('update chardata set online=%s where uuid=%s', (True, charuuid))
 
@@ -749,7 +757,7 @@ class CharMgr(AzaleaManager):
                 await farm_mgr.delete_farmdata()
 
                 if await cur.execute('delete from chardata where uuid=%s', charuuid) == 0:
-                    raise errors.CharacterNotFound
+                    raise mgrerrors.CharacterNotFound(charuuid)
 
     async def change_nick(self, charuuid: str, new: str):
         async with self.pool.acquire() as conn:
@@ -763,13 +771,13 @@ class CharMgr(AzaleaManager):
                 if await cur.execute('select * from chardata where uuid=%s and online=%s', (charuuid, True)) != 0:
                     await self.logout_all(userid)
                 if await cur.execute('update chardata set delete_request=%s where uuid=%s', (datetime.datetime.now(), charuuid)) == 0:
-                    raise errors.CharacterNotFound
+                    raise mgrerrors.CharacterNotFound(charuuid)
 
     async def cancel_delete(self, charuuid: str):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 if await cur.execute('update chardata set delete_request=%s where uuid=%s', (None, charuuid)) == 0:
-                    raise errors.CharacterNotFound
+                    raise mgrerrors.CharacterNotFound(charuuid)
 
     async def is_being_forgotten(self, charuuid: str):
         async with self.pool.acquire() as conn:

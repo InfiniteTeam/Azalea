@@ -10,7 +10,7 @@ import sys
 import os
 import io
 from utils.basecog import BaseCog
-from utils import errors, progressbar
+from utils import progressbar
 import traceback
 
 class Mastercmds(BaseCog):

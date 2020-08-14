@@ -9,7 +9,7 @@ import random
 import aiomysql
 import json
 import math
-from utils import pager, emojibuttons, errors, timedelta, event_waiter, progressbar
+from utils import pager, emojibuttons, timedelta, event_waiter, progressbar
 from utils.basecog import BaseCog
 from templates import errembeds, ingameembeds
 from dateutil.relativedelta import relativedelta
