@@ -10,7 +10,7 @@ import re
 from utils import pager, emojibuttons, timedelta, event_waiter
 from utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
 from utils.mgrerrors import CharCreateError, CharCreateErrReasons
-from templates import ingameembeds, errembeds
+from templates import ingameembeds, miniembeds
 from db import charsettings
 from templates import charembeds
 from functools import partial
@@ -266,7 +266,7 @@ class Charcmds(BaseCog):
                 await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{cname}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
         else:
-            await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, name))
+            await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, name))
             self.msglog.log(ctx, '[캐릭터 변경: 존재하지 않는 캐릭터]')
 
     @_char.command(name='삭제', aliases=['삭'])
@@ -274,7 +274,7 @@ class Charcmds(BaseCog):
         cmgr = CharMgr(self.pool)
         char = list(filter(lambda x: x.name.lower() == name.lower(), await cmgr.get_chars(ctx.author.id)))
         if not char:
-            embed = errembeds.CharNotFound.getembed(ctx, name)
+            embed = miniembeds.CharNotFound.getembed(ctx, name)
             embed.description = '캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.'
             await ctx.send(embed=embed)
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
@@ -321,7 +321,7 @@ class Charcmds(BaseCog):
         cmgr = CharMgr(self.pool)
         char = list(filter(lambda x: x.name.lower() == name.lower(), await cmgr.get_chars(ctx.author.id)))
         if not char:
-            embed = errembeds.CharNotFound.getembed(ctx, name)
+            embed = miniembeds.CharNotFound.getembed(ctx, name)
             embed.description = '캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.'
             await ctx.send(embed=embed)
             self.msglog.log(ctx, '[캐릭터 삭제취소: 존재하지 않는 캐릭터]')
@@ -357,7 +357,7 @@ class Charcmds(BaseCog):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'name':
                 missing = '캐릭터의 이름'
-            await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+            await ctx.send(embed=miniembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
     @_char.command(name='이름변경', aliases=['닉변'])
     async def _char_changename(self, ctx: commands.Context, *, charname: typing.Optional[str]):
@@ -365,7 +365,7 @@ class Charcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname, ctx.author.id)
             if not char:
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[이름변경: 존재하지 않는 캐릭터]')
                 return
         else:
@@ -471,7 +471,7 @@ class Charcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname, ctx.author.id)
             if not char:
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 return
         else:
             char = await cmgr.get_current_char(ctx.author.id)
@@ -583,7 +583,7 @@ class Charcmds(BaseCog):
                 if charname:
                     char = await cmgr.get_character_by_name(charname, ctx.author.id)
                     if not char:
-                        await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                        await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                         return
                 else:
                     char = await cmgr.get_current_char(ctx.author.id)

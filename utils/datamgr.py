@@ -257,14 +257,6 @@ class MarketDBMgr(AzaleaDBManager):
     def get_market(self, name: str) -> List[MarketItem]:
         if name in self.markets:
             return self.markets[name]
-        
-class MarketMgr(AzaleaManager):
-    def __init__(self, pool: aiomysql.Pool, charuuid: str):
-        self.pool = pool
-        self.charuuid = charuuid
-        
-    def buy(self):
-        pass
 
 class RegionDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
@@ -482,8 +474,8 @@ class ItemMgr(AzaleaManager):
             else:
                 items[idx]['count'] -= count
             await self._save_item_by_dict(items)
-            return True
-        return False
+        else:
+            raise mgrerrors.ItemNotFound
 
     async def give_item(self, itemdata: ItemData):
         items = await self.get_items_dict()
@@ -514,6 +506,32 @@ class ItemMgr(AzaleaManager):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute('update chardata set money=money+%s where uuid=%s', (value, self.charuuid))
+
+class MarketMgr(AzaleaManager):
+    def __init__(self, pool: aiomysql.Pool, datadb: DataDB, charuuid: str):
+        self.pool = pool
+        self.datadb = datadb
+        self.charuuid = charuuid
+        
+    async def buy(self, marketitem: MarketItem, count: int):
+        imgr = ItemMgr(self.pool, self.charuuid)
+        money = imgr.fetch_money()
+        if marketitem.discount is None:
+            final_price = count * marketitem.discount
+        else:
+            final_price = count * marketitem.price
+        
+        if final_price <= money:
+            await imgr.give_money(-final_price)
+            marketitem.item.count = count
+            await imgr.give_item(marketitem.item)
+        
+    async def sell(self, item: ItemData, count: int):
+        idgr = ItemDBMgr(self.datadb)
+        imgr = ItemMgr(self.pool, self.charuuid)
+        await imgr.delete_item(item, count)
+        final_price = idgr.get_final_price(item, count)
+        await imgr.give_money(final_price)
 
 class ExpTableDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):

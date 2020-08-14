@@ -2,11 +2,11 @@ import discord
 from discord.ext import commands
 import asyncio
 from utils.basecog import BaseCog
-from utils.gamemgr import FarmMgr, FarmDBMgr, FarmPlantData
+from utils.gamemgr import FarmMgr, FarmDBMgr, FarmPlantData, FarmPlantStatus
 from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr
 from utils.pager import Pager
 from utils import event_waiter
-from templates import errembeds, farmembeds, ingameembeds
+from templates import miniembeds, farmembeds, ingameembeds
 import typing
 import datetime
 
@@ -23,7 +23,7 @@ class Farmcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char:
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
                 return
         else:
@@ -40,7 +40,7 @@ class Farmcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char:
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
                 return
         else:
@@ -110,7 +110,7 @@ class Farmcmds(BaseCog):
                                 if count <= free:
                                     plantid = idgr.fetch_item(item.id).meta.get('farm_plant')
                                     await imgr.delete_item(item, count)
-                                    await farm_mgr.add_plant(farm_dmgr, FarmPlantData(plantid, 1, None, None), count)
+                                    await farm_mgr.add_plant(farm_dmgr, plantid, count)
                                     await ctx.send(embed=discord.Embed(title='🌱 `{}` 을(를) {} 개 심었습니다!'.format(farm_dmgr.fetch_plant(plantid).title, count), color=self.color['success']))
                                 else:
                                     embed = discord.Embed(title='❌ 농장 공간이 부족합니다!', description='현재 농장에 최대 {}개를 심을 수 있습니다.'.format(free), color=self.color['error'])
@@ -133,6 +133,25 @@ class Farmcmds(BaseCog):
                     await ctx.send(embed=embed, delete_after=7)
                     self.msglog.log(ctx, '[심기: 올바르지 않은 번째수]')
             await msg.delete()
+
+    @commands.command(name='수확')
+    async def _suhwak(self, ctx: commands.Context):
+        cmgr = CharMgr(self.pool)
+        char = await cmgr.get_current_char(ctx.author.id)
+        farm_dmgr = FarmDBMgr(self.datadb)
+        farm_mgr = FarmMgr(self.pool, char.uid)
+        can_harvest = await farm_mgr.get_plants_with_status(FarmPlantStatus.AllGrownUp)
+        plants = { one.id: None for one in can_harvest }
+        for pid in plants.keys():
+            plants[pid] = list(filter(lambda x: x.id == pid, can_harvest))
+
+        embed = discord.Embed(title='🍎 수확하기', description='', color=self.color['info'])
+        for oid in plants.keys():
+            plantdb = farm_dmgr.fetch_plant(oid)
+            allcount = sum(map(lambda x: x.count, plants[oid]))
+            embed.description += '{}: `{}`개\n'.format(plantdb.title, allcount)
+        await ctx.send(embed=embed)
+        self.msglog.log(ctx, '[수확]')
 
 def setup(client):
     cog = Farmcmds(client)

@@ -25,13 +25,14 @@ class SettingNotFound(AzaleaError):
         super().__init__(f'설정을 찾을 수 없습니다! (NAME: "{name}")')
         
 class CannotLoginBeingDeleted(AzaleaError):
-    def __init__(self, *, uid: str):
+    def __init__(self, uid: str):
         self.uid = uid
         super().__init__(f'삭제 중인 캐릭터에 로그인할 수 없습니다 (UUID: "{uid}")')
         
 # Item Errors
 
 class ItemNotFound(AzaleaError):
-    def __init__(self, *, uid: str):
-        self.uid = uid
-        super().__init__(f'아이템을 찾을 수 없습니다 (UUID: "{uid}")')
+    pass
+
+class NotEnoughMoney(AzaleaError):
+    pass

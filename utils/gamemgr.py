@@ -188,26 +188,32 @@ class FarmMgr(AzaleaGameManager):
         used = await self.get_used_space()
         return area - used
         
-    async def add_plant(self, farm_dmgr: FarmDBMgr, plantdata: FarmPlantData, count: int) -> List[FarmPlantData]:
+    async def add_plant(self, farm_dmgr: FarmDBMgr, plantid: str, count: int) -> List[FarmPlantData]:
         """
-        작물을 심습니다. plantdata의 grow_time 속성 또는 planted_datetime 속성이 None 이면 자동으로 이를 설정합니다
+        작물을 심습니다.
         """
         raw = await self.get_raw_plants()
-        plantdb = farm_dmgr.fetch_plant(plantdata.id)
-        ls = [plantdata] * count
+        plantdb = farm_dmgr.fetch_plant(plantid)
         plants = []
-        for one in ls:
-            if one.planted_datetime is None:
-                one.planted_datetime = datetime.datetime.now()
-            if one.grow_time is None:
-                one.grow_time = {}
-                for k, v in plantdb.growtime.items():
-                    if v is None:
-                        one.grow_time[k] = -1
-                        break
-                    one.grow_time[k] = random.randint(v[0], v[1])
-            plant = self.get_dict_from_plant(one)
+        for one in range(count):
+            grow_time = {}
+            for k, v in plantdb.growtime.items():
+                if v is None:
+                    grow_time[k] = -1
+                    break
+                grow_time[k] = random.randint(v[0], v[1])
+            plantdata = FarmPlantData(
+                plantdb.id,
+                random.randint(
+                    plantdb.harvest_count[0],
+                    plantdb.harvest_count[1]
+                ),
+                datetime.datetime.now(),
+                grow_time
+            )
+                
+            plant = self.get_dict_from_plant(plantdata)
             raw.append(plant)
-            plants.append(plant)
+            plants.append(plantdata)
         await self._save_plants(raw)
         return plants

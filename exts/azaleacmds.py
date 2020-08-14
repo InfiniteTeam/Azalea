@@ -11,7 +11,7 @@ import aiomysql
 from utils.basecog import BaseCog
 from utils.datamgr import NewsMgr, NewsData
 from utils import timedelta, pager, emojibuttons
-from templates import errembeds, azaleaembeds, help
+from templates import miniembeds, azaleaembeds, help
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):
@@ -311,7 +311,7 @@ class Azaleacmds(BaseCog):
                 missing = '내용'
             elif error.param.name == 'company':
                 missing = '신문사'
-            await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+            await ctx.send(embed=miniembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
 def setup(client):
     cog = Azaleacmds(client)

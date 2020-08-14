@@ -7,7 +7,7 @@ import json
 import typing
 import inspect
 from utils import pager, datamgr, converters
-from templates import errembeds
+from templates import miniembeds
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
@@ -24,7 +24,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char :
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
@@ -78,7 +78,7 @@ class GameDebugcmds(BaseCog):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'itemid':
                 missing = '아이템 아이디'
-            await ctx.send(embed=errembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+            await ctx.send(embed=miniembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
 
     @commands.command(name='경험치지급')
     async def _give_exp(self, ctx: commands.Context, exp: int, *, charname: typing.Optional[str]=None):
@@ -86,7 +86,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char :
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[경험치지급: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
@@ -143,7 +143,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char:
-                await ctx.send(embed=errembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
                 self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
                 return
         else:
