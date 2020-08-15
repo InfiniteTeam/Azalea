@@ -1,8 +1,7 @@
 import discord
 import math
 from utils.basecog import BaseCog
-from utils.gamemgr import FarmMgr, FarmPlantStatus
-from utils.datamgr import CharacterData
+from utils.datamgr import CharacterData, FarmMgr, FarmPlantStatus
 
 async def farm_dashboard(cog: BaseCog, *, char: CharacterData, farm_mgr: FarmMgr):
     level = await farm_mgr.get_level()

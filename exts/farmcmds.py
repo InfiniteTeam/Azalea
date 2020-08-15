@@ -2,10 +2,9 @@ import discord
 from discord.ext import commands
 import asyncio
 from utils.basecog import BaseCog
-from utils.gamemgr import FarmMgr, FarmDBMgr, FarmPlantData, FarmPlantStatus
-from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr
+from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr, FarmMgr, FarmDBMgr, FarmPlantData, FarmPlantStatus, StatMgr
 from utils.pager import Pager
-from utils import event_waiter
+from utils import event_waiter, mgrerrors
 from templates import miniembeds, farmembeds, ingameembeds
 import typing
 import datetime
@@ -94,7 +93,7 @@ class Farmcmds(BaseCog):
                                 if count <= free:
                                     plantid = idgr.fetch_item(item.id).meta.get('farm_plant')
                                     await imgr.delete_item(item, count)
-                                    await farm_mgr.add_plant(farm_dmgr, plantid, count)
+                                    await farm_mgr.add_plant(self.datadb, plantid, count)
                                     await ctx.send(embed=discord.Embed(title='🌱 `{}` 을(를) {} 개 심었습니다!'.format(farm_dmgr.fetch_plant(plantid).title, count), color=self.color['success']))
                                     self.msglog.log(ctx, '[심기: 완료]')
                                 else:
@@ -123,17 +122,22 @@ class Farmcmds(BaseCog):
     async def _suhwak(self, ctx: commands.Context):
         cmgr = CharMgr(self.pool)
         char = await cmgr.get_current_char(ctx.author.id)
+        smgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
         farm_dmgr = FarmDBMgr(self.datadb)
         farm_mgr = FarmMgr(self.pool, char.uid)
+        idgr = ItemDBMgr(self.datadb)
         can_harvest = await farm_mgr.get_plants_with_status(FarmPlantStatus.AllGrownUp)
+        if not can_harvest:
+            await ctx.send(embed=discord.Embed(title='❌ 수확할 수 있는 작물이 하나도 없습니다!', color=self.color['error']))
+            return
+
         plants = { one.id: None for one in can_harvest }
         for pid in plants.keys():
             plants[pid] = list(filter(lambda x: x.id == pid, can_harvest))
 
-        embed = discord.Embed(title='🍎 수확하기', description='{}칸을 수확할 수 있습니다. 계속할까요?'.format(len(can_harvest)), color=self.color['info'])
+        embed = discord.Embed(title='🍎 수확하기', description='{}칸을 수확할 수 있습니다. 계속할까요?\n\n'.format(len(can_harvest)), color=self.color['info'])
         for oid in plants.keys():
             plantdb = farm_dmgr.fetch_plant(oid)
-            allcount = sum(map(lambda x: x.count, plants[oid]))
             embed.description += '{} {}: `{}`칸\n'.format(plantdb.icon, plantdb.title, len(plants[oid]))
         msg = await ctx.send(embed=embed)
         self.msglog.log(ctx, '[수확]')
@@ -151,7 +155,28 @@ class Farmcmds(BaseCog):
                 pass
         else:
             if reaction.emoji == '⭕':
-                pass
+                try:
+                    await farm_mgr.harvest(smgr, self.datadb, *can_harvest, channel_id=ctx.channel.id)
+                except mgrerrors.NotFound:
+                    await ctx.send(embed=discord.Embed(title='❓ 수확할 수 있는 작물을 찾을 수 없습니다', description='이미 수확됐지는 않은가요?'))
+                else:
+                    gotten_plants = {one.id: 0 for one in can_harvest}
+                    for one in can_harvest:
+                        gotten_plants[one.id] += one.count
+
+                    embed = discord.Embed(title='{} 성공적으로 수확했습니다!'.format(self.emj.get(ctx, 'check')), description='수확으로 얻은 아이템:\n\n', color=self.color['success'])
+
+                    for k, v in gotten_plants.items():
+                        itemdb = idgr.fetch_item(farm_dmgr.fetch_plant(k).grown)
+                        embed.description += '{} {}: {}개\n'.format(itemdb.icon, itemdb.name, v)
+
+                    await ctx.send(embed=embed)
+
+            elif reaction.emoji == '❌':
+                try:
+                    await msg.delete()
+                except:
+                    pass
 
 def setup(client):
     cog = Farmcmds(client)
