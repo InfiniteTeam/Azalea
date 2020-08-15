@@ -8,6 +8,7 @@ import datetime
 from enum import Enum
 from functools import reduce
 from typing import List, Union, NamedTuple, Dict, Optional, Any, Callable, Awaitable
+from types import ModuleType
 import json
 import importlib
 from . import mgrerrors
@@ -193,6 +194,7 @@ class DataDB:
         self.permissions = []
         self.exp_table = {}
         self.farm_plants = []
+        self.base_exp = {}
         self.reloader = None
 
     def load_enchantments(self, enchantments: List[Enchantment]):
@@ -226,6 +228,9 @@ class DataDB:
         
     def load_farm_plants(self, plants: List[FarmPlant]):
         self.farm_plants = plants
+
+    def load_base_exp(self, base_exp: Dict[str, int]):
+        self.base_exp = base_exp
 
     def set_reloader(self, callback: Callable):
         self.reloader = callback
@@ -475,7 +480,7 @@ class ItemMgr(AzaleaManager):
                 items[idx]['count'] -= count
             await self._save_item_by_dict(items)
         else:
-            raise mgrerrors.ItemNotFound
+            raise mgrerrors.NotFound
 
     async def give_item(self, itemdata: ItemData):
         items = await self.get_items_dict()
@@ -741,12 +746,12 @@ class CharMgr(AzaleaManager):
                     farm_mgr = FarmMgr(self.pool, uid)
                     await farm_mgr.create_farmdata()
 
-                except Exception as exc:
+                except:
                     if rollback_on_error:
                         try:
                             await self.delete_character(uid)
                         except: pass
-                    raise exc
+                    raise
 
                 char = await self.get_character(uid)
         return char

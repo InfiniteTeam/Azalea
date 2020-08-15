@@ -33,23 +33,7 @@ class Farmcmds(BaseCog):
         farm_mgr = FarmMgr(self.pool, char.uid)
         embed = await farmembeds.farm_dashboard(self, farm_mgr=farm_mgr, char=char)
         await ctx.send(embed=embed)
-
-    @_farm.command(name='상태')
-    async def _farm_status(self, ctx: commands.Context, *, charname: typing.Optional[str]):
-        cmgr = CharMgr(self.pool)
-        if charname:
-            char = await cmgr.get_character_by_name(charname)
-            if not char:
-                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
-                self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
-                return
-        else:
-            char = await cmgr.get_current_char(ctx.author.id)
-            charname = char.name
-
-        farm_mgr = FarmMgr(self.pool, char.uid)
-        embed = await farmembeds.farm_status(self, char=char, farm_mgr=farm_mgr)
-        await ctx.send(embed=embed)
+        self.msglog.log(ctx, '[농장]')
 
     @commands.command(name='심기')
     async def _simgi(self, ctx: commands.Context):
@@ -112,6 +96,7 @@ class Farmcmds(BaseCog):
                                     await imgr.delete_item(item, count)
                                     await farm_mgr.add_plant(farm_dmgr, plantid, count)
                                     await ctx.send(embed=discord.Embed(title='🌱 `{}` 을(를) {} 개 심었습니다!'.format(farm_dmgr.fetch_plant(plantid).title, count), color=self.color['success']))
+                                    self.msglog.log(ctx, '[심기: 완료]')
                                 else:
                                     embed = discord.Embed(title='❌ 농장 공간이 부족합니다!', description='현재 농장에 최대 {}개를 심을 수 있습니다.'.format(free), color=self.color['error'])
                                     embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
@@ -145,13 +130,28 @@ class Farmcmds(BaseCog):
         for pid in plants.keys():
             plants[pid] = list(filter(lambda x: x.id == pid, can_harvest))
 
-        embed = discord.Embed(title='🍎 수확하기', description='', color=self.color['info'])
+        embed = discord.Embed(title='🍎 수확하기', description='{}칸을 수확할 수 있습니다. 계속할까요?'.format(len(can_harvest)), color=self.color['info'])
         for oid in plants.keys():
             plantdb = farm_dmgr.fetch_plant(oid)
             allcount = sum(map(lambda x: x.count, plants[oid]))
-            embed.description += '{}: `{}`개\n'.format(plantdb.title, allcount)
-        await ctx.send(embed=embed)
+            embed.description += '{} {}: `{}`칸\n'.format(plantdb.icon, plantdb.title, len(plants[oid]))
+        msg = await ctx.send(embed=embed)
         self.msglog.log(ctx, '[수확]')
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60)
+        except asyncio.TimeoutError:
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
+        else:
+            if reaction.emoji == '⭕':
+                pass
 
 def setup(client):
     cog = Farmcmds(client)

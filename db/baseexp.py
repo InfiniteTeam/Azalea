@@ -1,0 +1,3 @@
+BASE_EXP = {
+    'FARM_HARVEST': 10
+}

@@ -314,7 +314,7 @@ class InGamecmds(BaseCog):
                                                     # 판매 시도
                                                     try:
                                                         await mmgr.sell(item, count)
-                                                    except mgrerrors.ItemNotFound:
+                                                    except mgrerrors.NotFound:
                                                         embed = discord.Embed(title='❓ 해당 아이템을 찾을 수 없습니다!', description='아이템을 이미 판매했거나, 버렸지는 않은가요?', color=self.color['error'])
                                                         embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
                                                         await ctx.send(embed=embed, delete_after=7)

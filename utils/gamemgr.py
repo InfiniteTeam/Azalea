@@ -1,5 +1,7 @@
 import aiomysql
 from .basemgr import AzaleaData, AzaleaManager, AzaleaDBManager
+from .datamgr import ItemMgr, ItemData, DataDB, StatMgr
+import mgrerrors
 from typing import Tuple, Dict, List, Optional
 import json
 import random
@@ -20,12 +22,14 @@ class FarmPlantStatus(Enum):
     AllGrownUp = '다 자람'
 
 class FarmPlant(AzaleaData):
-    def __init__(self, id: str, title: str, grown: str, harvest_count: Tuple[int, int], *, growtime: Dict[FarmPlantStatus, Optional[Tuple[int, int]]]):
+    def __init__(self, id: str, icon: str, title: str, grown: str, harvest_count: Tuple[int, int], *, growtime: Dict[FarmPlantStatus, Optional[Tuple[int, int]]], exp: int):
         self.id = id
+        self.icon = icon
         self.title = title
         self.grown = grown
         self.harvest_count = harvest_count
         self.growtime = growtime
+        self.exp = exp
 
 class FarmPlantData(AzaleaData):
     def __init__(self, id: str, count: int, planted_datetime: datetime.datetime, grow_time: Dict):
@@ -73,9 +77,10 @@ class FarmDBMgr(AzaleaGameDBManager):
         return
 
 class FarmMgr(AzaleaGameManager):
-    def __init__(self, pool: aiomysql.Pool, charuuid: str):
+    def __init__(self, pool: aiomysql.Pool, datadb: DataDB, charuuid: str):
         self.pool = pool
         self.charuuid = charuuid
+        self.datadb = datadb
 
     async def has_farmdata(self):
         async with self.pool.acquire() as conn:
@@ -135,7 +140,7 @@ class FarmMgr(AzaleaGameManager):
         }
         return data
         
-    async def get_raw_plants(self):
+    async def get_raw_plants(self) -> List:
         raw = await self.get_raw_data()
         rawplants = json.loads(raw['plants'])['plants']
         return rawplants
@@ -145,12 +150,12 @@ class FarmMgr(AzaleaGameManager):
         plants = [self.get_plant_from_dict(one) for one in rawplants]
         return plants
             
-    async def get_level(self):
+    async def get_level(self) -> int:
         raw = await self.get_raw_data()
         level = raw['level']
         return level
 
-    async def get_area(self):
+    async def get_area(self) -> int:
         raw = await self.get_raw_data()
         area = raw['area']
         return area
@@ -173,25 +178,26 @@ class FarmMgr(AzaleaGameManager):
         filtered = list(filter(lambda one: self.get_status(one) == status, plants))
         return filtered
         
-    async def _save_plants(self, plants: List[Dict]):
+    async def _save_plants(self, plants: List[Dict]) -> int:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 pdt = {'plants': plants}
                 rst = await cur.execute('update farmdata set plants=%s where uuid=%s', (json.dumps(pdt, ensure_ascii=False), self.charuuid))
                 return rst
 
-    async def get_used_space(self):
+    async def get_used_space(self) -> int:
         return len(await self.get_raw_plants())
 
-    async def get_free_space(self):
+    async def get_free_space(self) -> int:
         area = await self.get_area()
         used = await self.get_used_space()
         return area - used
         
-    async def add_plant(self, farm_dmgr: FarmDBMgr, plantid: str, count: int) -> List[FarmPlantData]:
+    async def add_plant(self, plantid: str, count: int) -> List[FarmPlantData]:
         """
         작물을 심습니다.
         """
+        farm_dmgr = FarmDBMgr(self.datadb)
         raw = await self.get_raw_plants()
         plantdb = farm_dmgr.fetch_plant(plantid)
         plants = []
@@ -217,3 +223,28 @@ class FarmMgr(AzaleaGameManager):
             plants.append(plantdata)
         await self._save_plants(raw)
         return plants
+
+    async def remove_plant_exact(self, *plantdata: FarmPlantData):
+        if not plantdata:
+            return
+        raw = await self.get_raw_plants()
+
+        if {self.get_dict_from_plant(x) for x in plantdata} - set(raw):
+            raise mgrerrors.NotFound
+
+        for one in plantdata:
+            pld = self.get_dict_from_plant(one)
+            raw.remove(pld)
+        await self._save_plants(raw)
+
+    async def harvest(self, smgr: StatMgr, *plantdata: FarmPlantData):
+        await self.remove_plant_exact(*plantdata)
+        farm_dmgr = FarmDBMgr(self.datadb)
+        imgr = ItemMgr(self.pool, self.charuuid)
+        exp_plus = 0
+        for one in plantdata:
+            plantdb = farm_dmgr.fetch_plant(one.id)
+            await imgr.give_item(ItemData(plantdb.grown, one.count, []))
+            exp_plus += self.datadb.base_exp.get('FARM_HARVEST')*one.count*plantdb.exp
+        print(exp_plus)
+        smgr.give_exp(exp_plus)

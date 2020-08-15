@@ -13,7 +13,7 @@ import paramiko
 from itertools import chain
 from utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from utils.azalea import Azalea
-from db import enchantments, charsettings, market, regions, permissions, exptable
+from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp
 from ingame.farming import farm_plants
 
 # Local Data Load
@@ -166,6 +166,7 @@ def loader(datadb: datamgr.DataDB):
     datadb.load_permissions(permissions.PERMISSIONS)
     datadb.load_exp_table(exptable.EXP_TABLE)
     datadb.load_farm_plants(farm_plants.PLANTS)
+    datadb.load_base_exp(baseexp.BASE_EXP)
 
 def reloader(datadb: datamgr.DataDB):
     db_modules = [
@@ -176,7 +177,8 @@ def reloader(datadb: datamgr.DataDB):
         market,
         permissions,
         exptable,
-        farm_plants
+        farm_plants,
+        baseexp
     ]
     for md in db_modules:
         importlib.reload(md)

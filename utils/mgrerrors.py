@@ -1,6 +1,11 @@
 from .errors import AzaleaError
 from enum import Enum
 
+# Global
+
+class NotFound(AzaleaError):
+    pass
+
 # Character Errors
 
 class CharCreateErrReasons(Enum):
@@ -31,8 +36,7 @@ class CannotLoginBeingDeleted(AzaleaError):
         
 # Item Errors
 
-class ItemNotFound(AzaleaError):
-    pass
-
 class NotEnoughMoney(AzaleaError):
     pass
+
+# Farm Plant Errors
