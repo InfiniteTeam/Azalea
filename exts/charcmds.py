@@ -24,7 +24,7 @@ class Charcmds(BaseCog):
                 cmd.add_check(self.check.char_online)
 
     @commands.group(name='캐릭터', aliases=['캐'], invoke_without_command=True)
-    async def _char(self, ctx: commands.Context, *, user: typing.Optional[discord.Member]=None):
+    async def _char(self, ctx: commands.Context, *, user: typing.Optional[discord.User]=None):
         if not user:
             user = ctx.author
         perpage = 5
@@ -67,7 +67,7 @@ class Charcmds(BaseCog):
             return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         while True:
             try:
-                reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
+                reaction, _ = await self.client.wait_for('reaction_add', check=check, timeout=60*5)
             except asyncio.TimeoutError:
                 try:
                     await msg.clear_reactions()

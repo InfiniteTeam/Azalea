@@ -13,7 +13,7 @@ import paramiko
 from itertools import chain
 from utils import errors, checks, msglogger, emojictrl, permutil, datamgr
 from utils.azalea import Azalea
-from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp
+from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp, items
 from ingame.farming import farm_plants
 
 # Local Data Load
@@ -151,15 +151,11 @@ emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
 # 인게임 DB 로드
 def load_items():
-    itemdbs = {}
-    for ext in list(filter(lambda x: x.endswith('.py') and not x.startswith('_'), os.listdir('./db/items'))):
-        name = 'db.items.' + os.path.splitext(ext)[0]
-        itemdbs[name] = importlib.import_module(name)
-    return itemdbs
+    return chain([getattr(items, one) for one in items.__all__])
 
 def loader(datadb: datamgr.DataDB):
     datadb.load_enchantments(enchantments.ENCHANTMENTS)
-    datadb.load_items(chain.from_iterable(itemdbs))
+    datadb.load_items(chain.from_iterable(load_items()))
     datadb.load_char_settings(charsettings.CHAR_SETTINGS)
     datadb.load_region('azalea', regions.REGIONS)
     datadb.load_market('main', market.MARKET)
@@ -171,7 +167,7 @@ def loader(datadb: datamgr.DataDB):
 def reloader(datadb: datamgr.DataDB):
     db_modules = [
         enchantments,
-        *load_items().values(),
+        items,
         charsettings,
         regions,
         market,
@@ -183,10 +179,6 @@ def reloader(datadb: datamgr.DataDB):
     for md in db_modules:
         importlib.reload(md)
     loader(datadb)
-
-itemdbs = []
-for itemdb in load_items().values():
-    itemdbs.append(itemdb.ITEMS)
 
 datadb = datamgr.DataDB()
 datadb.set_loader(loader)
