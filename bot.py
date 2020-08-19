@@ -11,10 +11,11 @@ import logging.handlers
 import importlib
 import paramiko
 from itertools import chain
-from utils import errors, checks, msglogger, emojictrl, permutil, datamgr
+from utils import errors, checks, msglogger, emojictrl, permutil, datamgr, embedmgr
 from utils.azalea import Azalea
 from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp, items
 from ingame.farming import farm_plants
+from templates import azaleaembeds, charembeds, farmembeds, ingameembeds, miniembeds
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -185,6 +186,15 @@ datadb.set_loader(loader)
 datadb.set_reloader(reloader)
 loader(datadb)
 
+embedmgr = embedmgr.EmbedMgr(
+    pool,
+    azaleaembeds,
+    charembeds,
+    farmembeds,
+    ingameembeds,
+    miniembeds
+)
+
 check = checks.Checks(pool, datadb)
 
 def awaiter(coro):
@@ -203,6 +213,7 @@ client.add_data('errlogger', errlogger)
 client.add_data('pinglogger', pinglogger)
 client.add_data('logger', logger)
 client.add_data('pool', pool)
+client.add_data('embedmgr', embedmgr)
 client.add_data('dbcmd', dbcmd)
 client.add_data('ping', None)
 client.add_data('shutdown_left', None)

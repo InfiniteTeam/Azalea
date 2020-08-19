@@ -11,7 +11,7 @@ import aiomysql
 from utils.basecog import BaseCog
 from utils.datamgr import NewsMgr, NewsData
 from utils import timedelta, pager, emojibuttons
-from templates import miniembeds, azaleaembeds, help
+from templates import miniembeds, azaleaembeds
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):
@@ -26,14 +26,7 @@ class Azaleacmds(BaseCog):
 
     @commands.command(name='도움', aliases=['도움말', '명령어', '명령', '커맨드', '기능'])
     async def _help(self, ctx: commands.Context):
-        embed = discord.Embed(title='📃 Azalea 전체 명령어', description='(소괄호)는 필수 입력, [대괄호]는 선택 입력입니다.\n\n', color=self.color['primary'])
-        for name, value in help.gethelps():
-            embed.add_field(
-                name='🔸' + name,
-                value=value.format(p=self.prefix),
-                inline=False
-            )
-        
+        embed = await self.embedmgr.get(ctx, 'Help')
         if ctx.channel.type != discord.ChannelType.private:
             msg, sending = await asyncio.gather(
                 ctx.author.send(embed=embed),

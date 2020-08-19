@@ -1,7 +1,7 @@
 import aiomysql
 import logging
 from discord.ext import commands
-from . import msglogger, checks, azalea, emojictrl, datamgr
+from . import msglogger, checks, azalea, emojictrl, datamgr, embedmgr
 import sqlite3
 
 class BaseCog(commands.Cog):
@@ -20,6 +20,7 @@ class BaseCog(commands.Cog):
         self.awaiter = client.get_data('awaiter')
         self.prefix = client.command_prefix[0]
         self.eventcogname = client.get_data('eventcogname')
+        self.embedmgr: embedmgr.EmbedMgr = client.get_data('embedmgr')
 
     def getlistener(self, name):
         listeners = self.client.get_cog(self.eventcogname).get_listeners()

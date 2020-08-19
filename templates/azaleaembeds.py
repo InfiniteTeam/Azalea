@@ -1,7 +1,21 @@
 import discord
+from discord.ext import commands
 import datetime
 from utils import pager, timedelta
 from utils.basecog import BaseCog
+from utils.embedmgr import aEmbedBase
+from db import help
+
+class Help(aEmbedBase):
+    async def ko(self):
+        embed = discord.Embed(title='📃 Azalea 전체 명령어', description='(소괄호)는 필수 입력, [대괄호]는 선택 입력입니다.\n\n', color=self.cog.color['primary'])
+        for name, value in help.gethelps():
+            embed.add_field(
+                name='🔸' + name,
+                value=value.format(p=self.cog.prefix),
+                inline=False
+            )
+        return embed
 
 async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
     embed = discord.Embed(title='📰 뉴스', description='', color=cog.color['info'])
