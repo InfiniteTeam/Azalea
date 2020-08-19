@@ -28,14 +28,14 @@ class Public:
 class CountError:
     @staticmethod
     def must_be_over_than(cog: BaseCog, *, target: str, overthan: int, delafter: int=7):
-        embed = discord.Embed(title=f'❓ {target}(은)는 적어도 {overthan}개 이상이여야 합니다!', color=cog.color['error'])
+        embed = discord.Embed(title=f'❓ {target}(은)는 적어도 {overthan} 이상이여야 합니다!', color=cog.color['error'])
         set_delete_after_footer(embed, delafter)
         return embed
 
 class MoneyError:
     @staticmethod
     def not_enough_money(cog: BaseCog, *, more_required: int, delafter: int=7):
-        embed = discord.Embed(title='❓ 구매에 필요한 돈이 부족합니다!', description=f'`{more_required}`골드가 부족합니다!', color=cog.color['error'])
+        embed = discord.Embed(title='❓ 돈이 부족합니다!', description=f'`{more_required}`골드가 부족합니다!', color=cog.color['error'])
         set_delete_after_footer(embed, delafter)
         return embed
 
