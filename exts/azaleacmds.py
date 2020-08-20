@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands
 import datetime
-import re
-import json
 import time
 import math
 import asyncio
@@ -30,36 +28,16 @@ class Azaleacmds(BaseCog):
         if ctx.channel.type != discord.ChannelType.private:
             msg, sending = await asyncio.gather(
                 ctx.author.send(embed=embed),
-                ctx.send(embed=discord.Embed(title='{} 도움말을 전송하고 있습니다...'.format(self.emj.get(ctx, 'loading')), color=self.color['info']))
+                ctx.send(embed=await self.embedmgr.get(ctx, 'SendingHelp'))
             )
-            await sending.edit(embed=discord.Embed(title='{} 도움말을 전송했습니다!'.format(self.emj.get(ctx, 'check')), description=f'**[DM 메시지]({msg.jump_url})**를 확인하세요!', color=self.color['success']))
+            await sending.edit(embed=await self.embedmgr.get(ctx, 'SentHelp', msg))
         else:
             msg = await ctx.author.send(embed=embed)
         self.msglog.log(ctx, '[도움]')
 
     @commands.command(name='정보')
     async def _info(self, ctx: commands.Context):
-        uptimenow = re.findall(r'\d+', str(datetime.datetime.now() - self.client.get_data('start')))
-        uptimestr = ''
-        if len(uptimenow) == 4:
-            if int(uptimenow[0]) > 0:
-                uptimestr += f'{int(uptimenow[0])}시간 '
-            if int(uptimenow[1]) > 0:
-                uptimestr += f'{int(uptimenow[1])}분 '
-            if int(uptimenow[2]) > 0:
-                uptimestr += f'{int(uptimenow[2])}초 '
-        if len(uptimenow) == 5:
-            if int(uptimenow[0]) > 0:
-                uptimestr += f'{int(uptimenow[0])}일 '
-            if int(uptimenow[1]) > 0:
-                uptimestr += f'{int(uptimenow[1])}시간 '
-            if int(uptimenow[2]) > 0:
-                uptimestr += f'{int(uptimenow[2])}분 '
-            if int(uptimenow[3]) > 0:
-                uptimestr += f'{int(uptimenow[3])}초 '
-
-        embed=discord.Embed(title='🏷 Azalea 정보', description=f'Azalea 버전: {self.client.get_data("version_str")}\n실행 시간: {uptimestr}\nDiscord.py 버전: {discord.__version__}', color=self.color['primary'])
-        await ctx.send(embed=embed)
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Info'))
         self.msglog.log(ctx, '[정보]')
 
     @commands.command(name='핑', aliases=['지연시간', '레이턴시'])

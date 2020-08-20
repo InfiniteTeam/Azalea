@@ -21,10 +21,11 @@ class aEmbedBase:
         self.cog: BaseCog = ctx.cog
 
 class EmbedMgr:
-    def __init__(self, pool: aiomysql.Pool, *modules: ModuleType):
+    def __init__(self, pool: aiomysql.Pool, *modules: ModuleType, default_lang: str='ko'):
         self.pool = pool
         self.modules = list(modules)
-
+        self.default_lang = default_lang
+        
     def get_embedclss(self) -> List:
         clss = []
         for m in self.modules:
@@ -37,20 +38,23 @@ class EmbedMgr:
                         clss.append(attr)
         return clss
 
-    async def get(self, ctx: commands.Context, name: str, lang=None, *args, **kwargs) -> discord.Embed:
+    async def get(self, ctx: commands.Context, name: str, *args, **kwargs) -> discord.Embed:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                if not lang:
-                    lang = 'ko'
-                    await cur.execute('select lang from userdata where id=%s', ctx.author.id)
-                    rst = await cur.fetchone()
-                    if rst is not None:
-                        lang = rst['lang']
+                lang = self.default_lang
+                await cur.execute('select lang from userdata where id=%s', ctx.author.id)
+                rst = await cur.fetchone()
+                if rst is not None:
+                    lang = rst['lang']
 
                 embedcls = list(filter(lambda x: x.__name__ == name, self.get_embedclss()))
                 if embedcls:
-                    embedfunc = getattr(embedcls[0], lang)
-                    return await embedfunc(embedcls, *args, **kwargs)
+                    embedinstance = embedcls[0](ctx)
+                    try:
+                        embedfunc = getattr(embedinstance, lang)
+                    except AttributeError:
+                        embedfunc = getattr(embedinstance, self.default_lang)
+                    return await embedfunc(*args, **kwargs)
                 raise EmbedNotFound
 
     async def reload(self):

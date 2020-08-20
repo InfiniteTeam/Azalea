@@ -1,10 +1,23 @@
 import discord
 from discord.ext import commands
 import datetime
+import re
 from utils import pager, timedelta
 from utils.basecog import BaseCog
 from utils.embedmgr import aEmbedBase
 from db import help
+
+class SendingHelp(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title='{} 도움말을 전송하고 있습니다...'.format(self.cog.emj.get(self.ctx, 'loading')), color=self.cog.color['info'])
+    async def en(self):
+        return discord.Embed(title='{} Sending help message...'.format(self.cog.emj.get(self.ctx, 'loading')), color=self.cog.color['info'])
+    
+class SentHelp(aEmbedBase):
+    async def ko(self, msg: discord.Message):
+        return discord.Embed(title='{} 도움말을 전송했습니다!'.format(self.cog.emj.get(self.ctx, 'check')), description=f'**[DM 메시지]({msg.jump_url})**를 확인하세요!', color=self.cog.color['success'])
+    async def en(self, msg: discord.Message):
+        return discord.Embed(title='{} The help message has been sent.'.format(self.cog.emj.get(self.ctx, 'check')), description=f'**Check your [DM]({msg.jump_url})!**', color=self.cog.color['success'])
 
 class Help(aEmbedBase):
     async def ko(self):
@@ -16,6 +29,60 @@ class Help(aEmbedBase):
                 inline=False
             )
         return embed
+    async def en(self):
+        embed = discord.Embed(title='📃 Azalea All Commands', description='(Round brackets) are required, [Square brackets] are optional.\n\n', color=self.cog.color['primary'])
+        for name, value in help.gethelps():
+            embed.add_field(
+                name='🔸' + name,
+                value=value.format(p=self.cog.prefix),
+                inline=False
+            )
+        return embed
+    
+class Info(aEmbedBase):
+    async def ko(self):
+        uptimenow = re.findall(r'\d+', str(datetime.datetime.now() - self.cog.client.get_data('start')))
+        uptimestr = ''
+        if len(uptimenow) == 4:
+            if int(uptimenow[0]) > 0:
+                uptimestr += f'{int(uptimenow[0])}시간 '
+            if int(uptimenow[1]) > 0:
+                uptimestr += f'{int(uptimenow[1])}분 '
+            if int(uptimenow[2]) > 0:
+                uptimestr += f'{int(uptimenow[2])}초 '
+        if len(uptimenow) == 5:
+            if int(uptimenow[0]) > 0:
+                uptimestr += f'{int(uptimenow[0])}일 '
+            if int(uptimenow[1]) > 0:
+                uptimestr += f'{int(uptimenow[1])}시간 '
+            if int(uptimenow[2]) > 0:
+                uptimestr += f'{int(uptimenow[2])}분 '
+            if int(uptimenow[3]) > 0:
+                uptimestr += f'{int(uptimenow[3])}초 '
+                
+        return discord.Embed(title='🏷 Azalea 정보', description=f'Azalea 버전: {self.cog.client.get_data("version_str")}\n실행 시간: {uptimestr}\nDiscord.py 버전: {discord.__version__}', color=self.cog.color['primary'])
+    
+    async def en(self):
+        uptimenow = re.findall(r'\d+', str(datetime.datetime.now() - self.cog.client.get_data('start')))
+        uptimestr = ''
+        if len(uptimenow) == 4:
+            if int(uptimenow[0]) > 0:
+                uptimestr += f'{int(uptimenow[0])} Hours '
+            if int(uptimenow[1]) > 0:
+                uptimestr += f'{int(uptimenow[1])} Minutes '
+            if int(uptimenow[2]) > 0:
+                uptimestr += f'{int(uptimenow[2])} Seconds '
+        if len(uptimenow) == 5:
+            if int(uptimenow[0]) > 0:
+                uptimestr += f'{int(uptimenow[0])} Days '
+            if int(uptimenow[1]) > 0:
+                uptimestr += f'{int(uptimenow[1])} Hours '
+            if int(uptimenow[2]) > 0:
+                uptimestr += f'{int(uptimenow[2])} Minutes '
+            if int(uptimenow[3]) > 0:
+                uptimestr += f'{int(uptimenow[3])} Seconds '
+                
+        return discord.Embed(title='🏷 Azalea Information', description=f'Azalea Version: {self.cog.client.get_data("version_str")}\nRunning Time: {uptimestr}\nDiscord.py Version: {discord.__version__}', color=self.cog.color['primary'])
 
 async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
     embed = discord.Embed(title='📰 뉴스', description='', color=cog.color['info'])
