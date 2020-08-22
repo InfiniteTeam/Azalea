@@ -33,15 +33,15 @@ class Tasks(BaseCog):
         try:
             ping = int(self.client.latency*100000)/100
             if ping <= 100:
-                pinglevel = '🔵 매우좋음'
+                pinglevel = 0
             elif ping <= 300:
-                pinglevel = '🟢 양호함'
+                pinglevel = 1
             elif ping <= 500:
-                pinglevel = '🟡 보통'
+                pinglevel = 2
             elif ping <= 700:
-                pinglevel = '🔴 나쁨'
+                pinglevel = 3
             else:
-                pinglevel = '⚪ 매우나쁨'
+                pinglevel = 4
             self.client.set_data('ping', (ping, pinglevel))
             self.pinglogger.info(f'{ping}ms')
             self.pinglogger.info(f'CLIENT_CONNECTED: {not self.client.is_closed()}')

@@ -8,7 +8,7 @@ import typing
 import aiomysql
 from utils.basecog import BaseCog
 from utils.datamgr import NewsMgr, NewsData
-from utils import timedelta, pager, emojibuttons
+from utils import pager, emojibuttons
 from templates import miniembeds, azaleaembeds
 
 class Azaleacmds(BaseCog):
@@ -42,27 +42,17 @@ class Azaleacmds(BaseCog):
 
     @commands.command(name='핑', aliases=['지연시간', '레이턴시'])
     async def _ping(self, ctx: commands.Context):
-        embed = discord.Embed(title='🏓 퐁!', color=self.color['primary'])
-        embed.add_field(name='Discord 게이트웨이', value=f'{self.client.get_data("ping")[0]}ms')
-        embed.add_field(name='메시지 지연시간', value='측정하고 있어요...')
-        embed.set_footer(text=self.client.get_data("ping")[1])
         start = time.time()
-        msg = await ctx.send(embed=embed)
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Ping', '측정하고 있어요...'))
         end = time.time()
         mlatency = math.trunc(1000 * (end - start))
-        embed.set_field_at(1, name='메시지 지연시간', value='{}ms'.format(mlatency))
-        await msg.edit(embed=embed)
+        await msg.edit(embed=await self.embedmgr.get(ctx, 'Ping', '{}ms'.format(mlatency)))
         self.msglog.log(ctx, '[핑]')
 
     @commands.command(name='샤드')
     @commands.guild_only()
     async def _shard_id(self, ctx: commands.Context):
-        gshs = self.client.get_data("guildshards")
-        if gshs:
-            embed = discord.Embed(description=f'**이 서버의 샤드 아이디는 `{ctx.guild.shard_id}`입니다.**\n현재 총 {gshs.__len__()} 개의 샤드가 활성 상태입니다.', color=self.color['info'])
-        else:
-            embed = discord.Embed(description=f'**현재 Azalea는 자동 샤딩을 사용하고 있지 않습니다.**', color=self.color['info'])
-        await ctx.send(embed=embed)
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Shard'))
         self.msglog.log(ctx, '[샤드]')
 
     @commands.command(name='공지채널')
