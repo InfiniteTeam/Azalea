@@ -1,12 +1,24 @@
 import discord
 from discord.ext import commands
 from utils.basecog import BaseCog
+from utils.embedmgr import aEmbedBase, EmbedMgr
 
 def set_delete_after_footer(embed: discord.Embed, delafter: int):
     if delafter:
         embed.set_footer(text=f'이 메시지는 {delafter}초 후에 사라집니다')
         return True
     return False
+
+class Canceled(aEmbedBase):
+    async def ko(self, delafter: int=None):
+        embed = discord.Embed(title='❌ 취소되었습니다.', color=self.cog.color['error'])
+        set_delete_after_footer(embed, delafter)
+        return embed
+    
+    async def en(self, delafter: int=None):
+        embed = discord.Embed(title='❌ Canceled.', color=self.cog.color['error'])
+        set_delete_after_footer(embed, delafter)
+        return embed
 
 class MissingArgs:
     @classmethod
@@ -36,12 +48,5 @@ class MoneyError:
     @staticmethod
     def not_enough_money(cog: BaseCog, *, more_required: int, delafter: int=7):
         embed = discord.Embed(title='❓ 돈이 부족합니다!', description=f'`{more_required}`골드가 부족합니다!', color=cog.color['error'])
-        set_delete_after_footer(embed, delafter)
-        return embed
-
-class Canceled:
-    @staticmethod
-    def canceled_by_user(cog: BaseCog, *, delafter: int=7):
-        embed = discord.Embed(title='❌ 취소되었습니다.', color=cog.color['error'])
         set_delete_after_footer(embed, delafter)
         return embed

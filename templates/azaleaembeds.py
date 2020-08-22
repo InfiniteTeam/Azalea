@@ -4,7 +4,7 @@ import datetime
 import re
 from utils import pager, timedelta
 from utils.basecog import BaseCog
-from utils.embedmgr import aEmbedBase
+from utils.embedmgr import aEmbedBase, EmbedMgr
 from db import help
 
 #
@@ -142,7 +142,155 @@ class Shard(aEmbedBase):
         else:
             return discord.Embed(description=f"**Currently Azalea doesn't use auto sharding.**", color=self.cog.color['info'])
 
+#
+# NOTIFICATION EMBEDS
+#
+class Notice_base(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title='📢 공지채널 설정',
+            description='',
+            color=self.cog.color['ask']
+        )
+    
+    async def en(self):
+        return discord.Embed(
+            title='📢 Notification channel setting',
+            description='',
+            color=self.cog.color['ask']
+        )
+    
+class Notice_already_this_channel(aEmbedBase):
+    async def ko(self):
+        embed = discord.Embed(
+            title=f'❓ 이미 이 채널이 공지채널로 설정되어 있습니다!',
+            description='',
+            color=self.cog.color['ask']
+        )
+        embed.description += '\n공지를 끄려면 ⛔ 로 반응해주세요! 취소하려면 ❌ 로 반응해주세요.'
+        return embed
+        
+    async def en(self):
+        embed = discord.Embed(
+            title=f'❓ This channel is already set as an announcement channel!',
+            description='',
+            color=self.cog.color['ask']
+        )
+        embed.description += '\nReact ⛔ to disable notifications, React ❌ to cancel.'
+        return embed
+    
+class Notice_selection(aEmbedBase):
+    async def ko(self, current_notich, mentionchannel, notich):
+        embed = await self.cog.embedmgr.get(self.ctx, 'Notice_base')
+        embed.description = f'**현재 공지채널은 {current_notich.mention} 로 설정되어 있습니다.**'
+        if mentionchannel:
+            embed.description += f'\n{notich.mention} 을 공지채널로 설정할까요?'
+        else:
+            embed.description += '\n현재 채널을 공지채널로 설정할까요?'
+        embed.description += '\n공지를 끄려면 ⛔ 로 반응해주세요! 취소하려면 ❌ 로 반응해주세요.'
+        return embed
+    
+    async def en(self, current_notich, mentionchannel, notich):
+        embed = await self.cog.embedmgr.get(self.ctx, 'Notice_base')
+        embed.description = f'**Currently, the announcement channel is set to {current_notich.mention}.**'
+        if mentionchannel:
+            embed.description += f'\nDo you want to set {notich.mention} as the announcement channel?'
+        else:
+            embed.description += f'\nDo you want to set this channel as an announcement channel?'
+        embed.description += '\nReact ⛔ to disable notifications, React ❌ to cancel.'
+        return embed
+    
+class Notice_not_selected(aEmbedBase):
+    async def ko(self, notich):
+        embed = await self.cog.embedmgr.get(self.ctx, 'Notice_base')
+        embed.description = f'**이 서버에는 공지채널이 설정되어있지 않아 공지가 꺼져있습니다.**'
+        if channel:
+            embed.description += f'\n{notich.mention} 을 공지채널로 설정할까요?'
+        else:
+            embed.description += '\n현재 채널을 공지채널로 설정할까요?'
+        return embed
+    
+    async def en(self, notich):
+        embed = await self.cog.embedmgr.get(self.ctx, 'Notice_base')
+        embed.description = f'**Notification is disabled on this server.**'
+        if channel:
+            embed.description += f'\nDo you want to set {notich.mention} as the announcement channel?'
+        else:
+            embed.description += f'\nDo you want to set this channel as an announcement channel?'
+        return embed
 
+class Notice_set_done(aEmbedBase):
+    async def ko(self, notich):
+        return discord.Embed(
+            title=f'{self.cog.emj.get(self.ctx, "check")} 공지 채널을 성공적으로 설정했습니다!',
+            description=f'이제 {notich.mention} 채널에 공지를 보냅니다.',
+            color=self.cog.color['info']
+        )
+    
+    async def en(self, notich):
+        return discord.Embed(
+            title=f'{self.cog.emj.get(self.ctx, "check")} The notification channel has been set up successfully!',
+            description=f'The announcements will send to {notich.mention}.',
+            color=self.cog.color['info']
+        )
+    
+class Notice_turn_off(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title='❌ 공지 기능을 껐습니다!', color=self.cog.color['error'])
+    async def en(self):
+        return discord.Embed(title='❌ Notifications have been disabled! ', color=self.cog.color['error'])
+    
+#
+# REGISTERING EMBEDS
+#
+
+class Register_already_registered(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title=f'{self.cog.emj.get(self.ctx, "check")} 이미 등록된 사용자입니다!', color=self.cog.color['info'])
+    async def en(self):
+        return discord.Embed(title=f'{self.cog.emj.get(self.ctx, "check")} You already registered to Azalea.', color=self.cog.color['info'])
+    
+class  Register(aEmbedBase):
+    async def ko(self):
+        embed = discord.Embed(title='Azalea 등록', description='**Azalea를 이용하기 위한 이용약관 및 개인정보 취급방침입니다. Azalea를 이용하려면 동의가 필요 합니다.**', color=self.cog.color['ask'])
+        embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+        embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
+        return embed
+    async def en(self):
+        embed = discord.Embed(title='Azalea sign up', description='**These are the terms of use and privacy policy for using Azalea. Consent is required to use Azalea.**', color=self.cog.color['ask'])
+        embed.add_field(name='ㅤ', value='[Terms of Use](https://www.infiniteteam.me/tos)\n', inline=True)
+        embed.add_field(name='ㅤ', value='[Privacy Policy](https://www.infiniteteam.me/privacy)\n', inline=True)
+        return embed
+    
+class Register_done(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title=f'등록되었습니다. `{self.prefix}help` 명령으로 전체 명령을 볼 수 있습니다.', color=self.cog.color['success'])
+    async def en(self):
+        return discord.Embed(title=f'Signed up successfully. Enter `{self.prefix}help` to see all commands.', color=self.cog.color['success'])    
+    
+#
+# WITHDRAW 
+#
+
+class Withdraw(aEmbedBase):
+    async def ko(self):
+        embed = discord.Embed(title='Azalea 탈퇴',
+        description='''**Azalea 이용약관 및 개인정보 취급방침 동의를 철회하고, Azalea를 탈퇴하게 됩니다.**
+        이 경우 _사용자님의 모든 데이터(개인정보 취급방침을 참조하십시오)_가 Azalea에서 삭제되며, __되돌릴 수 없습니다.__
+        계속할까요?''', color=self.cog.color['warn'])
+        embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+        embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
+        return embed
+    
+class Withdraw_done(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title='탈퇴되었습니다.', color=self.cog.color['info'])
+
+class Withdraw_already(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title='❌ 이미 탈퇴된 사용자입니다.', color=self.cog.color['error'])
+    
+    
 async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
     embed = discord.Embed(title='📰 뉴스', description='', color=cog.color['info'])
     for one in pgr.get_thispage():
