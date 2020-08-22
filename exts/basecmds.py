@@ -148,6 +148,8 @@ class BaseCmds(BaseCog):
         await self._ext_reload(ctx, *names)
         self.datadb.reload()
         await ctx.send(embed=discord.Embed(description='**내부 데이터베이스를 모두 리로드했습니다.**', color=self.color['info']))
+        self.embedmgr.reload()
+        await ctx.send(embed=discord.Embed(description='**임베드 매니저를 리로드했습니다.**', color=self.color['info']))
 
 def setup(client):
     cog = BaseCmds(client)

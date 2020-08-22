@@ -4,7 +4,7 @@ import datetime
 import re
 from utils import pager, timedelta
 from utils.basecog import BaseCog
-from utils.embedmgr import aEmbedBase, EmbedMgr
+from utils.embedmgr import aEmbedBase, EmbedMgr, aMsgBase
 from db import help
 
 #
@@ -201,7 +201,7 @@ class Notice_selection(aEmbedBase):
         return embed
     
 class Notice_not_selected(aEmbedBase):
-    async def ko(self, notich):
+    async def ko(self, channel, notich):
         embed = await self.cog.embedmgr.get(self.ctx, 'Notice_base')
         embed.description = f'**이 서버에는 공지채널이 설정되어있지 않아 공지가 꺼져있습니다.**'
         if channel:
@@ -210,7 +210,7 @@ class Notice_not_selected(aEmbedBase):
             embed.description += '\n현재 채널을 공지채널로 설정할까요?'
         return embed
     
-    async def en(self, notich):
+    async def en(self, channel, notich):
         embed = await self.cog.embedmgr.get(self.ctx, 'Notice_base')
         embed.description = f'**Notification is disabled on this server.**'
         if channel:
@@ -264,9 +264,9 @@ class  Register(aEmbedBase):
     
 class Register_done(aEmbedBase):
     async def ko(self):
-        return discord.Embed(title=f'등록되었습니다. `{self.prefix}help` 명령으로 전체 명령을 볼 수 있습니다.', color=self.cog.color['success'])
+        return discord.Embed(title=f'등록되었습니다. `{self.cog.prefix}help` 명령으로 전체 명령을 볼 수 있습니다.', color=self.cog.color['success'])
     async def en(self):
-        return discord.Embed(title=f'Signed up successfully. Enter `{self.prefix}help` to see all commands.', color=self.cog.color['success'])    
+        return discord.Embed(title=f'Signed up successfully. Enter `{self.cog.prefix}help` to see all commands.', color=self.cog.color['success'])
     
 #
 # WITHDRAW 
@@ -290,26 +290,42 @@ class Withdraw_already(aEmbedBase):
     async def ko(self):
         return discord.Embed(title='❌ 이미 탈퇴된 사용자입니다.', color=self.cog.color['error'])
     
-    
-async def news_embed(cog: BaseCog, pgr: pager.Pager, *, total: int):
-    embed = discord.Embed(title='📰 뉴스', description='', color=cog.color['info'])
-    for one in pgr.get_thispage():
-        if one.content:
-            if one.content.__len__() > 110:
-                content = '> ' + one.content[:110] + '...\n'
+
+#
+# NEWS
+#
+
+class News(aEmbedBase):
+    async def ko(self, pgr: pager.Pager, *, total: int):
+        embed = discord.Embed(title='📰 뉴스', description='', color=self.cog.color['info'])
+        for one in pgr.get_thispage():
+            if one.content:
+                if one.content.__len__() > 110:
+                    content = '> ' + one.content[:110] + '...\n'
+                else:
+                    content = '> ' + one.content + '\n'
             else:
-                content = '> ' + one.content + '\n'
+                content = ''
+            td = datetime.datetime.now() - one.datetime
+            if td < datetime.timedelta(minutes=1):
+                pubtime = '방금'
+            else:
+                pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
+            embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
+        if total > 40:
+            embed.description += '```{}/{} 페이지, 전체 {}건 중 최신 {}건```'.format(pgr.now_pagenum()+1, len(pgr.pages()), total, pgr.objlen())
         else:
-            content = ''
-        td = datetime.datetime.now() - one.datetime
-        if td < datetime.timedelta(minutes=1):
-            pubtime = '방금'
-        else:
-            pubtime = list(timedelta.format_timedelta(td).values())[0] + ' 전'
-        embed.description += f'🔹 **`{one.title}`**\n{content}**- {one.company}**, {pubtime}\n\n'
-    if total > 40:
-        embed.description += '```{}/{} 페이지, 전체 {}건 중 최신 {}건```'.format(pgr.now_pagenum()+1, len(pgr.pages()), total, pgr.objlen())
-    else:
-        embed.description += '```{}/{} 페이지, 전체 {}건```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
-    embed.set_footer(text='* 이 뉴스는 재미 및 게임 플레이를 위한 실제와 상관없는 픽션임을 알려 드립니다.')
-    return embed
+            embed.description += '```{}/{} 페이지, 전체 {}건```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+        embed.set_footer(text='* 이 뉴스는 재미 및 게임 플레이를 위한 실제와 상관없는 픽션임을 알려 드립니다.')
+        return embed
+
+class News_publish_continue_ask(aMsgBase):
+    async def ko(self):
+        return f'{self.ctx.author.mention} 다음과 같이 발행할까요?'
+
+class News_publish_continue(aEmbedBase):
+    async def ko(self, *, company, title, viewcontent):
+        embed = discord.Embed(title='📰 뉴스', color=self.cog.color['info'])
+        embed.description = f'🔹 **`{title}`**\n{viewcontent}**- {company}**, 방금'
+        embed.set_author(name='뉴스 발행 미리보기')
+        return embed

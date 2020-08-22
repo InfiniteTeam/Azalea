@@ -20,6 +20,11 @@ class aEmbedBase:
         self.ctx = ctx
         self.cog: BaseCog = ctx.cog
 
+class aMsgBase:
+    def __init__(self, ctx: commands.Context):
+        self.ctx = ctx
+        self.cog: BaseCog = ctx.cog
+
 class EmbedMgr:
     def __init__(self, pool: aiomysql.Pool, *modules: ModuleType, default_lang: str='ko'):
         self.pool = pool
@@ -31,7 +36,7 @@ class EmbedMgr:
         for m in self.modules:
             for one in dir(m):
                 attr = getattr(m, one)
-                if isclass(attr) and issubclass(attr, aEmbedBase) and aEmbedBase in attr.__bases__:
+                if isclass(attr) and issubclass(attr, aEmbedBase) and {aEmbedBase, aMsgBase} & set(attr.__bases__):
                     if attr in clss:
                         raise EmbedAlreadyExists(attr.__name__)
                     else:
@@ -57,7 +62,7 @@ class EmbedMgr:
                     return await embedfunc(*args, **kwargs)
                 raise EmbedNotFound
 
-    async def reload(self):
+    def reload(self):
         for idx, m in enumerate(self.modules):
             self.modules[idx] = importlib.reload(m)
 

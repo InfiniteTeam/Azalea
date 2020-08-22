@@ -9,7 +9,7 @@ import aiomysql
 from utils.basecog import BaseCog
 from utils.datamgr import NewsMgr, NewsData
 from utils import pager, emojibuttons
-from templates import miniembeds, azaleaembeds
+from templates import miniembeds
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):
@@ -79,7 +79,7 @@ class Azaleacmds(BaseCog):
                         embed = await self.embedmgr.get(ctx, 'Notice_selection', ch, channel, notich)
                         notiemjs = ['⭕', '⛔', '❌']
                 else:
-                    embed = await self.embedmgr.get(ctx, 'Notice_not_selected', notich)
+                    embed = await self.embedmgr.get(ctx, 'Notice_not_selected', channel, notich)
                 msg = await ctx.send(embed=embed)
                 for rct in notiemjs:
                     await msg.add_reaction(rct)
@@ -184,7 +184,7 @@ class Azaleacmds(BaseCog):
                 news = await nmgr.fetch(limit=40)
                 total = await cur.execute('select uuid from news')
                 pgr = pager.Pager(news, 4)
-                msg = await ctx.send(embed=await azaleaembeds.news_embed(self, pgr, total=total))
+                msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'News', pgr, total=total))
                 self.msglog.log(ctx, '[뉴스]')
                 if len(pgr.pages()) <= 1:
                     return
@@ -204,7 +204,7 @@ class Azaleacmds(BaseCog):
                         do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                         if asyncio.iscoroutine(do):
                             await asyncio.gather(do,
-                                msg.edit(embed=await azaleaembeds.news_embed(self, pgr, total=total)),
+                                msg.edit(embed=await self.embedmgr.get(ctx, 'News', pgr, total=total)),
                             )
 
     @_news.command(name='작성', aliases=['발행', '쓰기', '업로드'])
@@ -216,10 +216,10 @@ class Azaleacmds(BaseCog):
                 viewcontent = '> ' + content + '\n'
         else:
             viewcontent = ''
-        embed = discord.Embed(title='📰 뉴스', color=self.color['info'])
-        embed.description = f'🔹 **`{title}`**\n{viewcontent}**- {company}**, 방금'
-        embed.set_author(name='뉴스 발행 미리보기')
-        msg = await ctx.send('{} 다음과 같이 발행할까요?'.format(ctx.author.mention), embed=embed)
+        msg = await ctx.send(
+            self.embedmgr.get(ctx, 'News_publish_continue_ask'),
+            embed=await self.embedmgr.get(ctx, 'News_publish_continue', company=company, title=title, viewcontent=viewcontent)
+        )
         emjs = ['⭕', '❌']
         for em in emjs:
             await msg.add_reaction(em)
@@ -227,10 +227,12 @@ class Azaleacmds(BaseCog):
         def check(reaction, user):
             return user == ctx.author and msg.id == reaction.message.id and reaction.emoji in emjs
         try:
-            reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
+            reaction, user = await self.client.wait_for('reaction_add', timeout=60.0, check=check)
         except asyncio.TimeoutError:
-            await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
-            self.msglog.log(ctx, '[뉴스 작성: 시간 초과]')
+            try:
+                await msg.clear_reactions()
+            except:
+                pass
         else:
             if reaction.emoji == '⭕':
                 nmgr = NewsMgr(self.pool)
@@ -240,7 +242,7 @@ class Azaleacmds(BaseCog):
                 ))
                 self.msglog.log(ctx, '[뉴스 작성: 완료]')
             elif reaction.emoji == '❌':
-                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                await ctx.send(embed=self.embedmgr.get(ctx, 'Canceled'))
                 self.msglog.log(ctx, '[뉴스 작성: 취소됨]')
 
     @_news_write.error
