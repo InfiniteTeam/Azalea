@@ -1,15 +1,11 @@
 import discord
 from discord.ext import commands
-import datetime
 import asyncio
-import datetime
-import json
 import typing
-import inspect
-from utils import pager, datamgr, converters
+from utils import converters
 from templates import miniembeds
 from utils.basecog import BaseCog
-from utils.datamgr import CharMgr, ItemMgr, ItemData, EnchantmentData, ItemDBMgr, StatMgr, ExpTableDBMgr
+from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
 class GameDebugcmds(BaseCog):
     def __init__(self, client):
@@ -78,7 +74,7 @@ class GameDebugcmds(BaseCog):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'itemid':
                 missing = '아이템 아이디'
-            await ctx.send(embed=miniembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'MissingArgs', missing))
 
     @commands.command(name='경험치지급')
     async def _give_exp(self, ctx: commands.Context, exp: int, *, charname: typing.Optional[str]=None):

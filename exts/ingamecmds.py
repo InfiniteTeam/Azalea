@@ -3,19 +3,15 @@ from discord.ext import commands
 import datetime
 import asyncio
 import datetime
-import typing
-import re
-import random
 import aiomysql
-import json
+import typing
 import math
-from utils import pager, emojibuttons, timedelta, event_waiter, progressbar, mgrerrors
+from utils import pager, emojibuttons, event_waiter, progressbar, mgrerrors
 from utils.basecog import BaseCog
 from templates import miniembeds, ingameembeds
-from dateutil.relativedelta import relativedelta
 from utils.datamgr import (
-    CharMgr, ItemMgr, ItemDBMgr, CharacterType, CharacterData, ItemData, StatData, StatType, StatMgr,
-    SettingData, Setting, SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, DataDB, RegionDBMgr, ExpTableDBMgr, MarketMgr
+    CharMgr, ItemMgr, ItemDBMgr, ItemData, StatType, StatMgr,
+    SettingDBMgr, SettingMgr, MarketItem, MarketDBMgr, RegionDBMgr, ExpTableDBMgr, MarketMgr
 )
 
 class InGamecmds(BaseCog):

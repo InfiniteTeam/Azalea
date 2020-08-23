@@ -2,12 +2,11 @@ import discord
 from discord.ext import commands
 import asyncio
 from utils.basecog import BaseCog
-from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr, FarmMgr, FarmDBMgr, FarmPlantData, FarmPlantStatus, StatMgr
+from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr, FarmMgr, FarmDBMgr, FarmPlantStatus, StatMgr
 from utils.pager import Pager
 from utils import event_waiter, mgrerrors
 from templates import miniembeds, farmembeds, ingameembeds
 import typing
-import datetime
 
 class Farmcmds(BaseCog):
     def __init__(self, client):

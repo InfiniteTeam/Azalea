@@ -1,10 +1,8 @@
 import discord
-from discord.ext import commands
 import datetime
 import re
 from utils import pager, timedelta
-from utils.basecog import BaseCog
-from utils.embedmgr import aEmbedBase, EmbedMgr, aMsgBase
+from utils.embedmgr import aEmbedBase, aMsgBase
 from db import help
 
 #
@@ -329,3 +327,7 @@ class News_publish_continue(aEmbedBase):
         embed.description = f'🔹 **`{title}`**\n{viewcontent}**- {company}**, 방금'
         embed.set_author(name='뉴스 발행 미리보기')
         return embed
+
+class News_publish_done(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(title='{} 발행되었습니다.'.format(self.cog.emj.get(self.ctx, 'check')), color=self.cog.color['success'])

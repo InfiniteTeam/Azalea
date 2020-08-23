@@ -36,7 +36,7 @@ class EmbedMgr:
         for m in self.modules:
             for one in dir(m):
                 attr = getattr(m, one)
-                if isclass(attr) and issubclass(attr, aEmbedBase) and {aEmbedBase, aMsgBase} & set(attr.__bases__):
+                if isclass(attr) and (issubclass(attr, aEmbedBase) or issubclass(attr, aMsgBase)) and {aEmbedBase, aMsgBase} & set(attr.__bases__):
                     if attr in clss:
                         raise EmbedAlreadyExists(attr.__name__)
                     else:

@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import asyncio
 import random
-import os
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemDBMgr, ItemMgr, ItemData, StatMgr, ExpTableDBMgr
 from db import exps

@@ -116,7 +116,7 @@ class Azaleacmds(BaseCog):
                     self.msglog.log(ctx, '[등록: 이미 등록됨]')
                     return
                 
-                msg = await ctx.send(content=ctx.author.mention, embed=self.embedmgr.get(ctx, 'Register'))
+                msg = await ctx.send(content=ctx.author.mention, embed=await self.embedmgr.get(ctx, 'Register'))
                 emjs = ['⭕', '❌']
                 for em in emjs:
                     await msg.add_reaction(em)
@@ -135,13 +135,13 @@ class Azaleacmds(BaseCog):
                     if remj == '⭕':
                         if await cur.execute('select * from userdata where id=%s', ctx.author.id) == 0:
                             if await cur.execute('insert into userdata(id, level, type) values (%s, %s, %s)', (ctx.author.id, 1, 'User')) == 1:
-                                await ctx.send(embed=self.embedmgr.get(ctx, 'Register_done'))
+                                await ctx.send(embed=await self.embedmgr.get(ctx, 'Register_done'))
                                 self.msglog.log(ctx, '[등록: 완료]')
                         else:
                             await ctx.send(embed=await self.embedmgr.get(ctx, 'Register_already_registered'))
                             self.msglog.log(ctx, '[등록: 이미 등록됨]')
                     elif remj == '❌':
-                        await ctx.send(embed=self.embedmgr.get(ctx, 'Canceled'))
+                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                         self.msglog.log(ctx, '[등록: 취소됨]')
 
     @commands.command(name='탈퇴')
@@ -217,7 +217,7 @@ class Azaleacmds(BaseCog):
         else:
             viewcontent = ''
         msg = await ctx.send(
-            self.embedmgr.get(ctx, 'News_publish_continue_ask'),
+            await self.embedmgr.get(ctx, 'News_publish_continue_ask'),
             embed=await self.embedmgr.get(ctx, 'News_publish_continue', company=company, title=title, viewcontent=viewcontent)
         )
         emjs = ['⭕', '❌']
@@ -237,12 +237,10 @@ class Azaleacmds(BaseCog):
             if reaction.emoji == '⭕':
                 nmgr = NewsMgr(self.pool)
                 await nmgr.publish(NewsData(None, title, content, company, datetime.datetime.now()))
-                await ctx.send(embed=discord.Embed(
-                    title='{} 발행되었습니다.'.format(self.emj.get(ctx, 'check')), color=self.color['success']
-                ))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'News_publish_done'))
                 self.msglog.log(ctx, '[뉴스 작성: 완료]')
             elif reaction.emoji == '❌':
-                await ctx.send(embed=self.embedmgr.get(ctx, 'Canceled'))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                 self.msglog.log(ctx, '[뉴스 작성: 취소됨]')
 
     @_news_write.error
@@ -254,7 +252,7 @@ class Azaleacmds(BaseCog):
                 missing = '내용'
             elif error.param.name == 'company':
                 missing = '신문사'
-            await ctx.send(embed=miniembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'MissingArgs', missing))
 
 def setup(client):
     cog = Azaleacmds(client)

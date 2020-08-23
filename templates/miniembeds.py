@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from utils.basecog import BaseCog
-from utils.embedmgr import aEmbedBase, EmbedMgr
+from utils.embedmgr import aEmbedBase
 
 def set_delete_after_footer(embed: discord.Embed, delafter: int):
     if delafter:
@@ -20,10 +20,13 @@ class Canceled(aEmbedBase):
         set_delete_after_footer(embed, delafter)
         return embed
 
-class MissingArgs:
-    @classmethod
-    def getembed(cls, prefix, color, paramdesc):
-        return discord.Embed(title='❗ 명령어에 빠진 부분이 있습니다!', description=f'**`{paramdesc}`이(가) 필요합니다!**\n자세한 명령어 사용법은 `{prefix}도움` 을 통해 확인하세요!', color=color)
+class MissingArgs(aEmbedBase):
+    def ko(self, paramdesc):
+        return discord.Embed(
+            title='❗ 명령어에 빠진 부분이 있습니다!',
+            description=f'**`{paramdesc}`이(가) 필요합니다!**\n자세한 명령어 사용법은 `{self.cog.prefix}도움` 을 통해 확인하세요!',
+            color=self.cog.color['error']
+        )
 
 class CharNotFound:
     @classmethod

@@ -17,21 +17,7 @@ class BaseCmds(BaseCog):
 
     @_ext.command(name='list', aliases=['목록'])
     async def _ext_list(self, ctx: commands.Context):
-        allexts = ''
-        for oneext in self.client.get_data('allexts'):
-            if oneext == __name__:
-                allexts += f'🔐 {oneext}\n'
-            elif oneext in self.client.extensions:
-                allexts += f'{self.emj.get(ctx, "check")} {oneext}\n'
-            else:
-                allexts += f'{self.emj.get(ctx, "cross")} {oneext}\n'
-        embed = discord.Embed(title=f'🔌 전체 확장 목록', color=self.color['primary'], description=
-            f"""\
-                총 {len(self.client.get_data('allexts'))}개 중 {len(self.client.extensions)}개 로드됨.
-                {allexts}
-            """
-        )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_list'))
         self.msglog.log(ctx, '[전체 확장 목록]')
 
     @_ext.command(name='reload', aliases=['리로드'])
@@ -40,9 +26,7 @@ class BaseCmds(BaseCog):
         if (not names) or ('*' in names):
             for onename in reloads:
                 self.client.reload_extension(onename)
-            embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 활성된 모든 확장을 리로드했습니다**', color=self.color['info'])
-            embed.set_footer(text=", ".join(reloads))
-            await ctx.send(embed=embed)
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_reload', reloads))
             self.msglog.log(ctx, '[모든 확장 리로드 완료]')
         else:
             try:
@@ -52,12 +36,10 @@ class BaseCmds(BaseCog):
                 for onename in names:
                     self.client.reload_extension(onename)
             except commands.ExtensionNotLoaded:
-                embed = discord.Embed(description=f'**❓ 로드되지 않았거나 존재하지 않는 확장입니다: `{onename}`**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_unloaded', onename))
                 self.msglog.log(ctx, '[로드되지 않았거나 존재하지 않는 확장]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 리로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_reload_done', names))
                 self.msglog.log(ctx, '[확장 리로드 완료]')
         
     @_ext.command(name='load', aliases=['로드'])
@@ -71,12 +53,10 @@ class BaseCmds(BaseCog):
                     self.client.load_extension(onename)
                     
             except commands.ExtensionAlreadyLoaded:
-                embed = discord.Embed(description='**❌ 모든 확장이 이미 로드되었습니다!**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_all_loaded_already'))
                 self.msglog.log(ctx, '[모든 확장이 이미 로드됨]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 로드를 완료했습니다: `{", ".join(loads)}`**', color=self.color['info'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_load_done', loads))
                 self.msglog.log(ctx, '[확장 로드 완료]')
         else:
             try:
@@ -89,16 +69,13 @@ class BaseCmds(BaseCog):
                     self.client.load_extension(onename)
 
             except commands.ExtensionNotFound:
-                embed = discord.Embed(description=f'**❓ 존재하지 않는 확장입니다: `{onename}`**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_not_found', onename))
                 self.msglog.log(ctx, '[존재하지 않는 확장]')
             except commands.ExtensionAlreadyLoaded:
-                embed = discord.Embed(description=f'**❌ 이미 로드된 확장입니다: `{onename}`**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_already_loaded', onename))
                 self.msglog.log(ctx, '[이미 로드된 확장]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_load_done', names))
                 self.msglog.log(ctx, '[확장 로드 완료]')
 
     @_ext.command(name='unload', aliases=['언로드'])
@@ -112,12 +89,10 @@ class BaseCmds(BaseCog):
                 for onename in unloads:
                     self.client.unload_extension(onename)
             except commands.ExtensionNotLoaded:
-                embed = discord.Embed(description='**❌ 로드된 확장이 하나도 없습니다!`**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_not_loaded_any'))
                 self.msglog.log(ctx, '[로드된 확장이 전혀 없음]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 언로드를 완료했습니다: `{", ".join(unloads)}`**', color=self.color['info'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_unloaded_all', unloads))
                 self.msglog.log(ctx, '[열린 모든 확장 언로드 완료]')
         else:
             try:

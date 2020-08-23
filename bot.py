@@ -1,5 +1,4 @@
 import discord
-from discord.ext import commands, tasks
 import datetime
 import json
 import asyncio
@@ -11,11 +10,11 @@ import logging.handlers
 import importlib
 import paramiko
 from itertools import chain
-from utils import errors, checks, msglogger, emojictrl, permutil, datamgr, embedmgr
+from utils import errors, checks, msglogger, emojictrl, datamgr, embedmgr
 from utils.azalea import Azalea
 from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp, items
 from ingame.farming import farm_plants
-from templates import azaleaembeds, charembeds, farmembeds, ingameembeds, miniembeds
+from templates import azaleaembeds, charembeds, farmembeds, ingameembeds, miniembeds, basecembeds
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -192,7 +191,8 @@ embedmgr = embedmgr.EmbedMgr(
     charembeds,
     farmembeds,
     ingameembeds,
-    miniembeds
+    miniembeds,
+    basecembeds
 )
 
 check = checks.Checks(pool, datadb)

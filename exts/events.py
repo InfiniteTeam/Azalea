@@ -8,8 +8,7 @@ import math
 import sys
 import aiomysql
 from utils.basecog import BaseCog
-from utils import errors, permutil, timedelta, datamgr, progressbar
-from dateutil.relativedelta import relativedelta
+from utils import errors, permutil, datamgr, progressbar
 import uuid
 from configs import advlogging
 

@@ -1,9 +1,9 @@
+# pylint: enable=unused-import
 import discord
 from discord.ext import commands
 from utils.basecog import BaseCog
 import typing
 import datetime
-from dateutil.relativedelta import relativedelta
 import asyncio
 import aiomysql
 import re
@@ -13,7 +13,6 @@ from utils.mgrerrors import CharCreateError, CharCreateErrReasons
 from templates import ingameembeds, miniembeds
 from db import charsettings
 from templates import charembeds
-from functools import partial
 
 class Charcmds(BaseCog):
     def __init__(self, client):
@@ -357,7 +356,7 @@ class Charcmds(BaseCog):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'name':
                 missing = '캐릭터의 이름'
-            await ctx.send(embed=miniembeds.MissingArgs.getembed(self.prefix, self.color['error'], missing))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'MissingArgs', missing))
 
     @_char.command(name='이름변경', aliases=['닉변'])
     async def _char_changename(self, ctx: commands.Context, *, charname: typing.Optional[str]):

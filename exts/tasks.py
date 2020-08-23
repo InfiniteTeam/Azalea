@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import tasks
 import asyncio
 import aiomysql
 from utils.basecog import BaseCog
@@ -8,6 +8,7 @@ import traceback
 import datetime
 import math
 from configs import advlogging
+import pylint
 
 # pylint: disable=no-member
 
