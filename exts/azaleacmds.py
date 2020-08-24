@@ -97,7 +97,7 @@ class Azaleacmds(BaseCog):
                     em = reaction.emoji
                     if em == '⭕':
                         await cur.execute('update serverdata set noticechannel=%s where id=%s', (notich.id, ctx.guild.id))
-                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Notice_set_done'))
+                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Notice_set_done', notich))
                         self.msglog.log(ctx, '[공지채널: 설정 완료]')
                     elif em == '❌':
                         await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))

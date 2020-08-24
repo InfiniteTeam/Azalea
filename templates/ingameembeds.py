@@ -4,7 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 from utils import pager, timedelta, basecog
 from utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr, ExpTableDBMgr, ItemMgr
-from db import charsettings
+
 
 def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default') -> discord.Embed:
     items = pgr.get_thispage()
@@ -154,30 +154,6 @@ def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, m
         embed.description = itemstr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
     else:
         embed.description = '\n가방에는 공기 말고는 아무것도 없네요!'
-    return embed
-
-async def char_settings_embed(cog: basecog.BaseCog, pgr: pager.Pager, char: CharacterData, mode='default') -> discord.Embed:
-    sdgr = SettingDBMgr(cog.datadb)
-    smgr = SettingMgr(cog.pool, sdgr, char.uid)
-    settitles = []
-    setvalue = []
-    embed = discord.Embed(title='⚙ `{}` 캐릭터 설정'.format(char.name), color=cog.color['info'])
-    now = pgr.get_thispage()
-    for idx, st in enumerate(now):
-        settitles.append(st.title)
-        valuestr = str(await smgr.get_setting(st.name))
-        if st.type == bool:
-            for x in [('True', '켜짐'), ('False', '꺼짐')]:
-                valuestr = valuestr.replace(x[0], x[1])
-        elif st.type == charsettings.Where_to_Levelup_Message:
-            for k, v in st.type.selections.items():
-                valuestr = valuestr.replace(str(k), v[1])
-        setvalue.append(valuestr)
-    if mode == 'select':
-        embed.title += ' - 선택 모드'
-        embed.add_field(name='번호', value='\n'.join(map(str, range(1, len(now)+1))))
-    embed.add_field(name='설정 이름', value='\n'.join(settitles))
-    embed.add_field(name='설정값', value='\n'.join(setvalue))
     return embed
 
 def rank_embed(cog: basecog.BaseCog, pgr: pager.Pager, *, orderby='money', where='server', guild: discord.Guild=None) -> discord.Embed:

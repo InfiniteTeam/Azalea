@@ -106,25 +106,22 @@ class BaseCmds(BaseCog):
                     self.client.unload_extension(onename)
 
             except commands.ExtensionNotLoaded:
-                embed = discord.Embed(description=f'**❌ 로드되지 않은 확장입니다: `{onename}`**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_not_loaded', onename))
                 self.msglog.log(ctx, '[로드되지 않은 확장]')
             except errors.LockedExtensionUnloading:
-                embed = discord.Embed(description=f'**🔐 잠긴 확장은 언로드할 수 없습니다: `{lockedinnames}`**', color=self.color['error'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_locked', lockedinnames))
                 self.msglog.log(ctx, '[잠긴 확장 로드 시도]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 언로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'])
-                await ctx.send(embed=embed)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_unload_done', names))
                 self.msglog.log(ctx, '[확장 언로드 완료]')
 
     @commands.command(name='reload', aliases=['리', '리로드'])
     async def _ext_reload_wrapper(self, ctx: commands.Context, *names):
         await self._ext_reload(ctx, *names)
         self.datadb.reload()
-        await ctx.send(embed=discord.Embed(description='**내부 데이터베이스를 모두 리로드했습니다.**', color=self.color['info']))
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_internal_db_reloaded'))
         self.embedmgr.reload()
-        await ctx.send(embed=discord.Embed(description='**임베드 매니저를 리로드했습니다.**', color=self.color['info']))
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Ext_embedmgr_reloaded'))
 
 def setup(client):
     cog = BaseCmds(client)

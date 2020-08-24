@@ -91,3 +91,38 @@ class Ext_unloaded_all(aEmbedBase):
             description=f'**{self.cog.emj.get(self.ctx, "check")} 확장 언로드를 완료했습니다: `{", ".join(unloads)}`**',
             color=self.cog.color['info']
         )
+
+class Ext_not_loaded(aEmbedBase):
+    async def ko(self, name):
+        return discord.Embed(
+            description=f'**❌ 로드되지 않은 확장입니다: `{name}`**',
+            color=self.cog.color['error']
+        )
+
+class Ext_locked(aEmbedBase):
+    async def ko(self, name):
+        return discord.Embed(
+            description=f'**🔐 잠긴 확장은 언로드할 수 없습니다: `{name}`**',
+            color=self.cog.color['error']
+        )
+
+class Ext_unload_done(aEmbedBase):
+    async def ko(self, unloads):
+        return discord.Embed(
+            description=f'**{self.cog.emj.get(self.ctx, "check")} 확장 언로드를 완료했습니다: `{", ".join(unloads)}`**',
+            color=self.cog.color['info']
+        )
+
+class Ext_internal_db_reloaded(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            description='**내부 데이터베이스를 모두 리로드했습니다.**',
+            color=self.cog.color['info']
+        )
+
+class Ext_embedmgr_reloaded(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            description='**임베드 매니저를 리로드했습니다.**',
+            color=self.cog.color['info']
+        )

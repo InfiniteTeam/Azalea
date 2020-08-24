@@ -10,7 +10,6 @@ import re
 from utils import pager, emojibuttons, timedelta, event_waiter
 from utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
 from utils.mgrerrors import CharCreateError, CharCreateErrReasons
-from templates import ingameembeds, miniembeds
 from db import charsettings
 from templates import charembeds
 
@@ -31,19 +30,12 @@ class Charcmds(BaseCog):
         chars = await cmgr.get_chars(user.id)
         if not chars:
             if ctx.author.id == user.id:
-                await ctx.send(embed=discord.Embed(
-                    title='🎲 캐릭터가 하나도 없네요!',
-                    description='`{}캐릭터 생성` 명령으로 캐릭터를 생성해서 게임을 시작하세요!'.format(self.prefix),
-                    color=self.color['warn']
-                ))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_no_any_char'))
             else:
-                await ctx.send(embed=discord.Embed(
-                    title=f'🎲 `{user.name}` 님은 캐릭터가 하나도 없네요!',
-                    color=self.color['warn']
-                ))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_no_any_char_other_user', user))
             return
         pgr = pager.Pager(chars, perpage)
-        msg = await ctx.send(embed=await charembeds.char_embed(self, user.name, pgr))
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char', user, pgr))
         self.msglog.log(ctx, '[캐릭터]')
         extemjs = []
         owner = False
@@ -75,11 +67,11 @@ class Charcmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await charembeds.char_embed(self, user.name, pgr, mode='select'))
+                        await msg.edit(embed=await self.embedmgr.get(ctx, 'Char', user, pgr, mode='select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await charembeds.char_embed(self, user.name, pgr, mode='select'))
+                            ctx.send(embed=await self.embedmgr.get(ctx, 'Char', user, pgr, mode='select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
@@ -89,11 +81,7 @@ class Charcmds(BaseCog):
                     await self._char_create(ctx)
 
                 elif reaction.emoji == '🎲' and owner:
-                    idxmsg = await ctx.send(embed=discord.Embed(
-                        title='🎲 캐릭터 변경 - 캐릭터 선택',
-                        description='변경할 캐릭터의 번째수를 입력해주세요.\n위 메시지에 캐릭터 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-                        color=self.color['ask']
-                    ))
+                    idxmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_change_select_index'))
                     self.msglog.log(ctx, '[캐릭터: 캐릭터 변경: 번째수 입력]')
                     await idxmsg.add_reaction('❌')
                     canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=idxmsg, emojis=['❌'], timeout=60))
@@ -108,11 +96,7 @@ class Charcmds(BaseCog):
                             await self._char_change(ctx, name=pgr.get_thispage()[idx].name)
 
                 elif reaction.emoji == '❔':
-                    idxmsg = await ctx.send(embed=discord.Embed(
-                        title='❔ 캐릭터 정보 - 캐릭터 선택',
-                        description='정보를 확인할 캐릭터의 번째수를 입력해주세요.\n위 메시지에 캐릭터 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-                        color=self.color['ask']
-                    ))
+                    idxmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_info_select_index'))
                     self.msglog.log(ctx, '[캐릭터: 캐릭터 정보: 번째수 입력]')
                     await idxmsg.add_reaction('❌')
                     canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=idxmsg, emojis=['❌'], timeout=60))
@@ -129,7 +113,7 @@ class Charcmds(BaseCog):
                 pgr.set_obj(await cmgr.get_chars(user.id))
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 await asyncio.gather(do,
-                    msg.edit(embed=await charembeds.char_embed(self, user.name, pgr)),
+                    msg.edit(embed=await self.embedmgr.get(ctx, 'Char', user, pgr)),
                 )
                     
     async def char_name_check(self, name: str):
@@ -153,20 +137,20 @@ class Charcmds(BaseCog):
         cmgr = CharMgr(self.pool)
         charcount = len(await cmgr.get_chars(ctx.author.id))
         if charcount >= self.config['max_charcount']:
-            await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_all_slots_full'))
             self.msglog.log(ctx, '[캐릭터 슬롯 부족]')
             return
-        namemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 이름', description='새 캐릭터를 생성합니다. 캐릭터의 이름을 입력하세요.\n취소하려면 `취소` 를 입력하세요!', color=self.color['ask']))
+        namemsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_create_name'))
         self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기]')
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content
         try:
             m = await self.client.wait_for('message', check=check, timeout=60)
         except asyncio.TimeoutError:
-            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=7)
-            self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 시간 초과]')
+            try:
+                await namemsg.delete()
+            except:
+                pass
         else:
             charname = m.content
                 
@@ -181,20 +165,13 @@ class Charcmds(BaseCog):
         else:
             try:
                 await namemsg.delete()
-            except: pass
+            except:
+                pass
+
             if ck is False:
                 return
         
-        typemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 생성 - 직업', color=self.color['ask'],
-            description="""\
-                `{}` 의 직업을 선택합니다.
-                ⚔: 전사
-                🏹: 궁수
-                🔯: 마법사
-
-                ❌: 취소
-            """.format(charname)
-        ))
+        typemsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_create_job', charname))
         emjs = ['⚔', '🏹', '🔯', '❌']
         for em in emjs:
             await typemsg.add_reaction(em)
@@ -204,17 +181,15 @@ class Charcmds(BaseCog):
         try:
             reaction, user = await self.client.wait_for('reaction_add', check=rcheck, timeout=20)
         except asyncio.TimeoutError:
-            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=7)
-            self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 시간 초과]')
+            try:
+                await typemsg.delete()
+            except:
+                pass    
         else:
             await typemsg.delete()
             e = reaction.emoji
             if e == '❌':
-                embed = discord.Embed(title='❌ 취소되었습니다.', color=self.color['error'])
-                embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다')
-                await ctx.send(embed=embed, delete_after=7)
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled', 7), delete_after=7)
                 self.msglog.log(ctx, '[캐릭터 생성: 직업 선택: 취소됨]')
                 return
             elif e == '⚔':
@@ -226,7 +201,7 @@ class Charcmds(BaseCog):
             
             charcount = len(await cmgr.get_chars(ctx.author.id))
             if charcount >= self.config['max_charcount']:
-                await ctx.send(embed=discord.Embed(title='❌ 캐릭터 슬롯이 모두 찼습니다.', description='유저당 최대 캐릭터 수는 {}개 입니다.'.format(self.config['max_charcount']), color=self.color['error']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_all_slots_full'))
                 self.msglog.log(ctx, '[캐릭터 생성: 슬롯 부족]')
                 return
             
@@ -241,10 +216,7 @@ class Charcmds(BaseCog):
                 
             if charcount == 0:
                 await cmgr.change_character(ctx.author.id, char.uid)
-                desc = '첫 캐릭터 생성이네요, 이제 게임을 시작해보세요!'
-            else:
-                desc = '`{}캐릭터 변경` 명령으로 이 캐릭터를 선텍해 게임을 시작할 수 있습니다!'.format(self.prefix)
-            await ctx.send(embed=discord.Embed(title='{} 캐릭터를 생성했습니다! - `{}`'.format(self.emj.get(ctx, 'check'), charname), description=desc, color=self.color['success']))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_create_done', charcount, charname))
             self.msglog.log(ctx, '[캐릭터 생성: 완료]')
 
     @_char.command(name='변경', aliases=['선택', '변', '선'])
@@ -256,16 +228,16 @@ class Charcmds(BaseCog):
             if not char[0].online:
                 if not await cmgr.is_being_forgotten(char[0].uid):
                     await cmgr.change_character(ctx.author.id, char[0].uid)
-                    await ctx.send(embed=discord.Embed(title='{} 현재 캐릭터를 `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
+                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_change_done', cname))
                     self.msglog.log(ctx, '[캐릭터 변경: 완료]')
                 else:
-                    await ctx.send(embed=discord.Embed(title=f'❓ 삭제 중인 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중이여서 로그인할 수 없습니다. `{}캐릭터 삭제취소` 명령으로 취소할 수 있습니다.'.format(self.prefix), color=self.color['error']))
+                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_change_but_being_deleted', cname))
                     self.msglog.log(ctx, '[캐릭터 변경: 삭제 중인 캐릭터]')
             else:
-                await ctx.send(embed=discord.Embed(title=f'❓ 이미 현재 캐릭터입니다: `{cname}`', description='이 캐릭터는 현재 플레이 중인 캐릭터입니다.', color=self.color['error']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_change_but_already_current', cname))
                 self.msglog.log(ctx, '[캐릭터 변경: 이미 현재 캐릭터]')
         else:
-            await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, name))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', name))
             self.msglog.log(ctx, '[캐릭터 변경: 존재하지 않는 캐릭터]')
 
     @_char.command(name='삭제', aliases=['삭'])
@@ -273,21 +245,15 @@ class Charcmds(BaseCog):
         cmgr = CharMgr(self.pool)
         char = list(filter(lambda x: x.name.lower() == name.lower(), await cmgr.get_chars(ctx.author.id)))
         if not char:
-            embed = miniembeds.CharNotFound.getembed(ctx, name)
-            embed.description = '캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.'
-            await ctx.send(embed=embed)
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', name))
             self.msglog.log(ctx, '[캐릭터 삭제: 존재하지 않는 캐릭터]')
             return
         cname = char[0].name
         if await cmgr.is_being_forgotten(char[0].uid):
-            await ctx.send(embed=discord.Embed(title=f'❓ 이미 삭제가 요청된 캐릭터입니다: `{cname}`', description=f'삭제를 취소하려면 `{self.prefix}캐릭터 삭제취소` 명령을 입력하세요.', color=self.color['error']))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_delete_already_queued', cname))
             self.msglog.log(ctx, '[캐릭터 삭제: 이미 삭제 요청됨]')
             return
-        msg = await ctx.send(embed=discord.Embed(
-            title=f'⚠ `{cname}` 캐릭터를 정말로 삭제할까요?',
-            description=f'캐릭터는 삭제 버튼을 누른 후 24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
-            color=self.color['warn']
-        ))
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_delete_ask', cname))
         emjs = ['⭕', '❌']
         for em in emjs:
             await msg.add_reaction(em)
@@ -297,22 +263,18 @@ class Charcmds(BaseCog):
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=20, check=check)
         except asyncio.TimeoutError:
-            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=7)
-            self.msglog.log(ctx, '[캐릭터 삭제: 시간 초과]')
+            try:
+                await msg.delete()
+            except:
+                pass
         else:
             remj = reaction.emoji
             if remj == '⭕':
                 await cmgr.schedule_delete(ctx.author.id, char[0].uid)
-                await ctx.send(embed=discord.Embed(
-                    title='{} `{}` 캐릭터가 24시간 후에 완전히 지워집니다.'.format(self.emj.get(ctx, 'check'), cname),
-                    description=f'24시간 후에 완전히 지워지며, 이 기간 동안에 `{self.prefix}캐릭터 삭제취소` 명령으로 취소가 가능합니다.',
-                    color=self.color['success']
-                ))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_delete_added_queue', cname))
                 self.msglog.log(ctx, '[캐릭터 삭제: 삭제 작업 예약됨]')
             elif remj == '❌':
-                await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                 self.msglog.log(ctx, '[캐릭터 삭제: 취소됨]')
 
     @_char.command(name='삭제취소')
@@ -320,18 +282,16 @@ class Charcmds(BaseCog):
         cmgr = CharMgr(self.pool)
         char = list(filter(lambda x: x.name.lower() == name.lower(), await cmgr.get_chars(ctx.author.id)))
         if not char:
-            embed = miniembeds.CharNotFound.getembed(ctx, name)
-            embed.description = '캐릭터 이름이 정확한지 확인해주세요!\n또는 캐릭터가 이미 삭제되었을 수도 있습니다.'
-            await ctx.send(embed=embed)
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', name))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 존재하지 않는 캐릭터]')
             return
         cname = char[0].name
         if not await cmgr.is_being_forgotten(char[0].uid):
-            await ctx.send(embed=discord.Embed(title=f'❓ 삭제중이 아닌 캐릭터입니다: `{cname}`', description='이 캐릭터는 삭제 중인 캐릭터가 아닙니다.', color=self.color['error']))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_cancel_delete_but_not_being_deleted', cname))
             self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제중이 아닌 캐릭터]')
             return
         await cmgr.cancel_delete(char[0].uid)
-        await ctx.send(embed=discord.Embed(title='{} 캐릭터 삭제를 취소했습니다!: `{}`'.format(self.emj.get(ctx, 'check'), cname), color=self.color['success']))
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_cancel_delete_done', cname))
         self.msglog.log(ctx, '[캐릭터 삭제취소: 삭제 취소 완료]')
         return
 
@@ -364,7 +324,7 @@ class Charcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname, ctx.author.id)
             if not char:
-                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', charname))
                 self.msglog.log(ctx, '[이름변경: 존재하지 않는 캐릭터]')
                 return
         else:
@@ -374,19 +334,20 @@ class Charcmds(BaseCog):
             td = datetime.datetime.now() - char.last_nick_change
             if td <= datetime.timedelta(days=1):
                 cldstr = ' '.join(timedelta.format_timedelta(datetime.timedelta(days=1) - td).values())
-                await ctx.send(embed=discord.Embed(title='⏱ 쿨타임 중입니다!', description=f'**`{cldstr}` 남았습니다!**\n닉네임은 24시간에 한 번 변경할 수 있습니다.', color=self.color['info']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_changename_cooldown', cldstr))
                 self.msglog.log(ctx, '[이름변경: 쿨다운 중]')
                 return
-        namemsg = await ctx.send(embed=discord.Embed(title='🏷 캐릭터 이름 변경', description=f'`{char.name}` 캐릭터의 이름을 변경합니다. 새 이름을 입력해주세요!\n취소하려면 `취소`를 입력하세요.', color=self.color['ask']))
+        namemsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_changename_name', char.name))
         self.msglog.log(ctx, '[이름변경]')
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content
         try:
             m = await self.client.wait_for('message', check=check, timeout=60)
         except asyncio.TimeoutError:
-            embed = discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info'])
-            embed.set_footer(text='이 메시지는 7초 후에 삭제됩니다.')
-            await ctx.send(embed=embed, delete_after=7)
+            try:
+                await namemsg.delete()
+            except:
+                pass
             self.msglog.log(ctx, '[이름변경: 시간 초과]')
         else:
             newname = m.content
@@ -406,7 +367,7 @@ class Charcmds(BaseCog):
                 if ck is False:
                     return
             
-            msg = await ctx.send(embed=discord.Embed(title=f'🏷 `{newname}` 으로 변경할까요?', description='변경하면 24시간 후에 다시 변경할 수 있습니다!', color=self.color['ask']))
+            msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_changename_continue_ask', newname))
             emjs = ['⭕', '❌']
             for em in emjs:
                 await msg.add_reaction(em)
@@ -422,10 +383,10 @@ class Charcmds(BaseCog):
             else:
                 if reaction.emoji == '⭕':
                     await cmgr.change_nick(char.uid, newname)
-                    await ctx.send(embed=discord.Embed(title='{} `{}` 으로 변경했습니다!'.format(self.emj.get(ctx, 'check'), newname), color=self.color['success']))
+                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_changename_done', newname))
                     self.msglog.log(ctx, '[이름변경: 완료]')
                 elif reaction.emoji == '❌':
-                    await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                     self.msglog.log(ctx, '[이름변경: 취소됨]')
 
     @commands.command(name='닉변')
@@ -436,11 +397,7 @@ class Charcmds(BaseCog):
     async def _logout(self, ctx: commands.Context):
         cmgr = CharMgr(self.pool)
         char = await cmgr.get_current_char(ctx.author.id)
-        msg = await ctx.send(embed=discord.Embed(
-            title='📤 로그아웃',
-            description=f'`{char.name}` 캐릭터에서 로그아웃할까요?\n`{self.prefix}캐릭터 변경` 명령으로 다시 캐릭터에 접속할 수 있습니다.',
-            color=self.color['ask']
-        ))
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_logout', char.name))
         self.msglog.log(ctx, '[로그아웃]')
         emjs = ['⭕', '❌']
         for em in emjs:
@@ -457,10 +414,10 @@ class Charcmds(BaseCog):
         else:
             if reaction.emoji == '⭕':
                 await cmgr.logout_all(ctx.author.id)
-                await ctx.send(embed=discord.Embed(title='{} 로그아웃했습니다!'.format(self.emj.get(ctx, 'check')), description=f'`{self.prefix}캐릭터 변경` 명령으로 다시 캐릭터에 접속할 수 있습니다.', color=self.color['success']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_logout_done'))
                 self.msglog.log(ctx, '[로그아웃: 완료]')
             elif reaction.emoji == '❌':
-                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                 self.msglog.log(ctx, '[로그아웃: 취소됨]')
 
     @_char.command(name='설정', aliases=['셋', '설'])
@@ -470,7 +427,7 @@ class Charcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname, ctx.author.id)
             if not char:
-                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', charname))
                 return
         else:
             char = await cmgr.get_current_char(ctx.author.id)
@@ -479,7 +436,7 @@ class Charcmds(BaseCog):
         smgr = SettingMgr(self.pool, sdgr, char.uid)
         pgr = pager.Pager(self.datadb.char_settings, perpage)
         
-        msg = await ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char))
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting', pgr, char))
         extemjs = ['✏']
         if len(pgr.pages()) <= 1:
             emjs = extemjs
@@ -502,17 +459,17 @@ class Charcmds(BaseCog):
             else:
                 if reaction.emoji in extemjs:
                     if not ctx.channel.last_message or ctx.channel.last_message_id == msg.id:
-                        await msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                        await msg.edit(embed=await self.embedmgr.get(ctx, 'Char_setting', pgr, char, mode='select'))
                     else:
                         results = await asyncio.gather(
                             msg.delete(),
-                            ctx.send(embed=await ingameembeds.char_settings_embed(self, pgr, char, 'select'))
+                            ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting', pgr, char, mode='select'))
                         )
                         msg = results[1]
                         await addreaction(msg)
                         reaction.message = msg
                 if reaction.emoji == '✏':
-                    idxmsg = await ctx.send(embed=discord.Embed(title='⚙ 설정 변경 - 항목 선택', description='변경할 항목의 번째 수를 입력해주세요.\n또는 ❌ 버튼을 클릭해 취소할 수 있습니다.', color=self.color['ask']))
+                    idxmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting_edit'))
                     self.msglog.log(ctx, '[설정: 변경: 번째수 입력]')
                     await idxmsg.add_reaction('❌')
                     canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=idxmsg, emojis=['❌'], timeout=20))
@@ -526,10 +483,9 @@ class Charcmds(BaseCog):
                             if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                                 idx = int(idxtaskrst.content)-1
                                 setting: Setting = pgr.get_thispage()[idx]
-                                embed = discord.Embed(title='⚙ '+ setting.title, description=setting.description + '\n\n', color=self.color['ask'])
+                                
                                 if setting.type == bool:
-                                    embed.description += '{}: 켜짐\n{}: 꺼짐'.format(self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross'))
-                                    editmsg = await ctx.send(embed=embed)
+                                    editmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting_edit_info_bool', setting))
                                     editemjs = [self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross')]
                                     for em in editemjs:
                                         await editmsg.add_reaction(em)
@@ -551,8 +507,7 @@ class Charcmds(BaseCog):
                                     editopts = {}
                                     for k, v in setting.type.selections.items():
                                         editopts[v[0]] = k
-                                        embed.description += '{}: {}\n'.format(v[0], v[1])
-                                    editmsg = await ctx.send(embed=embed)
+                                    editmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting_edit_whereto_levelup', setting))
                                     for em in editopts.keys():
                                         await editmsg.add_reaction(em)
                                     def opt_check(reaction, user):
@@ -569,20 +524,16 @@ class Charcmds(BaseCog):
                                     
                                 await editmsg.delete()
                             else:
-                                embed = discord.Embed(title='❓ 설정 번째수가 올바르지 않습니다!', description='위 메시지에 항목 앞마다 번호가 붙어 있습니다.', color=self.color['error'])
-                                embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                await ctx.send(embed=embed, delete_after=7)
+                                await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting_invalid_index', 7), delete_after=7)
                                 self.msglog.log(ctx, '[설정: 변경: 올바르지 않은 번째수]')
                         else:
-                            embed = discord.Embed(title='❓ 설정 번째수는 숫자만을 입력해주세요!', color=self.color['error'])
-                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                            await ctx.send(embed=embed, delete_after=7)
+                            await ctx.send(embed=await self.embedmgr.get(ctx, 'Char_setting_only_number', 7), delete_after=7)
                             self.msglog.log(ctx, '[설정: 변경: 숫자만 입력]')
 
                 if charname:
                     char = await cmgr.get_character_by_name(charname, ctx.author.id)
                     if not char:
-                        await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
+                        await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', charname))
                         return
                 else:
                     char = await cmgr.get_current_char(ctx.author.id)
@@ -590,7 +541,7 @@ class Charcmds(BaseCog):
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
                 if asyncio.iscoroutine(do):
                     await asyncio.gather(do,
-                        msg.edit(embed=await ingameembeds.char_settings_embed(self, pgr, char))
+                        msg.edit(embed=await self.embedmgr.get(ctx, 'Char_setting', pgr, char))
                     )
 
 def setup(client):

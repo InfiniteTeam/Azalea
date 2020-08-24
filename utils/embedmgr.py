@@ -1,18 +1,28 @@
 import discord
 from discord.ext import commands
 import aiomysql
+import asyncio
 from utils.basecog import BaseCog
 from types import ModuleType
 import importlib
 from typing import List
 from inspect import isclass
 
-class EmbedAlreadyExists(Exception):
+class EmbedError(Exception):
+    pass
+
+class EmbedAlreadyExists(EmbedError):
     def __init__(self, name):
         super().__init__(f'{name} 임베드 클래스가 이미 존재합니다')
         self.name = name
 
-class EmbedNotFound(Exception):
+class EmbedisNotCoroFunc(EmbedError):
+    def __init__(self, name, lang):
+        super().__init__(f'{name} 임베드 클래스의 {lang} 가 코루틴 함수가 아닙니다')
+        self.name = name
+        self.lang = lang
+
+class EmbedNotFound(EmbedError):
     pass
 
 class aEmbedBase:
@@ -30,6 +40,8 @@ class EmbedMgr:
         self.pool = pool
         self.modules = list(modules)
         self.default_lang = default_lang
+        # Precheck embeds
+        self.get_embedclss()
         
     def get_embedclss(self) -> List:
         clss = []
@@ -59,7 +71,9 @@ class EmbedMgr:
                         embedfunc = getattr(embedinstance, lang)
                     except AttributeError:
                         embedfunc = getattr(embedinstance, self.default_lang)
-                    return await embedfunc(*args, **kwargs)
+                    if asyncio.iscoroutinefunction(embedfunc):
+                        return await embedfunc(*args, **kwargs)
+                    raise EmbedisNotCoroFunc(embedinstance.__class__.__name__, embedfunc.__name__)
                 raise EmbedNotFound
 
     def reload(self):
@@ -67,3 +81,8 @@ class EmbedMgr:
             self.modules[idx] = importlib.reload(m)
 
                 
+def set_delete_after_footer(embed: discord.Embed, delafter: int):
+    if delafter:
+        embed.set_footer(text=f"이 메시지는 {delafter}초 후에 사라집니다")
+        return True
+    return False
