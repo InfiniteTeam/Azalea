@@ -71,7 +71,7 @@ class Gamecmds(BaseCog):
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
                 await imgr.give_item(ItemData(fish.id, 1, []))
                 exp = exps.fishing(req=edgr.get_required_exp(await samgr.get_level(edgr)), fish=fish)
-                await samgr.give_exp(exp, edgr, ctx.channel.id)
+                await samgr.give_exp(exp, edgr, ctx)
                 embed.title += ' - 잡았습니다!'
                 embed.description = '**`{}` 을(를)** 잡았습니다!\n+`{}` 경험치를 받았습니다.'.format(fish.name, exp)
                 self.msglog.log(ctx, '[낚시: 잡음]')

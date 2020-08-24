@@ -5,7 +5,7 @@ import asyncio
 from utils.basecog import BaseCog
 from types import ModuleType
 import importlib
-from typing import List
+from typing import List, Union
 from inspect import isclass
 
 class EmbedError(Exception):
@@ -26,9 +26,11 @@ class EmbedNotFound(EmbedError):
     pass
 
 class aEmbedBase:
-    def __init__(self, ctx: commands.Context):
+    def __init__(self, ctx: commands.Context, cog: BaseCog=None):
         self.ctx = ctx
-        self.cog: BaseCog = ctx.cog
+        self.cog = cog
+        if cog is None:
+            self.cog: BaseCog = ctx.cog
 
 class aMsgBase:
     def __init__(self, ctx: commands.Context):
@@ -55,18 +57,21 @@ class EmbedMgr:
                         clss.append(attr)
         return clss
 
-    async def get(self, ctx: commands.Context, name: str, *args, **kwargs) -> discord.Embed:
+    async def get(self, ctx: Union[commands.Context], name: str, *args, user: discord.User=None, cog: BaseCog=None, **kwargs) -> discord.Embed:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 lang = self.default_lang
-                await cur.execute('select lang from userdata where id=%s', ctx.author.id)
+                if ctx is None and user:
+                    await cur.execute('select lang from userdata where id=%s', user.id)
+                else:
+                    await cur.execute('select lang from userdata where id=%s', ctx.author.id)
                 rst = await cur.fetchone()
                 if rst is not None:
                     lang = rst['lang']
 
                 embedcls = list(filter(lambda x: x.__name__ == name, self.get_embedclss()))
                 if embedcls:
-                    embedinstance = embedcls[0](ctx)
+                    embedinstance = embedcls[0](ctx, cog)
                     try:
                         embedfunc = getattr(embedinstance, lang)
                     except AttributeError:

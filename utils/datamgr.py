@@ -589,10 +589,10 @@ class StatMgr(AzaleaManager):
         StatType.DEX: 'Dexterity',
         StatType.LUK: 'Luck'
     }
-    def __init__(self, pool: aiomysql.Pool, charuuid: str, on_levelup: Callable[[str, int, int], Awaitable[Any]]=None):
+    def __init__(self, pool: aiomysql.Pool, charuuid: str, on_levelup=None):
         """
         캐릭터의 경험치를 포함한 능력치를 관리합니다.
-        on_levelup 어웨이터블은 레벨이 상승할 때 호출되며 레벨업한 캐릭터의 uuid, 레벨업 전 레벨, 레벨업 후 레벨이 인자값으로 차례대로 전달됩니다.
+        on_levelup 코루틴 함수는 레벨이 상승할 때 호출되며 레벨업한 캐릭터의 uuid, 레벨업 전 레벨, 레벨업 후 레벨이 인자값으로 차례대로 전달됩니다.
         """
         self.pool = pool
         self.charuuid = charuuid
@@ -623,7 +623,7 @@ class StatMgr(AzaleaManager):
         level = edgr.clac_level(exp)
         return level
 
-    async def give_exp(self, value: int, edgr: ExpTableDBMgr, channel_id=None):
+    async def give_exp(self, value: int, edgr: ExpTableDBMgr, ctx=None):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 stat = await self.get_stat()
@@ -632,10 +632,10 @@ class StatMgr(AzaleaManager):
                 await cur.execute('update statdata set exp=exp+%s where uuid=%s', (value, self.charuuid))
                 after = edgr.clac_level(exp+value)
                 if after > prev:
-                    coro = self.on_levelup(self.charuuid, prev, after, channel_id)
+                    coro = self.on_levelup(self.charuuid, prev, after, ctx)
                     asyncio.create_task(coro)
 
-    async def set_exp(self, value: int, edgr: ExpTableDBMgr, channel_id=None):
+    async def set_exp(self, value: int, edgr: ExpTableDBMgr, ctx=None):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 stat = await self.get_stat()
@@ -644,7 +644,7 @@ class StatMgr(AzaleaManager):
                 await cur.execute('update statdata set exp=%s where uuid=%s', (value, self.charuuid))
                 after = edgr.clac_level(value)
                 if after > prev:
-                    coro = self.on_levelup(self.charuuid, prev, after, channel_id)
+                    coro = self.on_levelup(self.charuuid, prev, after, ctx)
                     asyncio.create_task(coro)
 
     async def set_stat(self, stat: StatType, value: int):

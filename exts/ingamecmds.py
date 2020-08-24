@@ -510,7 +510,7 @@ class InGamecmds(BaseCog):
                     return
                 imgr = ItemMgr(self.pool, char.uid)
                 await imgr.give_money(5000)
-                await samgr.give_exp(xp, edgr, ctx.channel.id)
+                await samgr.give_exp(xp, edgr, ctx)
                 await cur.execute('update chardata set received_money=%s where uuid=%s', (now, char.uid))
                 await ctx.send(ctx.author.mention, embed=embed)
                 self.msglog.log(ctx, '[돈받기: 완료]')
