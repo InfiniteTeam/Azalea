@@ -22,8 +22,8 @@ class Gamecmds(BaseCog):
         imgr = ItemMgr(self.pool, char.uid)
         edgr = ExpTableDBMgr(self.datadb)
         samgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
-        embed = discord.Embed(title='🎣 낚시', description='찌를 던졌습니다! 뭔가가 걸리면 재빨리 ⁉ 반응을 클릭하세요!', color=self.color['g-fishing'])
-        msg = await ctx.send(embed=embed)
+
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Fishing_throw'))
         self.msglog.log(ctx, '[낚시: 시작]')
         emjs = ['⁉']
         await msg.add_reaction('⁉')
@@ -51,29 +51,28 @@ class Gamecmds(BaseCog):
             pass
         else:
             if reaction.emoji == '⁉':
-                embed.description = '아무것도 잡히지 않았어요! 너무 빨리 당긴것 같아요.'
+                embed = await self.embedmgr.get(ctx, 'Fishing_caught_nothing')
                 self.msglog.log(ctx, '[낚시: 아무것도 잡히지 않음]')
                 await do()
                 return
-        embed.description = '뭔가가 걸렸습니다! 지금이에요!'
+
+        embed = await self.embedmgr.get(ctx, 'Fishing_something_caught')
         await msg.edit(embed=embed)
 
         try:
             reaction, user = await self.client.wait_for('reaction_add', check=check, timeout=random.uniform(0.8, 1.7))
         except asyncio.TimeoutError:
-            embed.description = '놓쳐 버렸네요... 너무 천천히 당긴것 같아요.'
+            embed = await self.embedmgr.get(ctx, 'Fishing_missed')
             self.msglog.log(ctx, '[낚시: 놓침]')
             await do()
         else:
             if reaction.emoji == '⁉':
-                
                 fishes = idgr.fetch_items_with(tags=[Tag.Fish], meta={'catchable': True})
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
                 await imgr.give_item(ItemData(fish.id, 1, []))
                 exp = exps.fishing(req=edgr.get_required_exp(await samgr.get_level(edgr)), fish=fish)
                 await samgr.give_exp(exp, edgr, ctx)
-                embed.title += ' - 잡았습니다!'
-                embed.description = '**`{}` 을(를)** 잡았습니다!\n+`{}` 경험치를 받았습니다.'.format(fish.name, exp)
+                embed = await self.embedmgr.get(ctx, 'Fishing_done', fish, exp)
                 self.msglog.log(ctx, '[낚시: 잡음]')
                 await do()
 

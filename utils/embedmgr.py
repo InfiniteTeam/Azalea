@@ -5,16 +5,17 @@ import asyncio
 from utils.basecog import BaseCog
 from types import ModuleType
 import importlib
-from typing import List, Union
+from typing import List, Union, Optional
 from inspect import isclass
 
 class EmbedError(Exception):
     pass
 
 class EmbedAlreadyExists(EmbedError):
-    def __init__(self, name):
-        super().__init__(f'{name} 임베드 클래스가 이미 존재합니다')
+    def __init__(self, name, module):
+        super().__init__(f'{name} 임베드 클래스가 {module} 모듈에서 이미 존재합니다')
         self.name = name
+        self.module = module
 
 class EmbedisNotCoroFunc(EmbedError):
     def __init__(self, name, lang):
@@ -25,17 +26,23 @@ class EmbedisNotCoroFunc(EmbedError):
 class EmbedNotFound(EmbedError):
     pass
 
-class aEmbedBase:
+class aBase:
     def __init__(self, ctx: commands.Context, cog: BaseCog=None):
         self.ctx = ctx
         self.cog = cog
         if cog is None:
             self.cog: BaseCog = ctx.cog
 
-class aMsgBase:
-    def __init__(self, ctx: commands.Context):
-        self.ctx = ctx
-        self.cog: BaseCog = ctx.cog
+class aEmbedBase(aBase):
+    pass
+
+class aMsgBase(aBase):
+    pass
+
+class Delafter:
+    @classmethod
+    async def ko(cls, delafter):
+        return f"이 메시지는 {delafter}초 후에 사라집니다"
 
 class EmbedMgr:
     def __init__(self, pool: aiomysql.Pool, *modules: ModuleType, default_lang: str='ko'):
@@ -51,13 +58,14 @@ class EmbedMgr:
             for one in dir(m):
                 attr = getattr(m, one)
                 if isclass(attr) and (issubclass(attr, aEmbedBase) or issubclass(attr, aMsgBase)) and {aEmbedBase, aMsgBase} & set(attr.__bases__):
-                    if attr in clss:
-                        raise EmbedAlreadyExists(attr.__name__)
+                    if attr.__name__ in map(str, clss):
+                        whereis = list(filter(lambda x: x.__name__ == attr.__name__, clss))[0].__module__
+                        raise EmbedAlreadyExists(attr.__name__, whereis)
                     else:
                         clss.append(attr)
         return clss
 
-    async def get(self, ctx: Union[commands.Context], name: str, *args, user: discord.User=None, cog: BaseCog=None, **kwargs) -> discord.Embed:
+    async def get(self, ctx: Union[commands.Context], name: str, *args, user: discord.User=None, cog: BaseCog=None, delafter: Optional[int]=None, **kwargs) -> discord.Embed:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 lang = self.default_lang
@@ -77,17 +85,21 @@ class EmbedMgr:
                     except AttributeError:
                         embedfunc = getattr(embedinstance, self.default_lang)
                     if asyncio.iscoroutinefunction(embedfunc):
-                        return await embedfunc(*args, **kwargs)
+                        embed: discord.Embed = await embedfunc(*args, **kwargs)
+                        print(delafter)
+                        if delafter:
+                            try:
+                                delafterfunc = getattr(Delafter, lang)
+                            except AttributeError:
+                                delafterfunc = getattr(Delafter, self.default_lang)
+                            if type(embed.footer.text) == str:
+                                embed.set_footer(text=embed.footer.text + '\n' + await delafterfunc(delafter))
+                            else:
+                                embed.set_footer(text=await delafterfunc(delafter))
+                        return embed
                     raise EmbedisNotCoroFunc(embedinstance.__class__.__name__, embedfunc.__name__)
                 raise EmbedNotFound
 
     def reload(self):
         for idx, m in enumerate(self.modules):
             self.modules[idx] = importlib.reload(m)
-
-                
-def set_delete_after_footer(embed: discord.Embed, delafter: int):
-    if delafter:
-        embed.set_footer(text=f"이 메시지는 {delafter}초 후에 사라집니다")
-        return True
-    return False

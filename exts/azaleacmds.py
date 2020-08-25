@@ -9,7 +9,6 @@ import aiomysql
 from utils.basecog import BaseCog
 from utils.datamgr import NewsMgr, NewsData
 from utils import pager, emojibuttons
-from templates import miniembeds
 
 class Azaleacmds(BaseCog):
     def __init__(self, client):

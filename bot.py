@@ -14,7 +14,7 @@ from utils import errors, checks, msglogger, emojictrl, datamgr, embedmgr
 from utils.azalea import Azalea
 from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp, items
 from ingame.farming import farm_plants
-from templates import azaleaembeds, charembeds, farmembeds, ingameembeds, miniembeds, basecembeds, eventembeds
+from templates import azaleaembeds, charembeds, farmembeds, ingameembeds, miniembeds, basecembeds, eventembeds, farmembeds, gameembeds, gamedebugembeds
 
 # Local Data Load
 with open('./data/config.json', 'r', encoding='utf-8') as config_file:
@@ -193,7 +193,10 @@ embedmgr = embedmgr.EmbedMgr(
     ingameembeds,
     miniembeds,
     basecembeds,
-    eventembeds
+    eventembeds,
+    farmembeds,
+    gameembeds,
+    gamedebugembeds
 )
 
 check = checks.Checks(pool, datadb)

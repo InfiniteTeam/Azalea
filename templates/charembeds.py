@@ -5,7 +5,7 @@ from utils import pager, timedelta
 from utils.datamgr import StatMgr, ExpTableDBMgr, SettingDBMgr, SettingMgr
 import datetime
 from dateutil.relativedelta import relativedelta
-from utils.embedmgr import aEmbedBase, aMsgBase, set_delete_after_footer
+from utils.embedmgr import aEmbedBase, aMsgBase
 from db import charsettings
 
 
@@ -300,22 +300,20 @@ class Char_setting(aEmbedBase):
 
 
 class Char_setting_invalid_index(aEmbedBase):
-    async def ko(self, delafter: int = None):
+    async def ko(self):
         embed = discord.Embed(
             title="❓ 설정 번째수가 올바르지 않습니다!",
             description="위 메시지에 항목 앞마다 번호가 붙어 있습니다.",
             color=self.cog.color["error"],
         )
-        set_delete_after_footer(embed, delafter)
         return embed
 
 
 class Char_setting_only_number(aEmbedBase):
-    async def ko(self, delafter: int = None):
+    async def ko(self):
         embed = discord.Embed(
             title=f"❓ 설정 번째수는 숫자만을 입력해주세요!", color=self.cog.color["error"]
         )
-        set_delete_after_footer(embed, delafter)
         return embed
 
 
@@ -343,34 +341,35 @@ class Char_setting_edit_whereto_levelup(aEmbedBase):
         return embed
 
 
-def charcreate_fail_embed(cog: BaseCog, exc: CharCreateError):
-    if exc.reason == CharCreateErrReasons.InvalidName:
-        embed = discord.Embed(
-            title="❌ 사용할 수 없는 이름입니다!",
-            description="캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!",
-            color=cog.color["error"],
-        )
-        return embed
-    elif exc.reason == CharCreateErrReasons.InvalidLength:
-        embed = discord.Embed(
-            title="❌ 사용할 수 없는 이름입니다!",
-            description="캐릭터 이름은 2~10글자이여야 합니다.\n다시 시도해 주세요!",
-            color=cog.color["error"],
-        )
-        return embed
-    elif exc.reason == CharCreateErrReasons.NameAlreadyExists:
-        embed = discord.Embed(
-            title="❌ 이미 사용중인 이름입니다!",
-            description="다시 시도해 주세요!",
-            color=cog.color["error"],
-        )
-        return embed
-    else:
-        exc.reason == CharCreateErrReasons.CannotIncludePrefix
-        embed = discord.Embed(
-            title="❌ 사용할 수 없는 이름입니다!",
-            description="아젤리아 봇 접두사는 이름에 포함할 수 없습니다.\n다시 시도해 주세요!",
-            color=cog.color["error"],
-        )
-        return embed
+class Char_create_fail(aEmbedBase):
+    async def ko(self, exc: CharCreateError):
+        if exc.reason == CharCreateErrReasons.InvalidName:
+            embed = discord.Embed(
+                title="❌ 사용할 수 없는 이름입니다!",
+                description="캐릭터 이름은 반드시 한글, 영어, 숫자만을 사용해야 합니다.\n다시 시도해 주세요!",
+                color=self.cog.color["error"],
+            )
+            return embed
+        elif exc.reason == CharCreateErrReasons.InvalidLength:
+            embed = discord.Embed(
+                title="❌ 사용할 수 없는 이름입니다!",
+                description="캐릭터 이름은 2~10글자이여야 합니다.\n다시 시도해 주세요!",
+                color=self.cog.color["error"],
+            )
+            return embed
+        elif exc.reason == CharCreateErrReasons.NameAlreadyExists:
+            embed = discord.Embed(
+                title="❌ 이미 사용중인 이름입니다!",
+                description="다시 시도해 주세요!",
+                color=self.cog.color["error"],
+            )
+            return embed
+        else:
+            exc.reason == CharCreateErrReasons.CannotIncludePrefix
+            embed = discord.Embed(
+                title="❌ 사용할 수 없는 이름입니다!",
+                description="아젤리아 봇 접두사는 이름에 포함할 수 없습니다.\n다시 시도해 주세요!",
+                color=self.cog.color["error"],
+            )
+            return embed
 

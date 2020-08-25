@@ -4,7 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 from utils import pager, timedelta, basecog
 from utils.datamgr import DataDB, ItemDBMgr, MarketItem, ItemData, CharMgr, CharacterData, SettingDBMgr, SettingMgr, MarketDBMgr, StatMgr, ExpTableDBMgr, ItemMgr
-
+from utils.embedmgr import aEmbedBase, aMsgBase
 
 def market_embed(datadb: DataDB, pgr: pager.Pager, *, color, mode='default') -> discord.Embed:
     items = pgr.get_thispage()
@@ -88,48 +88,49 @@ def marketitem_embed(cog: basecog.BaseCog, marketitem: MarketItem, mode='default
     embed.add_field(name='마법부여', value=enchantstr)
     return embed
 
-async def backpack_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charuuid, mode='default') -> discord.Embed:
-    items = pgr.get_thispage()
-    itemstr = ''
-    moneystr = ''
-    cmgr = CharMgr(cog.pool)
-    char = await cmgr.get_character(charuuid)
-    imgr = ItemDBMgr(cog.datadb)
-    idgr = ItemDBMgr(cog.datadb)
-    for idx, one in enumerate(items):
-        founditem = idgr.fetch_item(one.id)
-        icon = founditem.icon
-        name = founditem.name
-        count = one.count
-        enchants = []
-        for enc in one.enchantments:
-            enchants.append('`{}` {}'.format(imgr.fetch_enchantment(enc.name).title, enc.level))
-        enchantstr = ''
-        if enchants:
-            enchantstr = '> ' + ", ".join(enchants) + '\n'
-        if mode == 'select':
-            itemstr += '{}. {} **{}** ({}개)\n{}'.format(idx+1, icon, name, count, enchantstr)
-        else:
-            itemstr += '{} **{}** ({}개)\n{}'.format(icon, name, count, enchantstr)
-    embed = discord.Embed(
-        title=f'💼 `{char.name}`의 가방',
-        color=cog.color['info']
-    )
-    moneystr = f'\n**💵 {char.money:n} 골드**'
-    if mode == 'select':
+class Backpack(aEmbedBase):
+    async def ko(self, pgr: pager.Pager, charuuid, mode='default'):
+        items = pgr.get_thispage()
+        itemstr = ''
         moneystr = ''
-        embed.title += ' - 선택 모드'
-    if items:
-        embed.description = itemstr + moneystr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
-        embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
-    else:
-        embed.description = '\n가방에는 공기 말고는 아무것도 없네요!\n' + moneystr
-    return embed
+        cmgr = CharMgr(self.cog.pool)
+        char = await cmgr.get_character(charuuid)
+        imgr = ItemDBMgr(self.cog.datadb)
+        idgr = ItemDBMgr(self.cog.datadb)
+        for idx, one in enumerate(items):
+            founditem = idgr.fetch_item(one.id)
+            icon = founditem.icon
+            name = founditem.name
+            count = one.count
+            enchants = []
+            for enc in one.enchantments:
+                enchants.append('`{}` {}'.format(imgr.fetch_enchantment(enc.name).title, enc.level))
+            enchantstr = ''
+            if enchants:
+                enchantstr = '> ' + ", ".join(enchants) + '\n'
+            if mode == 'select':
+                itemstr += '{}. {} **{}** ({}개)\n{}'.format(idx+1, icon, name, count, enchantstr)
+            else:
+                itemstr += '{} **{}** ({}개)\n{}'.format(icon, name, count, enchantstr)
+        embed = discord.Embed(
+            title=f'💼 `{char.name}`의 가방',
+            color=self.cog.color['info']
+        )
+        moneystr = f'\n**💵 {char.money:n} 골드**'
+        if mode == 'select':
+            moneystr = ''
+            embed.title += ' - 선택 모드'
+        if items:
+            embed.description = itemstr + moneystr + '```{}/{} 페이지, 전체 {}개```'.format(pgr.now_pagenum()+1, len(pgr.pages()), pgr.objlen())
+            embed.set_footer(text='❔: 자세히 | 🗑: 버리기')
+        else:
+            embed.description = '\n가방에는 공기 말고는 아무것도 없네요!\n' + moneystr
+        return embed
+
 
 def backpack_sell_embed(cog: basecog.BaseCog, ctx, pgr: pager.Pager, charname, mode='select') -> discord.Embed:
     items = pgr.get_thispage()
     itemstr = ''
-    mdgr = MarketDBMgr(cog.datadb)
     imgr = ItemDBMgr(cog.datadb)
     idgr = ItemDBMgr(cog.datadb)
     for idx, one in enumerate(items):

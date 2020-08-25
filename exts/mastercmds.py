@@ -395,6 +395,10 @@ class Mastercmds(BaseCog):
         else:
             await ctx.send(embed=discord.Embed(title='🔓 점검 모드 해제됨', description='이미 점검 모드가 해제되어 있습니다.', color=self.color['warn']))
 
+    @commands.command(name='폭파')
+    async def _explosion(self, ctx):
+        raise Exception
+
 def setup(client):
     cog = Mastercmds(client)
     client.add_cog(cog)

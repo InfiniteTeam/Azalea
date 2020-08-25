@@ -372,9 +372,9 @@ class InGamecmds(BaseCog):
                                 counttaskrst = counttask.result()
                                 count = int(counttaskrst.content)
                                 if item.discount is None:
-                                    final_price = count * item.discount
-                                else:
                                     final_price = count * item.price
+                                else:
+                                    final_price = count * item.discount
 
                                 if count >= 1:
                                     if final_price <= char.money:

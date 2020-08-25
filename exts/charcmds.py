@@ -11,7 +11,6 @@ from utils import pager, emojibuttons, timedelta, event_waiter
 from utils.datamgr import CharMgr, CharacterType, Setting, SettingMgr, SettingDBMgr
 from utils.mgrerrors import CharCreateError, CharCreateErrReasons
 from db import charsettings
-from templates import charembeds
 
 class Charcmds(BaseCog):
     def __init__(self, client):
@@ -157,7 +156,7 @@ class Charcmds(BaseCog):
         try:
             ck = await self.char_name_check(m.content)
         except CharCreateError as exc:
-            embed = charembeds.charcreate_fail_embed(self, exc)
+            embed = await self.embedmgr.get(ctx, 'Char_create_fail', exc)
             if embed is not None:
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이름 짓기 검사]')
@@ -208,7 +207,7 @@ class Charcmds(BaseCog):
             try:
                 char = await cmgr.add_character_with_raw(ctx.author.id, charname, chartype, check=self.char_name_check(charname))
             except CharCreateError as exc:
-                embed = charembeds.charcreate_fail_embed(self, exc)
+                embed = await self.embedmgr.get(ctx, 'Char_create_fail', exc)
                 if embed is not None:
                     await ctx.send(embed=embed)
                     self.msglog.log(ctx, '[캐릭터 생성: 이름 짓기: 이름 짓기 검사]')
@@ -355,7 +354,7 @@ class Charcmds(BaseCog):
             try:
                 ck = await self.char_name_check(m.content)
             except CharCreateError as exc:
-                embed = charembeds.charcreate_fail_embed(self, exc)
+                embed = await self.embedmgr.get(ctx, 'Char_create_fail', exc)
                 if embed is not None:
                     await ctx.send(embed=embed)
                     self.msglog.log(ctx, '[이름변경: 이름 짓기 검사]')

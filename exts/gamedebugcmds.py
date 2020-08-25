@@ -20,7 +20,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char :
-                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', charname))
                 self.msglog.log(ctx, '[아이템 받기: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
@@ -31,18 +31,10 @@ class GameDebugcmds(BaseCog):
         idgr = ItemDBMgr(self.datadb)
         item = idgr.fetch_item(itemid)
         if not item:
-            await ctx.send(embed=discord.Embed(title=f'❓ 존재하지 않는 아이템 아이디: {itemid}', color=self.color['error']))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Give_not_exists', itemid))
             return
-        embed = discord.Embed(title='📦 아이템 받기', description='다음과 같이 아이템을 받습니다. 계속할까요?', color=self.color['ask'])
-        embed.add_field(name='아이템', value='[ {} ] {} {}'.format(item.id, item.icon, item.name))
-        embed.add_field(name='개수', value=f'{count}개')
-        enchantstrlist = [f'{enchant.name}: {enchant.level}' for enchant in enchantments]
-        enchantstr = '\n'.join(enchantstrlist)
-        if not enchantstr:
-            enchantstr = '(없음)'
-        embed.add_field(name='받는 캐릭터', value=charname)
-        embed.add_field(name='마법부여', value=enchantstr, inline=False)
-        msg = await ctx.send(embed=embed)
+        
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Give', item, count, enchantments, char))
 
         emjs = ['⭕', '❌']
         for em in emjs:
@@ -63,10 +55,10 @@ class GameDebugcmds(BaseCog):
             if remj == '⭕':
                 imgr = ItemMgr(self.pool, char.uid)
                 await imgr.give_item(ItemData(itemid, count, enchantments))
-                await ctx.send(embed=discord.Embed(title='{} 아이템을 성공적으로 받았습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Give_done'))
                 self.msglog.log(ctx, '[아이템 받기: 완료]')
             elif remj == '❌':
-                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                 self.msglog.log(ctx, '[아이템 받기: 취소됨]')
 
     @_giveme.error
@@ -82,7 +74,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char :
-                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', charname))
                 self.msglog.log(ctx, '[경험치지급: 존재하지 않는 캐릭터]')
                 return
             charname = char.name
@@ -95,11 +87,8 @@ class GameDebugcmds(BaseCog):
         stat = await samgr.get_stat()
         nowexp = stat.EXP
         lv = await samgr.get_level(edgr)
-        embed = discord.Embed(title='🏷 경험치 지급하기', description='다음과 같이 계속할까요?', color=self.color['warn'])
-        embed.add_field(name='경험치 변동', value=f'{nowexp} → {nowexp+exp}')
-        embed.add_field(name='레벨 변동', value='{} → {}'.format(lv, edgr.clac_level(nowexp+exp)))
-        embed.add_field(name='대상 캐릭터', value=charname)
-        msg = await ctx.send(embed=embed)
+        
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Giveexp', char, nowexp, exp, lv))
 
         emjs = ['⭕', '❌']
         for em in emjs:
@@ -118,10 +107,10 @@ class GameDebugcmds(BaseCog):
         else:
             if reaction.emoji == '⭕':
                 await samgr.give_exp(exp, edgr)
-                await ctx.send(embed=discord.Embed(title='{} 경험치 {} 만큼 성공적으로 주었습니다!'.format(self.emj.get(ctx, 'check'), exp), color=self.color['success']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Giveexp_done', exp))
                 self.msglog.log(ctx, '[경험치지급: 완료]')
             elif reaction.emoji == '❌':
-                await ctx.send(embed=discord.Embed(title='❌ 취소되었습니다.', color=self.color['error']))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled'))
                 self.msglog.log(ctx, '[경험치지급: 취소됨]')
 
     @commands.command(name='계산')
@@ -139,7 +128,7 @@ class GameDebugcmds(BaseCog):
         if charname:
             char = await cmgr.get_character_by_name(charname)
             if not char:
-                await ctx.send(embed=miniembeds.CharNotFound.getembed(ctx, charname))
+                await ctx.send(embed=await self.embedmgr.get(ctx, 'CharNotFound', charname))
                 self.msglog.log(ctx, '[농장: 존재하지 않는 캐릭터]')
                 return
         else:

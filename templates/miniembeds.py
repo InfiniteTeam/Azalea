@@ -1,18 +1,16 @@
 import discord
 from discord.ext import commands
 from utils.basecog import BaseCog
-from utils.embedmgr import aEmbedBase, set_delete_after_footer
+from utils.embedmgr import aEmbedBase
 
 
 class Canceled(aEmbedBase):
-    async def ko(self, delafter: int = None):
+    async def ko(self):
         embed = discord.Embed(title="❌ 취소되었습니다.", color=self.cog.color["error"])
-        set_delete_after_footer(embed, delafter)
         return embed
 
-    async def en(self, delafter: int = None):
+    async def en(self):
         embed = discord.Embed(title="❌ Canceled.", color=self.cog.color["error"])
-        set_delete_after_footer(embed, delafter)
         return embed
 
 
@@ -32,7 +30,7 @@ class CharNotFound(aEmbedBase):
         )
 
 
-
+"""
 class Public:
     @staticmethod
     def invalid(cog: BaseCog, *, target: str, description: str = "", delafter: int = 7):
@@ -41,19 +39,7 @@ class Public:
             description=description,
             color=cog.color["error"],
         )
-        set_delete_after_footer(embed, delafter)
-        return embed
-
-
-class CountError:
-    @staticmethod
-    def must_be_over_than(
-        cog: BaseCog, *, target: str, overthan: int, delafter: int = 7
-    ):
-        embed = discord.Embed(
-            title=f"❓ {target}(은)는 적어도 {overthan} 이상이여야 합니다!", color=cog.color["error"]
-        )
-        set_delete_after_footer(embed, delafter)
+        
         return embed
 
 
@@ -65,5 +51,6 @@ class MoneyError:
             description=f"`{more_required}`골드가 부족합니다!",
             color=cog.color["error"],
         )
-        set_delete_after_footer(embed, delafter)
+        
         return embed
+"""

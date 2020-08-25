@@ -539,11 +539,11 @@ class MarketMgr(AzaleaManager):
         
     async def buy(self, marketitem: MarketItem, count: int):
         imgr = ItemMgr(self.pool, self.charuuid)
-        money = imgr.fetch_money()
+        money = await imgr.fetch_money()
         if marketitem.discount is None:
-            final_price = count * marketitem.discount
-        else:
             final_price = count * marketitem.price
+        else:
+            final_price = count * marketitem.discount
         
         if final_price <= money:
             await imgr.give_money(-final_price)
@@ -1082,5 +1082,4 @@ class FarmMgr(AzaleaManager):
             plantdb = farm_dmgr.fetch_plant(one.id)
             await imgr.give_item(ItemData(plantdb.grown, one.count, []))
             exp_plus += datadb.base_exp.get('FARM_HARVEST')*one.count*plantdb.exp
-        print(exp_plus)
         await samgr.give_exp(exp_plus, edgr, channel_id)
