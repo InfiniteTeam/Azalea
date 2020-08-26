@@ -29,6 +29,16 @@ class CharNotFound(aEmbedBase):
             title=f"❓ 존재하지 않는 캐릭터입니다!: `{charname}`", color=self.cog.color["error"]
         )
 
+class NotEnoughMoney(aEmbedBase):
+    async def ko(self, more_required: int):
+        embed = discord.Embed(
+            title="❓ 돈이 부족합니다!",
+            description=f"`{more_required}`골드가 부족합니다!",
+            color=self.cog.color["error"],
+        )
+        
+        return embed
+
 
 """
 class Public:
@@ -37,18 +47,6 @@ class Public:
         embed = discord.Embed(
             title=f"❓ {target} (이)가 올바르지 않습니다!",
             description=description,
-            color=cog.color["error"],
-        )
-        
-        return embed
-
-
-class MoneyError:
-    @staticmethod
-    def not_enough_money(cog: BaseCog, *, more_required: int, delafter: int = 7):
-        embed = discord.Embed(
-            title="❓ 돈이 부족합니다!",
-            description=f"`{more_required}`골드가 부족합니다!",
             color=cog.color["error"],
         )
         

@@ -12,7 +12,7 @@ class Plantplant_lack_of_space(aEmbedBase):
             description="농장에 빈 공간이 전혀 없습니다! 수확을 기다리거나 작물 재배를 취소해 공간을 늘릴 수 있습니다.",
             color=self.cog.color["error"],
         )
-        
+
         return embed
 
 
@@ -64,7 +64,7 @@ class Plantplant_lack_of_space_count(aEmbedBase):
             description="현재 농장에 최대 {}개를 심을 수 있습니다.".format(maxcount),
             color=self.cog.color["error"],
         )
-        
+
         return embed
 
 
@@ -75,7 +75,7 @@ class Plantplant_lack_of_item(aEmbedBase):
             description="이 아이템은 최대 {}개를 심을 수 있습니다.".format(maxcount),
             color=self.cog.color["error"],
         )
-        
+
         return embed
 
 
@@ -84,7 +84,7 @@ class Plantplant_item_overthan_one(aEmbedBase):
         embed = discord.Embed(
             title="❓ 아이템 개수는 적어도 1개 이상이여야 합니다!", color=self.cog.color["error"]
         )
-        
+
         return embed
 
 
@@ -95,7 +95,7 @@ class Plantplant_invalid_item_index(aEmbedBase):
             description="위 메시지에 아이템 앞마다 번호가 붙어 있습니다.",
             color=self.cog.color["error"],
         )
-        
+
         return embed
 
 

@@ -86,7 +86,6 @@ class EmbedMgr:
                         embedfunc = getattr(embedinstance, self.default_lang)
                     if asyncio.iscoroutinefunction(embedfunc):
                         embed: discord.Embed = await embedfunc(*args, **kwargs)
-                        print(delafter)
                         if delafter:
                             try:
                                 delafterfunc = getattr(Delafter, lang)

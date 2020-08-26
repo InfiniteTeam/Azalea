@@ -3,7 +3,6 @@ from discord.ext import commands
 import asyncio
 import typing
 from utils import converters
-from templates import miniembeds
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
