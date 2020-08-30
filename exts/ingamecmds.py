@@ -296,7 +296,7 @@ class InGamecmds(BaseCog):
                                             await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_sell_too_many', item, delafter=7), delete_after=7)
                                             self.msglog.log(ctx, '[상점: 아이템 판매: 아이템 부족]')
                                     else:
-                                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Item_count_overthan_one'), delete_after=7)
+                                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Item_count_overthan_one', delafter=7), delete_after=7)
                                         self.msglog.log(ctx, '[상점: 아이템 판매: 1 이상이여야 함]')
                             else:
                                 await ctx.send(embed=await self.embedmgr.get(ctx, 'Invalid_item_index', delafter=7), delete_after=7)
@@ -389,9 +389,7 @@ class InGamecmds(BaseCog):
                             await event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=iteminfomsg, emojis=['❌'], timeout=60*5)
                             await iteminfomsg.delete()
                         else:
-                            embed = discord.Embed(title='❓ 아이템 번째수가 올바르지 않습니다!', description='위 메시지에 아이템 앞마다 번호가 붙어 있습니다.', color=self.color['error'])
-                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                            await ctx.send(embed=embed, delete_after=7)
+                            await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_info_invalid_index', delafter=7), delete_after=7)
                             self.msglog.log(ctx, '[상점: 아이템 정보: 올바르지 않은 번째수]')
 
                 do = await emojibuttons.PageButton.buttonctrl(reaction, user, pgr)
@@ -411,29 +409,8 @@ class InGamecmds(BaseCog):
                 embed = await self.embedmgr.get(ctx, 'CharNotFound', charname)
                 await ctx.send(embed=embed)
                 return
-        samgr = StatMgr(self.pool, char.uid, self.getlistener('on_levelup'))
-        edgr = ExpTableDBMgr(self.datadb)
-        icons = {'STR': '💪', 'INT': '📖', 'DEX': '☄', 'LUK': '🍀'}
-        level = await samgr.get_level(edgr)
-        nowexp = char.stat.EXP
-        req = edgr.get_required_exp(level+1)
-        accu = edgr.get_accumulate_exp(level+1)
-        prev_req = edgr.get_required_exp(level)
-        prev_accu = edgr.get_accumulate_exp(level)
-        if req-prev_req <= 0:
-            percent = 0
-        else:
-            percent = math.trunc((req-accu+nowexp)/req*1000)/10
-        embed = discord.Embed(title=f'📊 `{char.name}` 의 정보', color=self.color['info'])
-        stats = ['{} **{}**_`({})`_ **:** **`{}`**'.format(icons[key], StatType.__getattr__(key).value, key, val) for key, val in char.stat.__dict__.items() if key != 'EXP']
-        embed.add_field(name='• 능력치', value='\n'.join(stats))
-        embed.add_field(name='• 기본 정보', value=f'**레벨:** `{level}`\n**직업:** `{char.type.value}`')
-        embed.add_field(name='• 생일', value=str(char.birth))
-        embed.add_field(name='• 경험치', value='>>> {}ㅤ **{}/{}** ({}%)\n레벨업 필요 경험치: **`{}`/`{}`**'.format(
-            progressbar.get(ctx, self.emj, req-accu+nowexp, req, 10),
-            format(req-accu+nowexp, ','), format(req, ','), percent, nowexp, accu
-        ))
-        await ctx.send(embed=embed)
+        
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Stat', char))
         self.msglog.log(ctx, '[내정보]')
 
     @commands.command(name='출석체크', aliases=['돈받기', '돈줘', '돈내놔', '출첵', '출석'])
@@ -449,11 +426,11 @@ class InGamecmds(BaseCog):
                 now = datetime.datetime.now()
                 level = await samgr.get_level(edgr)
                 xp = round(edgr.get_required_exp(level)/100*2+50)
-                embed = discord.Embed(title='💸 일일 기본금을 받았습니다!', description=f'`5000`골드와 `{xp}` 경험치를 받았습니다.', color=self.color['info'])
+                embed = await self.embedmgr.get(ctx, 'Getmoney_done', 5000, xp)
                 if rcv_money is None:
                     pass
                 elif now.year == rcv_money.year and now.month == rcv_money.month and now.day <= rcv_money.day:
-                    await ctx.send(ctx.author.mention, embed=discord.Embed(title='⏱ 오늘 이미 출석체크를 완료했습니다!', description='내일이 오면 다시 할 수 있어요.', color=self.color['info']))
+                    await ctx.send(ctx.author.mention, embed=await self.embedmgr.get(ctx, 'Getmoney_already'))
                     self.msglog.log(ctx, '[돈받기: 이미 받음]')
                     return
                 imgr = ItemMgr(self.pool, char.uid)
@@ -467,15 +444,8 @@ class InGamecmds(BaseCog):
     async def _map(self, ctx: commands.Context):
         cmgr = CharMgr(self.pool)
         char = await cmgr.get_current_char(ctx.author.id)
-        rdgr = RegionDBMgr(self.datadb)
-        rgn = rdgr.get_warpables('azalea')
-        embed = discord.Embed(title='🗺 지도', description='', color=self.color['info'])
-        for one in rgn:
-            if char.location.name == one.name:
-                embed.description += '{} **{} (현재)** 🔸 \n'.format(one.icon, one.title)
-            else:
-                embed.description += '{} {}\n'.format(one.icon, one.title)
-        await ctx.send(embed=embed)
+        
+        await ctx.send(embed=await self.embedmgr.get(ctx, 'Map', char))
         self.msglog.log(ctx, '[지도]')
 
     @commands.command(name='이동', aliases=['워프'])
@@ -483,14 +453,8 @@ class InGamecmds(BaseCog):
         cmgr = CharMgr(self.pool)
         char = await cmgr.get_current_char(ctx.author.id)
         rdgr = RegionDBMgr(self.datadb)
-        rgn = rdgr.get_warpables('azalea')
-        rgn = list(filter(lambda x: x.name != char.location.name, rgn))
-        now = rdgr.get_region('azalea', char.location.name)
-        print(now)
-        embed = discord.Embed(title='✈ 이동', description='이동할 위치를 선택하세요!\n**현재 위치: {}**\n\n'.format(now.icon + ' ' + now.title), color=self.color['ask'])
-        for one in rgn:
-            embed.description += f'{one.icon} {one.title}\n'
-        msg = await ctx.send(embed=embed)
+        rgn = rdgr.get_warpables("azalea")
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Warp_select_region', char))
         self.msglog.log(ctx, '[이동]')
         emjs = []
         for em in rgn:
@@ -509,7 +473,7 @@ class InGamecmds(BaseCog):
             idx = emjs.index(reaction.emoji)
             region = rgn[idx]
             await cmgr.move_to(char.uid, region)
-            await ctx.send(embed=discord.Embed(title='{} `{}` 으(로) 이동했습니다!'.format(region.icon, region.title), color=self.color['success']))
+            await ctx.send(embed=await self.embedmgr.get(ctx, 'Warp_done', region))
             self.msglog.log(ctx, '[이동: 완료]')
 
     @commands.guild_only()
