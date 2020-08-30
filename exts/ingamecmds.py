@@ -120,8 +120,7 @@ class InGamecmds(BaseCog):
                         if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                             itemidx = int(idxtaskrst.content) - 1
                             infoitem = pgr.get_thispage()[itemidx]
-                            embed = await self.embedmgr.get(ctx, 'Item_info', infoitem)
-                            embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다.')
+                            embed = await self.embedmgr.get(ctx, 'Item_info', infoitem, xtoclose=True)
                             iteminfomsg = await ctx.send(embed=embed)
                             self.msglog.log(ctx, '[가방: 아이템 정보]')
                             await iteminfomsg.add_reaction('❌')
@@ -156,7 +155,7 @@ class InGamecmds(BaseCog):
                                 countmsg = counttask.result()
                                 delcount = int(countmsg.content)
                                 if 1 <= delcount <= delitem.count:
-                                    embed = await self.embedmgr.get(ctx, 'Item_info', delitem, 'delete', count=delcount)
+                                    embed = await self.embedmgr.get(ctx, 'Item_info', delitem, mode='delete', count=delcount)
                                     deloxmsg = await ctx.send(embed=embed)
                                     self.msglog.log(ctx, '[가방: 아이템 버리기: 아이템 삭제 경고]')
                                     oxemjs = [self.emj.get(ctx, 'check'), self.emj.get(ctx, 'cross')]
@@ -167,14 +166,10 @@ class InGamecmds(BaseCog):
                                     if rst:
                                         if rst[0].emoji == self.emj.get(ctx, 'check'):
                                             await imgr.delete_item(delitem, delcount)
-                                            embed = discord.Embed(title='{} 아이템을 버렸습니다!'.format(self.emj.get(ctx, 'check')), color=self.color['success'])
-                                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                            await ctx.send(embed=embed, delete_after=7)
+                                            await ctx.send(embed=await self.embedmgr.get(ctx, 'Item_discard_done', delafter=7), delete_after=7)
                                             self.msglog.log(ctx, '[가방: 아이템 버리기: 완료]')
                                 else:
-                                    embed = discord.Embed(title='❓ 버릴 아이템 개수가 올바르지 않습니다!', color=self.color['error'])
-                                    embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                    await ctx.send(embed=embed, delete_after=7)
+                                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Item_discard_invalid_count', delafter=7), delete_after=7)
                                     self.msglog.log(ctx, '[가방: 아이템 버리기: 올바르지 않은 개수]')
                         else:
                             await ctx.send(embed=await self.embedmgr.get(ctx, 'Invalid_item_index', delafter=7), delete_after=7)
@@ -249,13 +244,9 @@ class InGamecmds(BaseCog):
                 if reaction.emoji == '💰':
                     # 상점아이템 판매 섹션
                     if len(pgr2.pages()) == 0:
-                        await ctx.send(embed=discord.Embed(title='📦 판매할 수 있는 아이템이 하나도 없습니다!', color=self.color['error']))
+                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_sell_no_any'))
                     else:
-                        itemidxmsg = await ctx.send(embed=discord.Embed(
-                            title='💰 아이템 판매 - 아이템 선택',
-                            description='판매할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-                            color=self.color['ask']
-                        ))
+                        itemidxmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_sell_select_item'))
                         self.msglog.log(ctx, '[상점: 아이템 판매: 번째수 입력]')
                         await itemidxmsg.add_reaction('❌')
                         canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
@@ -268,11 +259,7 @@ class InGamecmds(BaseCog):
                             if 1 <= int(idxtaskrst.content) <= len(pgr2.get_thispage()):
                                 itemidx = int(idxtaskrst.content) - 1
                                 item: ItemData = pgr2.get_thispage()[itemidx]
-                                itemcountmsg = await ctx.send(embed=discord.Embed(
-                                    title='💰 아이템 판매 - 판매 아이템 개수',
-                                    description='몇 개를 판매하시겠어요? (최대 {}개)\n❌를 클릭해 취소합니다.'.format(item.count),
-                                    color=self.color['ask']
-                                ))
+                                itemcountmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_sell_count', item))
                                 self.msglog.log(ctx, '[상점: 아이템 판매: 개수 입력]')
                                 await itemcountmsg.add_reaction('❌')
                                 canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=60))
@@ -284,7 +271,7 @@ class InGamecmds(BaseCog):
                                     count = int(counttaskrst.content)
                                     if count >= 1:
                                         if count <= item.count:
-                                            embed = await self.embedmgr.get(ctx, 'Item_info', item, 'sell', count=count, charuuid=char.uid)
+                                            embed = await self.embedmgr.get(ctx, 'Item_info', item, mode='sell', count=count, charuuid=char.uid)
                                             finalmsg = await ctx.send(embed=embed)
                                             await finalmsg.add_reaction('⭕')
                                             await finalmsg.add_reaction('❌')
@@ -296,25 +283,17 @@ class InGamecmds(BaseCog):
                                                     try:
                                                         await mmgr.sell(item, count)
                                                     except mgrerrors.NotFound:
-                                                        embed = discord.Embed(title='❓ 해당 아이템을 찾을 수 없습니다!', description='아이템을 이미 판매했거나, 버렸지는 않은가요?', color=self.color['error'])
-                                                        embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                                        await ctx.send(embed=embed, delete_after=7)
+                                                        await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_sell_not_found', delafter=7), delete_after=7)
                                                         self.msglog.log(ctx, '[상점: 아이템 판매: 아이템 찾을 수 없음]')
                                                     else:
-                                                        await ctx.send(embed=discord.Embed(
-                                                            title='{} 성공적으로 판매했습니다!'.format(self.emj.get(ctx, 'check')),
-                                                            description='{} 을(를) {} 개 판매했어요.'.format(idgr.fetch_item(item.id).name, count),
-                                                            color=self.color['success']
-                                                        ))
+                                                        await ctx.send(embed=await self.embedmgr.get(ctx,'Market_sell_done', item, count))
                                                         self.msglog.log(ctx, '[상점: 아이템 판매: 완료]')
                                                 elif rct.emoji == '❌':
                                                     await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled', delafter=7), delete_after=7)
                                                     self.msglog.log(ctx, '[상점: 아이템 판매: 취소]')
                                             await finalmsg.delete()
                                         else:
-                                            embed = discord.Embed(title='❌ 판매하려는 양이 너무 많습니다!', description='이 아이템은 최대 {}개를 판매할 수 있습니다.'.format(item.count), color=self.color['error'])
-                                            embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                            await ctx.send(embed=embed, delete_after=7)
+                                            await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_sell_too_many', item, delafter=7), delete_after=7)
                                             self.msglog.log(ctx, '[상점: 아이템 판매: 아이템 부족]')
                                     else:
                                         await ctx.send(embed=await self.embedmgr.get(ctx, 'Item_count_overthan_one'), delete_after=7)
@@ -325,11 +304,7 @@ class InGamecmds(BaseCog):
 
                 elif reaction.emoji == '💎':
                     # 상점아이템 구매 섹션
-                    itemidxmsg = await ctx.send(embed=discord.Embed(
-                        title='💎 아이템 구매 - 아이템 선택',
-                        description='구매할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-                        color=self.color['ask']
-                    ))
+                    itemidxmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_buy_select_item'))
                     self.msglog.log(ctx, '[상점: 아이템 구매: 번째수 입력]')
                     await itemidxmsg.add_reaction('❌')
                     canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
@@ -342,11 +317,7 @@ class InGamecmds(BaseCog):
                         if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                             itemidx = int(idxtaskrst.content) - 1
                             item: MarketItem = pgr.get_thispage()[itemidx]
-                            itemcountmsg = await ctx.send(embed=discord.Embed(
-                                title='💎 아이템 구매 - 구매 아이템 개수',
-                                description='몇 개를 구매하시겠어요?\n❌를 클릭해 취소합니다.',
-                                color=self.color['ask']
-                            ))
+                            itemcountmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_buy_count'))
                             self.msglog.log(ctx, '[상점: 아이템 구매: 개수 입력]')
                             await itemcountmsg.add_reaction('❌')
                             canceltask2 = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemcountmsg, emojis=['❌'], timeout=60))
@@ -376,13 +347,10 @@ class InGamecmds(BaseCog):
                                                 try:
                                                     await mmgr.buy(item, count)
                                                 except mgrerrors.NotEnoughMoney:
-                                                    embed = discord.Embed(title='❓ 구매에 필요한 돈이 부족합니다!', description='`{}`골드가 부족합니다!'.format(final_price - char.money), color=self.color['error'])
-                                                    embed.set_footer(text='이 메시지는 7초 후에 사라집니다')
-                                                    await ctx.send(embed=embed, delete_after=7)
+                                                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_buy_not_enough_money', char.uid, final_price, delafter=7), delete_after=7)
                                                     self.msglog.log(ctx, '[상점: 아이템 구매: 돈 부족]')
                                                 else:
-                                                    embed = discord.Embed(title='{} 성공적으로 구매했습니다!'.format(self.emj.get(ctx, 'check')), description='`{}` 을(를) {}개 구입했어요.'.format(idgr.fetch_item(item.item.id).name, count), color=self.color['success'])
-                                                    await ctx.send(embed=embed)
+                                                    await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_buy_done', item, count))
                                                     self.msglog.log(ctx, '[상점: 아이템 구매: 완료]')
                                             elif rct.emoji == '❌':
                                                 await ctx.send(embed=await self.embedmgr.get(ctx, 'Canceled', delafter=7), delete_after=7)
@@ -401,11 +369,7 @@ class InGamecmds(BaseCog):
 
                 elif reaction.emoji == '❔':
                     # 상점아이템 정보 확인 섹션
-                    itemidxmsg = await ctx.send(embed=discord.Embed(
-                        title='🔍 아이템 정보 보기 - 아이템 선택',
-                        description='자세한 정보를 확인할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-                        color=self.color['ask']
-                    ))
+                    itemidxmsg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Market_info_select_item'))
                     self.msglog.log(ctx, '[상점: 아이템 정보: 번째수 입력]')
                     await itemidxmsg.add_reaction('❌')
                     canceltask = asyncio.create_task(event_waiter.wait_for_reaction(self.client, ctx=ctx, msg=itemidxmsg, emojis=['❌'], timeout=60))
@@ -418,8 +382,7 @@ class InGamecmds(BaseCog):
                         if 1 <= int(idxtaskrst.content) <= len(pgr.get_thispage()):
                             itemidx = int(idxtaskrst.content) - 1
                             infoitem = pgr.get_thispage()[itemidx]
-                            embed = await self.embedmgr.get(ctx, 'Market_item', infoitem)
-                            embed.set_footer(text='❌ 버튼을 클릭해 이 메시지를 닫습니다.')
+                            embed = await self.embedmgr.get(ctx, 'Market_item', infoitem, xtoclose=True)
                             iteminfomsg = await ctx.send(embed=embed)
                             self.msglog.log(ctx, '[상점: 아이템 정보]')
                             await iteminfomsg.add_reaction('❌')

@@ -357,23 +357,145 @@ class Items_private(aEmbedBase):
 class Item_info_select_index(aEmbedBase):
     async def ko(self):
         return discord.Embed(
-            title='🔍 아이템 정보 보기 - 아이템 선택',
-            description='자세한 정보를 확인할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-            color=self.cog.color['ask']
+            title="🔍 아이템 정보 보기 - 아이템 선택",
+            description="자세한 정보를 확인할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
         )
+
 
 class Item_discard_select_index(aEmbedBase):
     async def ko(self):
         return discord.Embed(
-            title='📮 아이템 버리기 - 아이템 선택',
-            description='버릴 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.',
-            color=self.cog.color['ask']
+            title="📮 아이템 버리기 - 아이템 선택",
+            description="버릴 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
         )
+
 
 class Item_discard_count(aEmbedBase):
     async def ko(self, item):
         return discord.Embed(
-            title='📮 아이템 버리기 - 아이템 개수',
-            description=f'버릴 개수를 입력해주세요. **(현재 {item.count}개)**\n❌를 클릭해 취소합니다.',
-            color=self.cog.color['ask']
+            title="📮 아이템 버리기 - 아이템 개수",
+            description=f"버릴 개수를 입력해주세요. **(현재 {item.count}개)**\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
         )
+
+
+class Item_discard_done(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="{} 아이템을 버렸습니다!".format(self.cog.emj.get(self.ctx, "check")),
+            color=self.cog.color["success"],
+        )
+
+
+class Item_discard_invalid_count(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="❓ 버릴 아이템 개수가 올바르지 않습니다!", color=self.cog.color["error"]
+        )
+
+
+class Market_sell_select_item(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="💰 아이템 판매 - 아이템 선택",
+            description="판매할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
+        )
+
+
+class Market_sell_count(aEmbedBase):
+    async def ko(self, item):
+        return discord.Embed(
+            title="💰 아이템 판매 - 판매 아이템 개수",
+            description="몇 개를 판매하시겠어요? (최대 {}개)\n❌를 클릭해 취소합니다.".format(item.count),
+            color=self.cog.color["ask"],
+        )
+
+
+class Market_sell_not_found(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="❓ 해당 아이템을 찾을 수 없습니다!",
+            description="아이템을 이미 판매했거나, 버렸지는 않은가요?",
+            color=self.cog.color["error"],
+        )
+
+
+class Market_sell_done(aEmbedBase):
+    async def ko(self, item, count):
+        idgr = ItemDBMgr(self.cog.datadb)
+        return discord.Embed(
+            title="{} 성공적으로 판매했습니다!".format(self.cog.emj.get(self.ctx, "check")),
+            description="{} 을(를) {} 개 판매했어요.".format(
+                idgr.fetch_item(item.id).name, count
+            ),
+            color=self.cog.color["success"],
+        )
+
+
+class Market_sell_too_many(aEmbedBase):
+    async def ko(self, item):
+        return discord.Embed(
+            title="❌ 판매하려는 양이 너무 많습니다!",
+            description="이 아이템은 최대 {}개를 판매할 수 있습니다.".format(item.count),
+            color=self.cog.color["error"],
+        )
+
+
+class Market_sell_no_any(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="📦 판매할 수 있는 아이템이 하나도 없습니다!", color=self.cog.color["error"]
+        )
+
+
+class Market_buy_select_item(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="💎 아이템 구매 - 아이템 선택",
+            description="구매할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
+        )
+
+
+class Market_buy_count(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="💎 아이템 구매 - 구매 아이템 개수",
+            description="몇 개를 구매하시겠어요?\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
+        )
+
+
+class Market_buy_not_enough_money(aEmbedBase):
+    async def ko(self, charuuid, final_price):
+        imgr = ItemMgr(self.cog.pool, charuuid)
+        return discord.Embed(
+            title="❓ 구매에 필요한 돈이 부족합니다!",
+            description="`{}`골드가 부족합니다!".format(final_price - imgr.fetch_money()),
+            color=self.cog.color["error"],
+        )
+
+
+class Market_buy_done(aEmbedBase):
+    async def ko(self, item, count):
+        idgr = ItemDBMgr(self.cog.datadb)
+        return discord.Embed(
+            title="{} 성공적으로 구매했습니다!".format(self.cog.emj.get(self.ctx, "check")),
+            description="`{}` 을(를) {}개 구입했어요.".format(
+                idgr.fetch_item(item.item.id).name, count
+            ),
+            color=self.cog.color["success"],
+        )
+
+
+class Market_info_select_item(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title="🔍 아이템 정보 보기 - 아이템 선택",
+            description="자세한 정보를 확인할 아이템의 번째수를 입력해주세요.\n위 메시지에 아이템 앞마다 번호가 붙어 있습니다.\n❌를 클릭해 취소합니다.",
+            color=self.cog.color["ask"],
+        )
+

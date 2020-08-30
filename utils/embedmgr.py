@@ -44,6 +44,11 @@ class Delafter:
     async def ko(cls, delafter):
         return f"이 메시지는 {delafter}초 후에 사라집니다"
 
+class XtoClose:
+    @classmethod
+    async def ko(cls):
+        return '❌ 버튼을 클릭해 이 메시지를 닫습니다.'
+
 class EmbedMgr:
     def __init__(self, pool: aiomysql.Pool, *modules: ModuleType, default_lang: str='ko'):
         self.pool = pool
@@ -65,7 +70,7 @@ class EmbedMgr:
                         clss.append(attr)
         return clss
 
-    async def get(self, ctx: Union[commands.Context], name: str, *args, user: discord.User=None, cog: BaseCog=None, delafter: Optional[int]=None, **kwargs) -> discord.Embed:
+    async def get(self, ctx: Union[commands.Context], name: str, *args, user: discord.User=None, cog: BaseCog=None, delafter: Optional[int]=None, xtoclose: bool=False, **kwargs) -> discord.Embed:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 lang = self.default_lang
@@ -95,6 +100,16 @@ class EmbedMgr:
                                 embed.set_footer(text=embed.footer.text + '\n' + await delafterfunc(delafter))
                             else:
                                 embed.set_footer(text=await delafterfunc(delafter))
+
+                        if xtoclose:
+                            try:
+                                delafterfunc = getattr(XtoClose, lang)
+                            except AttributeError:
+                                delafterfunc = getattr(XtoClose, self.default_lang)
+                            if type(embed.footer.text) == str:
+                                embed.set_footer(text=embed.footer.text + '\n' + await delafterfunc())
+                            else:
+                                embed.set_footer(text=await delafterfunc())
                         return embed
                     raise EmbedisNotCoroFunc(embedinstance.__class__.__name__, embedfunc.__name__)
                 raise EmbedNotFound
