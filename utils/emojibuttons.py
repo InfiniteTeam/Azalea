@@ -6,7 +6,7 @@ class PageButton:
     emojis = ['⏪','◀', '⏹', '▶', '⏩']
     @classmethod
     async def buttonctrl(cls, reaction: discord.Reaction, user: discord.User, pgr: pager.Pager, *, double: int=5):
-        emj = str(reaction.emoji)
+        emj = reaction.emoji
         try:
             if emj == '⏪':
                 if double == 0:
@@ -23,8 +23,7 @@ class PageButton:
             elif emj == '▶':
                 pgr.next(exc=True)
             elif emj == '⏹':
-                await reaction.message.clear_reactions()
-                return
+                return reaction.message.clear_reactions()
         except StopIteration:
             await reaction.remove(user)
             return

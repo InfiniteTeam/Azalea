@@ -343,7 +343,6 @@ class InGamecmds(BaseCog):
                                         if rst:
                                             rct = rst[0]
                                             if rct.emoji == '⭕':
-                                                # 캐릭터 갱신 후 다시 한번 잔고 충분한지 확인
                                                 try:
                                                     await mmgr.buy(item, count)
                                                 except mgrerrors.NotEnoughMoney:

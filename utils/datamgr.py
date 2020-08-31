@@ -450,9 +450,13 @@ class ItemMgr(AzaleaManager):
     async def get_items_dict(self) -> List[Dict]:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute('select items from chardata where uuid=%s', self.charuuid)
-                fetch = await cur.fetchone()
-        return json.loads(fetch['items'])['items']
+                await cur.execute('select * from itemdata where charid=%s', self.charuuid)
+                itms = await cur.fetchall()
+                for idx, itm in enumerate(itms):
+                    await cur.execute('select * from enchantmentdata where itemid=%s', itm['uuid'])
+                    encs = await cur.fetchall()
+                    itms[idx]['enchantments'] = {enc['name']: enc['level'] for enc in encs}
+        return itms
 
     @classmethod
     def get_itemdata_from_dict(cls, itemdict: Dict) -> ItemData:
@@ -478,40 +482,47 @@ class ItemMgr(AzaleaManager):
         items = [self.get_itemdata_from_dict(x) for x in itemdict]
         return items
 
-    async def _save_item_by_dict(self, itemdicts: List[Dict]):
-        """
-        경고! 이 메서드는 캐릭터 기존의 아이템 정보를 완전히 덮어쓰게 됩니다! 자칫 아이템 데이터가 모두 삭제되거나 손상될 우려가 있습니다! 외부적 사용은 권장하지 않습니다.
-        """
+    async def delete_item(self, itemdata: ItemData, count: int= None) -> bool:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                items = {'items': itemdicts}
-                await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), self.charuuid))
-
-    async def delete_item(self, itemdata: ItemData, count: int= None) -> bool:
-        count = int(count)
-        items = await self.get_items_dict()
-        delitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
-        if delitem in items:
-            idx = items.index(delitem)
-            if count == None or items[idx]['count'] - count == 0:
-                items.remove(delitem)
-            else:
-                items[idx]['count'] -= count
-            await self._save_item_by_dict(items)
-        else:
-            raise mgrerrors.NotFound
+                items = await self.get_items_dict()
+                find_item = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
+                delitem = next(
+                    (
+                        item for item in items
+                        if item['id'] == find_item['id'] 
+                        and item['count'] == find_item['count'] 
+                        and item['enchantments'] == find_item['enchantments']
+                    ),
+                    None
+                )
+                if delitem is not None:
+                    idx = items.index(delitem)
+                    if count == None or items[idx]['count'] - count == 0:
+                        await cur.execute('delete from itemdata where uuid=%s', delitem['uuid'])
+                        await cur.execute('delete from enchantmentdata where itemid=%s', delitem['uuid'])
+                    else:
+                        await cur.execute('update itemdata set count=count-%s where uuid=%s', (count, delitem['uuid']))
+                else:
+                    raise mgrerrors.NotFound
 
     async def give_item(self, itemdata: ItemData):
-        items = await self.get_items_dict()
-        giveitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
-        sameitem = list(filter(lambda one: one['id'] == giveitem['id'] and one['enchantments'] == giveitem['enchantments'], items))
-        if sameitem:
-            idx = items.index(sameitem[0])
-            items[idx]['count'] += itemdata.count
-        else:
-            items.append(giveitem)
-        await self._save_item_by_dict(items)
-        return True
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                items = await self.get_items_dict()
+                giveitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
+                sameitem = next((one for one in items if one['id'] == giveitem['id'] and one['enchantments'] == giveitem['enchantments']), None)
+                if sameitem:
+                    await cur.execute('update itemdata set count=count+%s where uuid=%s', (itemdata.count, sameitem['uuid']))
+                else:
+                    newitemuid = uuid.uuid4().hex
+                    await cur.execute('insert into itemdata (uuid, charid, id, count) values (%s, %s, %s, %s)', (
+                        newitemuid, self.charuuid, itemdata.id, itemdata.count
+                    ))
+                    for enc in itemdata.enchantments:
+                        await cur.execute('insert into enchantmentdata (itemid, name, level) values (%s, %s, %s)', (
+                            newitemuid, enc.name, enc.level
+                        ))
 
     async def fetch_money(self):
         async with self.pool.acquire() as conn:
@@ -858,7 +869,7 @@ class MigrateTool:
                     except:
                         pass
 
-    async def json_to_row(self):
+    async def item_json_to_row(self):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute('select * from chardata')
