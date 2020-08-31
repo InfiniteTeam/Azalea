@@ -847,21 +847,6 @@ class MigrateTool:
     def __init__(self, pool: aiomysql.Pool):
         self.pool = pool
 
-    async def migrate_item_id(self, itemid, newid):
-        async with self.pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                migrated = 0
-                await cur.execute('select uuid, items from chardata')
-                fetch = await cur.fetchall()
-                for one in fetch:
-                    items = json.loads(one['items'])
-                    for item in items['items']:
-                        if item['id'] == itemid:
-                            item['id'] = newid
-                            migrated += 1
-                    await cur.execute('update chardata set items=%s where uuid=%s', (json.dumps(items, ensure_ascii=False), one['uuid']))
-        return migrated
-
     async def copy_uuid_to_new_table(self, fetching_table: str, target_table: str):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -872,6 +857,22 @@ class MigrateTool:
                         await cur.execute(f'insert into `{target_table}` (uuid) values (%s)', x['uuid'])
                     except:
                         pass
+
+    async def json_to_row(self):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute('select * from chardata')
+                ls = await cur.fetchall()
+                for one in ls:
+                    for item in json.loads(one['items'])['items']:
+                        iid = uuid.uuid4().hex
+                        await cur.execute('insert into itemdata (uuid, owner, id, count) values (%s, %s, %s, %s)', (
+                            iid, one['uuid'], item['id'], item['count']
+                        ))
+                        for ek, ev in item['enchantments'].items():
+                            await cur.execute('insert into enchantmentdata (itemid, name, level) values (%s, %s, %s)', (
+                                iid, ek, ev
+                            ))
 
 class MineMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool, charuuid: str):

@@ -117,8 +117,10 @@ class Mastercmds(BaseCog):
                 for one in guild_dbs:
                     guild = self.client.get_guild(one['id'])
                     if guild:
-                        guilds.append(guild)
-                        channels.append(guild.get_channel(one['noticechannel']))
+                        ch = guild.get_channel(one['noticechannel'])
+                        if ch:
+                            channels.append(ch)
+                            guilds.append(guild)
 
                 cpembed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 유효한 서버 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['primary'])
                 cpembed.add_field(name='진행률', value=progressbar.get(ctx, self.emj, 0, 1, 12) + ' `0.00%`', inline=False)
