@@ -12,7 +12,7 @@ import paramiko
 from itertools import chain
 from utils import errors, checks, msglogger, emojictrl, datamgr, embedmgr
 from utils.azalea import Azalea
-from db import enchantments, charsettings, market, regions, permissions, exptable, baseexp, items
+from db import charsettings, market, regions, permissions, exptable, baseexp, items
 from ingame.farming import farm_plants
 from templates import azaleaembeds, charembeds, farmembeds, ingameembeds, publicembeds, basecembeds, eventembeds, farmembeds, gameembeds, gamedebugembeds
 
@@ -151,11 +151,10 @@ emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 
 # 인게임 DB 로드
 def load_items():
-    return chain([getattr(items, one) for one in items.__all__])
+    return list(chain.from_iterable([getattr(items, one) for one in items.__all__]))
 
 def loader(datadb: datamgr.DataDB):
-    datadb.load_enchantments(enchantments.ENCHANTMENTS)
-    datadb.load_items(chain.from_iterable(load_items()))
+    datadb.load_items(load_items())
     datadb.load_char_settings(charsettings.CHAR_SETTINGS)
     datadb.load_region('azalea', regions.REGIONS)
     datadb.load_market('main', market.MARKET)
@@ -166,7 +165,6 @@ def loader(datadb: datamgr.DataDB):
 
 def reloader(datadb: datamgr.DataDB):
     db_modules = [
-        enchantments,
         items,
         charsettings,
         regions,

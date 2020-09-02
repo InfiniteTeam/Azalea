@@ -4,7 +4,7 @@ from db.itemtags import Tag
 __all__ = ['ETC', 'PLANTS']
 
 ETC = (
-    Item('galaxy_zflip', '갤럭시 Z플립', '모 회사의 폴더블 스마트폰이다.', 100, '📱', tags=[Tag.Phone], enchantments=['long-battery'], selling=8000),
+    Item('galaxy_zflip', '갤럭시 Z플립', '모 회사의 폴더블 스마트폰이다.', 100, '📱', tags=[Tag.Phone], selling=8000),
     Item('odroid_n2', 'ODROID N2', '오드로이드 N2.', 100, '⚙'),
     Item('buldak', '불닭볶음면', '개맛있다.', 100, '🍜'),
     Item('nad', '니코틴아마이드아데닌다이뉴클레오타이드', '길다.', 100, '🧬'),

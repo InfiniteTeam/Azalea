@@ -28,52 +28,21 @@ class SettingData(AzaleaData):
         self.name = name
         self.value = value
 
-class EnchantType(Enum):
-    """
-    마법부여의 종류를 정의합니다.
-    """
-    Active = 'Active'
-    Passive = 'Passive'
-
-class Enchantment(AzaleaData):
-    """
-    전체 마법부여를 정의하는 클래스입니다.
-    """
-    def __init__(self, name: str, title: str, max_level: int, type: EnchantType, tags: List[str]=[], *, price_percent: float=1.0):
-        self.name = name
-        self.title = title
-        self.max_level = max_level
-        self.type = type
-        self.tags = tags
-        self.price_percent = float(price_percent)
-
-class EnchantmentData(AzaleaData):
-    """
-    어떤 아이템에 부여된 마법부여 하나를 나타냅니다.
-    """
-    def __init__(self, name: str, level: int):
-        self.name = name
-        self.level = level
-
-    def __eq__(self, enchantment):
-        return self.name == enchantment.name and self.level == enchantment.level
-
 class ItemType(Enum):
     Phone = '핸드폰'
     Fish = '물고기'
 
 class Item(AzaleaData):
     """
-    전체 아이템을 정의하는 클래스입니다. 예외적으로 아이템 데이터베이스 파일에서 사용되는 Item 객체에서는 self.enchantments 속성이 str입니다.
+    전체 아이템을 정의하는 클래스입니다.
     """
-    def __init__(self, id: str, name: str, description: str, max_count: int, icon: Union[str, int], *, tags: List[str]=[], enchantments: List[Union[Enchantment, str]]=[], meta: Dict={}, selling=None):
+    def __init__(self, id: str, name: str, description: str, max_count: int, icon: Union[str, int], *, tags: List[str]=[], meta: Dict={}, selling=None):
         self.id = id
         self.name = name
         self.description = description
         self.max_count = max_count
         self.icon = icon
         self.tags = tags
-        self.enchantments = enchantments
         self.meta = meta
         self.selling = selling
 
@@ -81,13 +50,12 @@ class ItemData(AzaleaData):
     """
     한 캐릭터가 가진 아이템 하나를 나타냅니다.
     """
-    def __init__(self, id: str, count: int, enchantments: List[EnchantmentData]):
+    def __init__(self, id: str, count: int):
         self.id = id
         self.count = count
-        self.enchantments = enchantments
 
     def __eq__(self, item):
-        return self.id == item.id and self.enchantments == item.enchantments
+        return self.id == item.id
 
 class StatType(Enum):
     EXP = '경험치'
@@ -205,7 +173,6 @@ class FarmPlantData(AzaleaData):
 
 class DataDB:
     def __init__(self):
-        self.enchantments = []
         self.items = []
         self.char_settings = []
         self.markets = {}
@@ -216,19 +183,8 @@ class DataDB:
         self.base_exp = {}
         self.reloader = None
 
-    def load_enchantments(self, enchantments: List[Enchantment]):
-        self.enchantments = enchantments
-
     def load_items(self, items: List[Item]):
-        its = []
-        for item in items:
-            enchants = list(filter(
-                lambda x: x.name in item.enchantments,
-                self.enchantments
-            ))
-            item.enchantments = enchants
-            its.append(item)
-        self.items = its
+        self.items = items
     
     def load_char_settings(self, settings: List[Setting]):
         self.char_settings = settings
@@ -403,17 +359,8 @@ class ItemDBMgr(AzaleaDBManager):
     def __init__(self, datadb: DataDB):
         self.datadb = datadb
 
-    def fetch_item_enchantments(self, tags: List[str]) -> Enchantment:
-        enchants = []
-        found = list(filter(lambda x: set(x.tags) & set(tags), self.datadb.enchantments))
-        for x in found:
-            enchants.append(Enchantment(x.id, x.name, x.title, x.max_level, x.type, price_percent=x.price_percent))
-        return enchants
-
     def fetch_item(self, itemid: str) -> Item:
-        found = list(filter(lambda x: x.id == itemid, self.datadb.items))
-        if found:
-            return found[0]
+        return next((item for item in self.datadb.items if item.id == itemid), None)
 
     def fetch_items_with(self, *, tags: Optional[list]=None, meta: Optional[dict]=None) -> List[Item]:
         foundtags = foundmeta = set(self.datadb.items)
@@ -428,18 +375,8 @@ class ItemDBMgr(AzaleaDBManager):
         rst = list(foundtags & foundmeta)
         return rst
 
-    def fetch_enchantment(self, name: str) -> Enchantment:
-        found = list(filter(lambda x: name == x.name, self.datadb.enchantments))
-        if found:
-            return found[0]
-
-    def get_enchantment_percent(self, item: ItemData) -> float:
-        percent = reduce(lambda x, y: x*self.fetch_enchantment(y.name).price_percent, item.enchantments, 1)
-        return percent
-
-    def get_final_price(self, item: ItemData, count: int=1) -> int:
-        percent = self.get_enchantment_percent(item)
-        final = round(percent*self.fetch_item(item.id).selling)*count
+    def get_final_selling_price(self, item: ItemData, count: int=1) -> int:
+        final = self.fetch_item(item.id).selling*count
         return final
 
 class ItemMgr(AzaleaManager):
@@ -452,29 +389,17 @@ class ItemMgr(AzaleaManager):
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute('select * from itemdata where charid=%s', self.charuuid)
                 itms = await cur.fetchall()
-                for idx, itm in enumerate(itms):
-                    await cur.execute('select * from enchantmentdata where itemid=%s', itm['uuid'])
-                    encs = await cur.fetchall()
-                    itms[idx]['enchantments'] = {enc['name']: enc['level'] for enc in encs}
         return itms
 
     @classmethod
     def get_itemdata_from_dict(cls, itemdict: Dict) -> ItemData:
-        enchants = []
-        for enchant in itemdict['enchantments']:
-            enchants.append(EnchantmentData(enchant, itemdict['enchantments'][enchant]))
-        return ItemData(itemdict['id'], itemdict['count'], enchants)
+        return ItemData(itemdict['id'], itemdict['count'])
 
     @classmethod
     def get_dict_from_itemdata(cls, item: ItemData) -> Dict:
-        enchants = {}
-        for enchant in item.enchantments:
-            enchants[enchant.name] = enchant.level
-            
         return {
             'id': item.id,
-            'count': item.count,
-            'enchantments': enchants
+            'count': item.count
         }
 
     async def get_items(self) -> List[ItemData]:
@@ -486,13 +411,12 @@ class ItemMgr(AzaleaManager):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 items = await self.get_items_dict()
-                find_item = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
+                find_item = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count))
                 delitem = next(
                     (
                         item for item in items
                         if item['id'] == find_item['id'] 
                         and item['count'] == find_item['count'] 
-                        and item['enchantments'] == find_item['enchantments']
                     ),
                     None
                 )
@@ -500,7 +424,6 @@ class ItemMgr(AzaleaManager):
                     idx = items.index(delitem)
                     if count == None or items[idx]['count'] - count == 0:
                         await cur.execute('delete from itemdata where uuid=%s', delitem['uuid'])
-                        await cur.execute('delete from enchantmentdata where itemid=%s', delitem['uuid'])
                     else:
                         await cur.execute('update itemdata set count=count-%s where uuid=%s', (count, delitem['uuid']))
                 else:
@@ -510,8 +433,8 @@ class ItemMgr(AzaleaManager):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 items = await self.get_items_dict()
-                giveitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count, itemdata.enchantments))
-                sameitem = next((one for one in items if one['id'] == giveitem['id'] and one['enchantments'] == giveitem['enchantments']), None)
+                giveitem = self.get_dict_from_itemdata(ItemData(itemdata.id, itemdata.count))
+                sameitem = next((one for one in items if one['id'] == giveitem['id']), None)
                 if sameitem:
                     await cur.execute('update itemdata set count=count+%s where uuid=%s', (itemdata.count, sameitem['uuid']))
                 else:
@@ -519,10 +442,6 @@ class ItemMgr(AzaleaManager):
                     await cur.execute('insert into itemdata (uuid, charid, id, count) values (%s, %s, %s, %s)', (
                         newitemuid, self.charuuid, itemdata.id, itemdata.count
                     ))
-                    for enc in itemdata.enchantments:
-                        await cur.execute('insert into enchantmentdata (itemid, name, level) values (%s, %s, %s)', (
-                            newitemuid, enc.name, enc.level
-                        ))
 
     async def fetch_money(self):
         async with self.pool.acquire() as conn:
@@ -565,7 +484,7 @@ class MarketMgr(AzaleaManager):
         idgr = ItemDBMgr(self.datadb)
         imgr = ItemMgr(self.pool, self.charuuid)
         await imgr.delete_item(item, count)
-        final_price = idgr.get_final_price(item, count)
+        final_price = idgr.get_final_selling_price(item, count)
         await imgr.give_money(final_price)
 
 class ExpTableDBMgr(AzaleaDBManager):
@@ -880,10 +799,6 @@ class MigrateTool:
                         await cur.execute('insert into itemdata (uuid, owner, id, count) values (%s, %s, %s, %s)', (
                             iid, one['uuid'], item['id'], item['count']
                         ))
-                        for ek, ev in item['enchantments'].items():
-                            await cur.execute('insert into enchantmentdata (itemid, name, level) values (%s, %s, %s)', (
-                                iid, ek, ev
-                            ))
 
 class MineMgr(AzaleaManager):
     def __init__(self, pool: aiomysql.Pool, charuuid: str):
@@ -1092,6 +1007,6 @@ class FarmMgr(AzaleaManager):
         exp_plus = 0
         for one in plantdata:
             plantdb = farm_dmgr.fetch_plant(one.id)
-            await imgr.give_item(ItemData(plantdb.grown, one.count, []))
+            await imgr.give_item(ItemData(plantdb.grown, one.count))
             exp_plus += datadb.base_exp.get('FARM_HARVEST')*one.count*plantdb.exp
         await samgr.give_exp(exp_plus, edgr, channel_id)

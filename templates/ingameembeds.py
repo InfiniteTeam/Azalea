@@ -32,13 +32,6 @@ class Market(aEmbedBase):
         idgr = ItemDBMgr(self.cog.datadb)
         for idx, one in enumerate(items):
             itemdb = idgr.fetch_item(one.item.id)
-            enchants = [
-                "`{}` {}".format(idgr.fetch_enchantment(enc.name).title, enc.level)
-                for enc in one.item.enchantments
-            ]
-            enchantstr = ""
-            if enchants:
-                enchantstr = ", ".join(enchants) + "\n"
             if one.discount:
                 pricestr = "~~`{:n}`~~ {:n} 골드".format(one.price, one.discount)
             else:
@@ -46,8 +39,8 @@ class Market(aEmbedBase):
             if mode == "select":
                 embed.title += " - 선택 모드"
                 embed.description += f"**{idx+1}.** "
-            embed.description += "{} **{}**\n{}{}\n\n".format(
-                itemdb.icon, itemdb.name, enchantstr, pricestr
+            embed.description += "{} **{}**\n{}\n\n".format(
+                itemdb.icon, itemdb.name, pricestr
             )
         embed.description += "```{}/{} 페이지, 전체 {}개```".format(
             pgr.now_pagenum() + 1, len(pgr.pages()), pgr.objlen()
@@ -73,13 +66,6 @@ class Item_info(aEmbedBase):
         embed = discord.Embed(
             title=item.icon + " " + item.name, description=item.description, color=color
         )
-        enchantstr = ""
-        for enchant in itemdata.enchantments:
-            enchantstr += "`{}` {}\n".format(
-                idgr.fetch_enchantment(enchant.name).title, enchant.level
-            )
-        if not enchantstr:
-            enchantstr = "없음"
         if mode == "delete":
             embed.description = "**정말 이 아이템을 버릴까요? 다시 회수할 수 없어요.**"
             embed.add_field(name="아이템 설명", value=item.description)
@@ -92,22 +78,21 @@ class Item_info(aEmbedBase):
         else:
             embed.set_author(name="📔 아이템 상세 정보")
             embed.add_field(name="개수", value="{}개".format(itemdata.count))
-        embed.add_field(name="마법부여", value=enchantstr)
         if mode == "sell":
             imgr = ItemMgr(self.cog.pool, charuuid)
             money = await imgr.fetch_money()
             embed.add_field(
                 name="최종 판매",
                 value="{:n} 골드 × {:n} 개\n= **{:n} 골드**".format(
-                    idgr.get_final_price(itemdata),
+                    idgr.get_final_selling_price(itemdata),
                     count,
-                    idgr.get_final_price(itemdata, count),
+                    idgr.get_final_selling_price(itemdata, count),
                 ),
             )
             embed.add_field(
                 name="판매 후 잔고",
                 value="{:n} 골드\n↓\n{:n} 골드".format(
-                    money, money + idgr.get_final_price(itemdata, count)
+                    money, money + idgr.get_final_selling_price(itemdata, count)
                 ),
             )
         return embed
@@ -146,13 +131,6 @@ class Market_item(aEmbedBase):
             description=item.description,
             color=self.cog.color["info"],
         )
-        enchantstr = ""
-        for enchant in marketitem.item.enchantments:
-            enchantstr += "`{}` {}\n".format(
-                idgr.fetch_enchantment(enchant.name).title, enchant.level
-            )
-        if not enchantstr:
-            enchantstr = "없음"
         if mode == "buy":
             embed.set_author(name="💎 아이템 구매하기")
             embed.description = "정말 이 아이템을 구매할까요? 환불은 할 수 없어요."
@@ -197,7 +175,6 @@ class Market_item(aEmbedBase):
                 )
             else:
                 embed.add_field(name="가격", value="{:n} 골드".format(marketitem.price))
-        embed.add_field(name="마법부여", value=enchantstr)
         return embed
 
 
@@ -215,20 +192,12 @@ class Backpack(aEmbedBase):
             icon = founditem.icon
             name = founditem.name
             count = one.count
-            enchants = []
-            for enc in one.enchantments:
-                enchants.append(
-                    "`{}` {}".format(imgr.fetch_enchantment(enc.name).title, enc.level)
-                )
-            enchantstr = ""
-            if enchants:
-                enchantstr = "> " + ", ".join(enchants) + "\n"
             if mode == "select":
-                itemstr += "{}. {} **{}** ({}개)\n{}".format(
-                    idx + 1, icon, name, count, enchantstr
+                itemstr += "{}. {} **{}** ({}개)\n".format(
+                    idx + 1, icon, name, count
                 )
             else:
-                itemstr += "{} **{}** ({}개)\n{}".format(icon, name, count, enchantstr)
+                itemstr += "{} **{}** ({}개)\n".format(icon, name, count)
         embed = discord.Embed(
             title=f"💼 `{char.name}`의 가방", color=self.cog.color["info"]
         )
@@ -261,16 +230,8 @@ class Backpack_sell(aEmbedBase):
             icon = founditem.icon
             name = founditem.name
             count = one.count
-            enchants = []
-            for enc in one.enchantments:
-                enchants.append(
-                    "`{}` {}".format(imgr.fetch_enchantment(enc.name).title, enc.level)
-                )
-            enchantstr = ""
-            if enchants:
-                enchantstr = "> " + ", ".join(enchants) + "\n"
-            itemstr += "{}. {} **{}** ({}개): `{:n}` 골드\n{}".format(
-                idx + 1, icon, name, count, idgr.get_final_price(one), enchantstr
+            itemstr += "{}. {} **{}** ({}개): `{:n}` 골드".format(
+                idx + 1, icon, name, count, idgr.get_final_selling_price(one)
             )
         embed = discord.Embed(
             title=f"💼 `{char.name}`의 가방 - 선택 모드", color=self.cog.color["info"]

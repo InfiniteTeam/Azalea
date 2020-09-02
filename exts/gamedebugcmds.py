@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import asyncio
 import typing
-from utils import converters
 from utils.basecog import BaseCog
 from utils.datamgr import CharMgr, ItemMgr, ItemData, ItemDBMgr, StatMgr, ExpTableDBMgr
 
@@ -14,7 +13,7 @@ class GameDebugcmds(BaseCog):
             cmd.add_check(self.check.char_online)
 
     @commands.command(name='내놔')
-    async def _giveme(self, ctx: commands.Context, itemid: str, count: typing.Optional[int]=1, enchantments: commands.Greedy[converters.EnchantmentConverter]=[], *, charname: typing.Optional[str]=None):
+    async def _giveme(self, ctx: commands.Context, itemid: str, count: typing.Optional[int]=1, *, charname: typing.Optional[str]=None):
         cmgr = CharMgr(self.pool)
         if charname:
             char = await cmgr.get_character_by_name(charname)
@@ -33,7 +32,7 @@ class GameDebugcmds(BaseCog):
             await ctx.send(embed=await self.embedmgr.get(ctx, 'Give_not_exists', itemid))
             return
         
-        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Give', item, count, enchantments, char))
+        msg = await ctx.send(embed=await self.embedmgr.get(ctx, 'Give', item, count, char))
 
         emjs = ['⭕', '❌']
         for em in emjs:
@@ -53,7 +52,7 @@ class GameDebugcmds(BaseCog):
             remj = str(reaction.emoji)
             if remj == '⭕':
                 imgr = ItemMgr(self.pool, char.uid)
-                await imgr.give_item(ItemData(itemid, count, enchantments))
+                await imgr.give_item(ItemData(itemid, count))
                 await ctx.send(embed=await self.embedmgr.get(ctx, 'Give_done'))
                 self.msglog.log(ctx, '[아이템 받기: 완료]')
             elif remj == '❌':

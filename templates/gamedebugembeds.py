@@ -10,7 +10,7 @@ class Give_not_exists(aEmbedBase):
 
 
 class Give(aEmbedBase):
-    async def ko(self, item, count, enchantments, char):
+    async def ko(self, item, count, char):
         embed = discord.Embed(
             title="📦 아이템 받기",
             description="다음과 같이 아이템을 받습니다. 계속할까요?",
@@ -20,14 +20,9 @@ class Give(aEmbedBase):
             name="아이템", value="[ {} ] {} {}".format(item.id, item.icon, item.name)
         )
         embed.add_field(name="개수", value=f"{count}개")
-        enchantstrlist = [
-            f"{enchant.name}: {enchant.level}" for enchant in enchantments
-        ]
-        enchantstr = "\n".join(enchantstrlist)
         if not enchantstr:
             enchantstr = "(없음)"
         embed.add_field(name="받는 캐릭터", value=char.name)
-        embed.add_field(name="마법부여", value=enchantstr, inline=False)
         return embed
 
 
