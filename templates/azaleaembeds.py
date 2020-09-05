@@ -62,30 +62,19 @@ class Info(aEmbedBase):
             if int(uptimenow[3]) > 0:
                 uptimestr += f'{int(uptimenow[3])}초 '
                 
-        return discord.Embed(title='🏷 Azalea 정보', description=f'Azalea 버전: {self.cog.client.get_data("version_str")}\n실행 시간: {uptimestr}\nDiscord.py 버전: {discord.__version__}', color=self.cog.color['primary'])
+        return discord.Embed(
+            title='🏷 Azalea 정보',
+            description=f"""\
+                **Azalea - 텍스트 RPG 게임봇**
+                > Azalea 버전: {self.cog.client.get_data("version_str")}
+                > 실행 시간: {uptimestr}
+                > Discord.py 버전: {discord.__version__}
+                > **{len(self.cog.client.guilds)}** 서버 | **{len(self.cog.client.users)}** 유저
+                개발 InfiniteTeam - [서포트서버 참여하기]({self.cog.config.get('support_url')})
+                """,
+            color=self.cog.color['primary']
+        )
     
-    async def en(self):
-        uptimenow = re.findall(r'\d+', str(datetime.datetime.now() - self.cog.client.get_data('start')))
-        uptimestr = ''
-        if len(uptimenow) == 4:
-            if int(uptimenow[0]) > 0:
-                uptimestr += f'{int(uptimenow[0])} Hours '
-            if int(uptimenow[1]) > 0:
-                uptimestr += f'{int(uptimenow[1])} Minutes '
-            if int(uptimenow[2]) > 0:
-                uptimestr += f'{int(uptimenow[2])} Seconds '
-        if len(uptimenow) == 5:
-            if int(uptimenow[0]) > 0:
-                uptimestr += f'{int(uptimenow[0])} Days '
-            if int(uptimenow[1]) > 0:
-                uptimestr += f'{int(uptimenow[1])} Hours '
-            if int(uptimenow[2]) > 0:
-                uptimestr += f'{int(uptimenow[2])} Minutes '
-            if int(uptimenow[3]) > 0:
-                uptimestr += f'{int(uptimenow[3])} Seconds '
-                
-        return discord.Embed(title='🏷 Azalea Information', description=f'Azalea Version: {self.cog.client.get_data("version_str")}\nRunning Time: {uptimestr}\nDiscord.py Version: {discord.__version__}', color=self.cog.color['primary'])
-
 #
 class Ping(aEmbedBase):
     async def ko(self, mping):

@@ -6,6 +6,8 @@ import aiomysql
 import time
 import typing
 import math
+import re
+import json
 import sys
 import os
 import io
@@ -400,6 +402,30 @@ class Mastercmds(BaseCog):
     @commands.command(name='폭파')
     async def _explosion(self, ctx):
         raise Exception
+
+    @commands.command(name='수집')
+    async def _suzip(self, ctx: commands.Context):
+        channel = self.client.get_channel(735563383277092874)
+        data = []
+        prev_dt = None
+        prev = None
+        async for msg in channel.history(limit=None, oldest_first=True):
+            if prev is not None and prev.author.id == 661477460390707201 and '현재 서버수' in prev.content:
+                if prev_dt is None or (prev_dt+datetime.timedelta(hours=9)).day != (msg.created_at+datetime.timedelta(hours=9)).day:
+                    print(prev.content)
+                    scount = re.findall('\d+', prev.content.splitlines()[2])
+                    if scount:
+                        data.append(
+                            ', '.join([
+                                scount[0], (prev.created_at+datetime.timedelta(hours=9)).strftime('%Y-%m-%d')
+                            ])
+                        )
+            prev = msg
+            prev_dt = msg.created_at
+        await ctx.send(file=discord.File(
+            io.StringIO('\n'.join(data)),
+            'results.txt'
+        ))
 
 def setup(client):
     cog = Mastercmds(client)

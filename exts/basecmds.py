@@ -9,7 +9,7 @@ class BaseCmds(BaseCog):
     def __init__(self, client):
         super().__init__(client)
         for cmd in self.get_commands():
-            cmd.add_check(client.get_data('check').master)
+            cmd.add_check(self.check.master)
 
     @commands.group(name='ext', aliases=['확장'])
     async def _ext(self, ctx: commands.Context):

@@ -120,9 +120,8 @@ class Tasks(BaseCog):
                                 aws.append(send_log(cid))
                             asyncio.gather(*aws)
 
-                    addlist = []
                     for guild in added:
-                        addlist.append(add_guild(guild))
+                        await add_guild(guild)
                     
                     await asyncio.gather(*addlist)
 
