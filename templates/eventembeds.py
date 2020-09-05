@@ -233,3 +233,14 @@ class Cmderror_errdm_sent(aEmbedBase):
             color=self.cog.color["error"],
         )
 
+
+class Cmderror_missing_sendmsg_perm(aEmbedBase):
+    async def ko(self):
+        return discord.Embed(
+            title='⛔ 메시지를 보낼 수 없습니다!',
+            description=f"""\
+                방금 명령어를 입력하신 채널에서 Aztra에 `메시지 전송하기` 와 `링크 전송` 권한이 없어 메시지를 보낼 수 없습니다. 서버 관리자에게 문의해주세요.
+                **(`{self.ctx.guild}` 서버의 `{self.ctx.channel}` 채널)**
+            """,
+            color=self.cog.color['error']
+        )

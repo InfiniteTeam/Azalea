@@ -119,10 +119,11 @@ class Events(BaseCog):
                     return
                     
                 elif isinstance(error.__cause__, discord.HTTPException):
-                    if error.__cause__.code == 50013:
+                    if error.__cause__.code in [50013, 50001]:
                         try:
                             await ctx.send(embed=await self.embedmgr.get(ctx, 'Cmderror_missing_bot_perms', originerrstr))
                         except discord.Forbidden:
+                            await ctx.author.send(embed=await self.embedmgr.get(ctx, 'Cmderror_missing_sendmsg_perm'))
                             self.msglog.log(ctx, '[봇 메시지 전송 권한 없음]')
                         else:
                             self.msglog.print('')
