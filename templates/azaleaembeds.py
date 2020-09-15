@@ -251,7 +251,7 @@ class  Register(aEmbedBase):
     
 class Register_done(aEmbedBase):
     async def ko(self):
-        return discord.Embed(title=f'등록되었습니다. `{self.cog.prefix}help` 명령으로 전체 명령을 볼 수 있습니다.', color=self.cog.color['success'])
+        return discord.Embed(title=f'등록되었습니다. `{self.cog.prefix}도움` 명령으로 전체 명령을 볼 수 있습니다.', color=self.cog.color['success'])
     async def en(self):
         return discord.Embed(title=f'Signed up successfully. Enter `{self.cog.prefix}help` to see all commands.', color=self.cog.color['success'])
     
