@@ -122,8 +122,6 @@ class Tasks(BaseCog):
 
                     for guild in added:
                         await add_guild(guild)
-                    
-                    await asyncio.gather(*addlist)
 
                     # 제거 섹션
                     deleted_ids = list(set(db_guild_ids) - set(client_guild_ids))
