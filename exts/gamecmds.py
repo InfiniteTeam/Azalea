@@ -69,7 +69,7 @@ class Gamecmds(BaseCog):
             if reaction.emoji == '⁉':
                 fishes = idgr.fetch_items_with(tags=[Tag.Fish], meta={'catchable': True})
                 fish = random.choices(fishes, list(map(lambda x: x.meta['percentage'], fishes)))[0]
-                await imgr.give_item(ItemData(fish.id, 1, []))
+                await imgr.give_item(ItemData(fish.id, 1))
                 exp = exps.fishing(req=edgr.get_required_exp(await samgr.get_level(edgr)), fish=fish)
                 await samgr.give_exp(exp, edgr, ctx)
                 embed = await self.embedmgr.get(ctx, 'Fishing_done', fish, exp)
