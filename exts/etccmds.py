@@ -22,7 +22,7 @@ class Etccmds(BaseCog):
         await ctx.send(embed=embed)
 
     @commands.command(name='다쿤찬양')
-    async def _thecoin(self, ctx: commands.Context):
+    async def _thedacon(self, ctx: commands.Context):
         embed = discord.Embed(title='다쿤을 찬양하세요', color=self.color['primary'])
         embed.set_image(url='https://avatars1.githubusercontent.com/u/61615961?s=400&v=4')
         await ctx.send(embed=embed)
