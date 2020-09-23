@@ -51,6 +51,8 @@ class Tasks(BaseCog):
                 for one in self.client.latencies:
                     guildshards[one[0]] = tuple(filter(lambda guild: guild.shard_id == one[0], self.client.guilds))
             self.client.set_data('guildshards', guildshards)
+        except OverflowError:
+            return
         except:
             self.errlogger.error(traceback.format_exc())
 
